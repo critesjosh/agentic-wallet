@@ -1,0 +1,26 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ipynb_checkpoints/
+dist/
+build/
+*.egg-info/
+
+# agent session dirs
+.codex/
+.agents/
+
+# local model artifacts (never commit weights)
+*.safetensors
+*.gguf
+*.litertlm
+*.ckpt
+*.pt
+*.pth
+*.bin
+gemma_adapter/
+artifacts/
+*.log
+
+.env

@@ -1,0 +1,208 @@
+{
+  "$defs": {
+    "Amount": {
+      "additionalProperties": false,
+      "description": "A token amount as integer base units. Never a float.\n\n``base_units`` is the on-chain integer (wei-like) as a decimal string;\n``decimals`` records the token scale for display only.",
+      "properties": {
+        "base_units": {
+          "title": "Base Units",
+          "type": "string"
+        },
+        "decimals": {
+          "title": "Decimals",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "base_units",
+        "decimals"
+      ],
+      "title": "Amount",
+      "type": "object"
+    },
+    "IntentConstraints": {
+      "additionalProperties": false,
+      "properties": {
+        "max_slippage_bps": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Slippage Bps"
+        },
+        "preserve_gas_reserve": {
+          "default": false,
+          "title": "Preserve Gas Reserve",
+          "type": "boolean"
+        },
+        "gas_reserve": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Amount"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "deadline_unix": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Deadline Unix"
+        }
+      },
+      "title": "IntentConstraints",
+      "type": "object"
+    },
+    "UntrustedData": {
+      "additionalProperties": false,
+      "description": "Retrieved content that is NOT trusted (token metadata, protocol docs).\n\nUntrusted content lives only inside this typed wrapper. It must never be\nmerged into instruction context and must never populate an actionable field\nsuch as a recipient, address, amount, or chain. See plan.md P5.",
+      "properties": {
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "content": {
+          "title": "Content",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source",
+        "content"
+      ],
+      "title": "UntrustedData",
+      "type": "object"
+    },
+    "UsdValue": {
+      "additionalProperties": false,
+      "description": "A USD-denominated value (e.g. \"swap $300\"). Decimal string, never float.",
+      "properties": {
+        "usd": {
+          "title": "Usd",
+          "type": "string"
+        }
+      },
+      "required": [
+        "usd"
+      ],
+      "title": "UsdValue",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Actionable fields are typed and set only from trusted parsing, never\nfrom ``untrusted_context``.",
+  "properties": {
+    "user_request": {
+      "title": "User Request",
+      "type": "string"
+    },
+    "normalized_action": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Normalized Action"
+    },
+    "chain_id": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Chain Id"
+    },
+    "input_asset": {
+      "anyOf": [
+        {
+          "pattern": "^[a-z0-9]+:[a-z0-9\\-]+$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Input Asset"
+    },
+    "output_asset": {
+      "anyOf": [
+        {
+          "pattern": "^[a-z0-9]+:[a-z0-9\\-]+$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Output Asset"
+    },
+    "amount": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Amount"
+        },
+        {
+          "$ref": "#/$defs/UsdValue"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Amount"
+    },
+    "constraints": {
+      "$ref": "#/$defs/IntentConstraints"
+    },
+    "missing_fields": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Missing Fields",
+      "type": "array"
+    },
+    "ambiguities": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Ambiguities",
+      "type": "array"
+    },
+    "untrusted_context": {
+      "items": {
+        "$ref": "#/$defs/UntrustedData"
+      },
+      "title": "Untrusted Context",
+      "type": "array"
+    }
+  },
+  "required": [
+    "user_request"
+  ],
+  "title": "Intent",
+  "type": "object"
+}

@@ -1,0 +1,5 @@
+Return only one JSON tool call with exactly these fields: action, arguments, reason.
+Available actions: get_swap_quote, request_missing_information, reject_request.
+User request: Swap 300 USDC for ETH on Base with no more than 0.5% slippage.
+Workflow state: PLANNING.
+Do not execute anything. Select the next available action.

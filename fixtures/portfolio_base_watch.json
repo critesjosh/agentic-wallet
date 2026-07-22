@@ -1,0 +1,18 @@
+{
+  "chain_id": 8453,
+  "address": "0x1111111111111111111111111111111111111111",
+  "native_balance": { "base_units": "241000000000000000", "decimals": 18 },
+  "token_balances": [
+    { "asset_id": "base:usdc", "amount": { "base_units": "300000000", "decimals": 6 } },
+    { "asset_id": "base:weth", "amount": { "base_units": "50000000000000000", "decimals": 18 } }
+  ],
+  "allowances": [
+    {
+      "asset_id": "base:usdc",
+      "spender_id": "base:fixture-swap-router",
+      "amount": { "base_units": "0", "decimals": 6 }
+    }
+  ],
+  "as_of_block": 21000000,
+  "stale": false
+}

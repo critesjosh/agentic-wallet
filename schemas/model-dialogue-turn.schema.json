@@ -1,0 +1,87 @@
+{
+  "$defs": {
+    "ToolCall": {
+      "additionalProperties": false,
+      "description": "Schema-validated before anything runs. Never executed as free-form text.\n\n``arguments`` are validated per-tool by the harness (fail-closed).",
+      "properties": {
+        "action": {
+          "title": "Action",
+          "type": "string"
+        },
+        "arguments": {
+          "additionalProperties": true,
+          "title": "Arguments",
+          "type": "object"
+        },
+        "reason": {
+          "default": "",
+          "title": "Reason",
+          "type": "string"
+        },
+        "expected_next_state": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expected Next State"
+        }
+      },
+      "required": [
+        "action"
+      ],
+      "title": "ToolCall",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Model output. ``message`` is display-only and never parsed as a command.",
+  "properties": {
+    "message": {
+      "maxLength": 2000,
+      "minLength": 1,
+      "title": "Message",
+      "type": "string"
+    },
+    "intent": {
+      "enum": [
+        "conversation",
+        "offer_action",
+        "propose_tool",
+        "clarify",
+        "refuse"
+      ],
+      "title": "Intent",
+      "type": "string"
+    },
+    "proposed_action": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ToolCall"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "suggested_actions": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 3,
+      "title": "Suggested Actions",
+      "type": "array"
+    }
+  },
+  "required": [
+    "message",
+    "intent"
+  ],
+  "title": "ModelDialogueTurn",
+  "type": "object"
+}

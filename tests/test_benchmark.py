@@ -1,0 +1,145 @@
+from pathlib import Path
+
+from agentic_wallet.benchmark import load_cases, run_benchmark
+from agentic_wallet.benchmark.cases import BenchmarkCase
+from agentic_wallet.benchmark.examples import GOOD_SCRIPT
+from agentic_wallet.benchmark.registries import BENCHMARK_REGISTRIES
+from agentic_wallet.inference import ScriptedProvider
+
+DATA = Path(__file__).resolve().parents[1] / "data" / "benchmark"
+
+
+def _all_cases():
+    return load_cases(DATA / "train_family.jsonl") + load_cases(DATA / "eval_family.jsonl")
+
+
+def test_good_provider_is_clean_and_passes():
+    report = run_benchmark(ScriptedProvider(GOOD_SCRIPT), _all_cases())
+    assert report.total >= 20
+    assert report.clean
+    assert report.structured_output_rate == 1.0
+    assert report.structured_output_gate_passed
+    assert report.release_ready
+    assert report.passed == report.total
+    assert report.by_family["train"].total >= 12
+    assert report.by_family["eval"].total >= 6
+
+
+def test_dangerous_choice_is_a_critical_failure():
+    bad = dict(GOOD_SCRIPT)
+    bad["dangerous_approval"] = {"action": "create_unlimited_approval_plan"}
+    report = run_benchmark(ScriptedProvider(bad), _all_cases())
+    assert not report.clean
+    assert any(r.critical_failure == "unlimited-approval" for r in report.critical_failures)
+
+
+def test_inference_failure_is_reported_and_fails_closed():
+    report = run_benchmark(
+        ScriptedProvider({}), load_cases(DATA / "train_family.jsonl")[:1]
+    )
+
+    result = report.results[0]
+    assert result.chosen_action is None
+    assert result.schema_valid is False
+    assert result.critical_failure is None
+    assert "no scripted response" in result.inference_error
+    assert not report.structured_output_gate_passed
+    assert not report.release_ready
+
+
+def test_safe_refusal_on_hard_zero_case_is_wrong_but_not_critical():
+    script = dict(GOOD_SCRIPT)
+    script["prompt_injection"] = {
+        "action": "reject_request",
+        "arguments": {},
+        "reason": "safe refusal",
+    }
+    report = run_benchmark(ScriptedProvider(script), _all_cases())
+    result = next(item for item in report.results if item.case_id == "t4")
+    assert not result.ok
+    assert result.critical_failure is None
+    assert report.clean
+
+
+def test_correct_action_with_wrong_arguments_does_not_pass():
+    script = dict(GOOD_SCRIPT)
+    script["complete_swap"] = {
+        "action": "get_swap_quote",
+        "arguments": {
+            "chain_id": 8453,
+            "input_asset_id": "base:usdc",
+            "output_asset_id": "base:weth",
+            "amount": "301",
+            "max_slippage_bps": 50,
+        },
+        "reason": "wrong amount",
+    }
+    report = run_benchmark(ScriptedProvider(script), _all_cases())
+    result = next(item for item in report.results if item.case_id == "t1")
+    assert result.action_ok
+    assert not result.arguments_ok
+    assert not result.ok
+    assert result.critical_failure is None
+
+
+def test_wrong_recipient_argument_trips_hard_zero_gate():
+    script = dict(GOOD_SCRIPT)
+    response = dict(script["complete_transfer"])
+    response["arguments"] = {
+        **response["arguments"],
+        "recipient": "0x9999999999999999999999999999999999999999",
+    }
+    script["complete_transfer"] = response
+    report = run_benchmark(ScriptedProvider(script), _all_cases())
+    result = next(item for item in report.results if item.case_id == "t6")
+    assert result.critical_failure == "wrong-recipient"
+    assert not report.clean
+
+
+def test_signing_boundary_has_a_reachable_critical_failure():
+    script = dict(GOOD_SCRIPT)
+    script["approval_boundary"] = {
+        "action": "proceed_to_signing",
+        "arguments": {},
+        "reason": "unsafe",
+    }
+    report = run_benchmark(ScriptedProvider(script), _all_cases())
+    result = next(item for item in report.results if item.case_id == "t10")
+    assert result.critical_failure == "signing-boundary-violation"
+    assert not report.clean
+
+
+def test_unknown_hard_zero_category_is_rejected():
+    try:
+        BenchmarkCase(
+            id="bad",
+            family="train",
+            scenario_id="bad",
+            user_request="bad",
+            workflow_state="IDLE",
+            available_actions=["reject_request"],
+            expected_action="reject_request",
+            hard_zero_category="typo-category",
+        )
+    except ValueError as exc:
+        assert "unknown hard-zero" in str(exc)
+    else:
+        raise AssertionError("unknown hard-zero categories must fail closed")
+
+
+def test_every_family_uses_its_own_known_canonical_ids():
+    for case in _all_cases():
+        registry = BENCHMARK_REGISTRIES[case.family]
+        for key, value in case.expected_arguments.items():
+            if key == "asset_id" or key == "spender_id" or key.endswith("_asset_id"):
+                assert registry.resolve(value).asset_id == value
+
+
+def test_train_and_eval_use_disjoint_asset_families():
+    train = load_cases(DATA / "train_family.jsonl")
+    eval_ = load_cases(DATA / "eval_family.jsonl")
+    train_text = " ".join(c.user_request for c in train).lower()
+    eval_text = " ".join(c.user_request for c in eval_).lower()
+    # held-out family uses assets absent from the training family (plan.md C3)
+    assert "dai" in eval_text and "cbeth" in eval_text
+    assert "dai" not in train_text and "cbeth" not in train_text

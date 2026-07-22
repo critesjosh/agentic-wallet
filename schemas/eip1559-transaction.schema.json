@@ -1,0 +1,101 @@
+{
+  "$defs": {
+    "AccessListEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "address": {
+          "pattern": "^0x[0-9a-fA-F]{40}$",
+          "title": "Address",
+          "type": "string"
+        },
+        "storage_keys": {
+          "items": {
+            "pattern": "^0x[0-9a-fA-F]{64}$",
+            "type": "string"
+          },
+          "title": "Storage Keys",
+          "type": "array"
+        }
+      },
+      "required": [
+        "address"
+      ],
+      "title": "AccessListEntry",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The real transaction preimage fields, not a display-only summary.",
+  "properties": {
+    "transaction_type": {
+      "const": 2,
+      "default": 2,
+      "title": "Transaction Type",
+      "type": "integer"
+    },
+    "chain_id": {
+      "title": "Chain Id",
+      "type": "integer"
+    },
+    "nonce": {
+      "pattern": "^(0|[1-9]\\d*)$",
+      "title": "Nonce",
+      "type": "string"
+    },
+    "max_priority_fee_per_gas": {
+      "pattern": "^(0|[1-9]\\d*)$",
+      "title": "Max Priority Fee Per Gas",
+      "type": "string"
+    },
+    "max_fee_per_gas": {
+      "pattern": "^(0|[1-9]\\d*)$",
+      "title": "Max Fee Per Gas",
+      "type": "string"
+    },
+    "gas_limit": {
+      "pattern": "^(0|[1-9]\\d*)$",
+      "title": "Gas Limit",
+      "type": "string"
+    },
+    "from_address": {
+      "pattern": "^0x[0-9a-fA-F]{40}$",
+      "title": "From Address",
+      "type": "string"
+    },
+    "to_address": {
+      "pattern": "^0x[0-9a-fA-F]{40}$",
+      "title": "To Address",
+      "type": "string"
+    },
+    "value": {
+      "pattern": "^(0|[1-9]\\d*)$",
+      "title": "Value",
+      "type": "string"
+    },
+    "data": {
+      "default": "0x",
+      "pattern": "^0x[0-9a-fA-F]*$",
+      "title": "Data",
+      "type": "string"
+    },
+    "access_list": {
+      "items": {
+        "$ref": "#/$defs/AccessListEntry"
+      },
+      "title": "Access List",
+      "type": "array"
+    }
+  },
+  "required": [
+    "chain_id",
+    "nonce",
+    "max_priority_fee_per_gas",
+    "max_fee_per_gas",
+    "gas_limit",
+    "from_address",
+    "to_address",
+    "value"
+  ],
+  "title": "Eip1559Transaction",
+  "type": "object"
+}

@@ -1,0 +1,18 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "words": [
+    "TTFT", "calldata", "LoRA", "quantize", "quantized", "quantization",
+    "tokenizer", "Gemma", "OpenRouter", "Ollama", "USDC", "cbETH", "WETH",
+    "ERC", "EVM", "onchain", "mempool", "GBNF", "LiteRT", "bitsandbytes",
+    "peft", "safetensors", "pydantic", "nbstripout", "Colab", "unsigned",
+    "untuned", "reproducible", "jsonl", "dataclass", "agentic", "fastapi",
+    "uvicorn", "starlette", "importorskip", "venv", "pytest", "ipynb",
+    "setuptools", "httpx", "testpaths", "addopts", "negotiables",
+    "requotes", "resimulate", "xblockhash"
+  ],
+  "ignorePaths": [
+    "*.ipynb", ".venv/**", "**/__pycache__/**", "data/**", "fixtures/**",
+    "schemas/**", ".git/**"
+  ]
+}

@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow,noarchive" />
+    <title>Agentic Wallet · Local transcript</title>
+    <style>
+      :root { color-scheme: dark; --bg: #0d100e; --panel: #171c19; --line: #303b35; --ink: #f4f1e8; --muted: #aaa99f; --lime: #b8f35b; --blue: #78adff; --danger: #ff8674; }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 ui-sans-serif, system-ui, sans-serif; }
+      header { position: sticky; top: 0; z-index: 2; border-bottom: 1px solid var(--line); background: #0d100eef; backdrop-filter: blur(12px); }
+      .bar, main { width: min(calc(100% - 2rem), 900px); margin: auto; }
+      .bar { min-height: 4.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+      h1 { margin: 0; font-size: 1.05rem; }
+      nav { display: flex; gap: .5rem; align-items: center; }
+      a, button { border: 1px solid var(--line); border-radius: .45rem; padding: .48rem .7rem; color: var(--ink); background: transparent; font: inherit; text-decoration: none; cursor: pointer; }
+      button:hover, a:hover { border-color: var(--lime); }
+      #clear { color: var(--danger); }
+      main { padding: 2rem 0 5rem; }
+      .notice { border-left: 3px solid var(--lime); padding: .9rem 1rem; background: #b8f35b12; color: var(--muted); }
+      .notice strong { color: var(--ink); }
+      .meta { margin: 1rem 0 1.5rem; color: var(--muted); font: .78rem ui-monospace, monospace; }
+      .session { margin-top: 2rem; }
+      .session h2 { margin: 0 0 .8rem; color: var(--muted); font: .78rem ui-monospace, monospace; word-break: break-all; }
+      .turn { margin: 0 0 1rem; padding: 1rem; border: 1px solid var(--line); border-radius: .65rem; background: var(--panel); }
+      .turn-meta { display: flex; justify-content: space-between; gap: 1rem; color: var(--muted); font: .72rem ui-monospace, monospace; }
+      .message { margin-top: .8rem; }
+      .role { display: block; margin-bottom: .25rem; color: var(--blue); font: 700 .7rem ui-monospace, monospace; letter-spacing: .08em; text-transform: uppercase; }
+      .assistant .role { color: var(--lime); }
+      .text { white-space: pre-wrap; overflow-wrap: anywhere; }
+      details { margin-top: .8rem; border-top: 1px solid var(--line); padding-top: .7rem; }
+      summary { color: var(--muted); cursor: pointer; font-size: .8rem; }
+      pre { margin: .7rem 0 0; overflow: auto; padding: .75rem; border-radius: .4rem; background: #090b0a; font: .75rem/1.45 ui-monospace, monospace; }
+      .empty { margin-top: 2rem; padding: 3rem 1rem; border: 1px dashed var(--line); border-radius: .65rem; text-align: center; color: var(--muted); }
+      @media (max-width: 560px) { .bar { align-items: flex-start; padding: .8rem 0; } nav { flex-wrap: wrap; justify-content: flex-end; } .turn-meta { display: block; } }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="bar">
+        <h1>Local debug transcript</h1>
+        <nav><a href="/">Chat</a><button id="refresh" type="button">Refresh</button><button id="clear" type="button">Clear all</button></nav>
+      </div>
+    </header>
+    <main>
+      <div class="notice"><strong>Local development only.</strong> Messages are kept in this server process, capped, never written to disk, and lost when the server restarts. They may contain sensitive wallet context; do not paste seed phrases or private keys into chat.</div>
+      <div class="meta" id="meta">Loading…</div>
+      <div id="sessions" aria-live="polite"></div>
+    </main>
+    <script>
+      const sessionsNode = document.getElementById("sessions");
+      const metaNode = document.getElementById("meta");
+
+      function node(tag, className, text) {
+        const element = document.createElement(tag);
+        if (className) element.className = className;
+        if (text !== undefined) element.textContent = text;
+        return element;
+      }
+
+      function render(payload) {
+        sessionsNode.replaceChildren();
+        const count = payload.sessions.reduce((total, session) => total + session.turns.length, 0);
+        metaNode.textContent = `${count} turn${count === 1 ? "" : "s"} across ${payload.sessions.length} session${payload.sessions.length === 1 ? "" : "s"} · memory only · newest session first`;
+        if (!count) {
+          sessionsNode.append(node("div", "empty", "No local chat turns have been recorded yet."));
+          return;
+        }
+        for (const session of payload.sessions) {
+          const section = node("section", "session");
+          section.append(node("h2", "", `session ${session.session_id}`));
+          for (const turn of session.turns) {
+            const article = node("article", "turn");
+            const turnMeta = node("div", "turn-meta");
+            turnMeta.append(node("span", "", `turn ${turn.sequence} · ${turn.workflow_state || "unknown state"}`));
+            turnMeta.append(node("time", "", new Date(turn.recorded_at).toLocaleString()));
+            article.append(turnMeta);
+            const user = node("div", "message user");
+            user.append(node("span", "role", "User"), node("div", "text", turn.user_message));
+            const assistant = node("div", "message assistant");
+            assistant.append(node("span", "role", "Assistant"), node("div", "text", turn.assistant_reply));
+            article.append(user, assistant);
+            if (turn.data !== null) {
+              const details = node("details");
+              details.append(node("summary", "", "Structured response data"), node("pre", "", JSON.stringify(turn.data, null, 2)));
+              article.append(details);
+            }
+            section.append(article);
+          }
+          sessionsNode.append(section);
+        }
+      }
+
+      async function load() {
+        const response = await fetch("/debug/transcripts.json", { cache: "no-store" });
+        if (!response.ok) throw new Error(`Transcript request failed: ${response.status}`);
+        render(await response.json());
+      }
+
+      document.getElementById("refresh").addEventListener("click", () => load().catch(showError));
+      document.getElementById("clear").addEventListener("click", async () => {
+        if (!confirm("Clear every in-memory debug transcript?")) return;
+        const response = await fetch("/debug/transcripts", { method: "DELETE" });
+        if (!response.ok) return showError(new Error(`Clear failed: ${response.status}`));
+        await load();
+      });
+      function showError(error) { metaNode.textContent = error.message; }
+      load().catch(showError);
+    </script>
+  </body>
+</html>

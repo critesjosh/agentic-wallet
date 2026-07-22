@@ -1,0 +1,113 @@
+{
+  "$defs": {
+    "Allowance": {
+      "additionalProperties": false,
+      "properties": {
+        "asset_id": {
+          "pattern": "^[a-z0-9]+:[a-z0-9\\-]+$",
+          "title": "Asset Id",
+          "type": "string"
+        },
+        "spender_id": {
+          "pattern": "^[a-z0-9]+:[a-z0-9\\-]+$",
+          "title": "Spender Id",
+          "type": "string"
+        },
+        "amount": {
+          "$ref": "#/$defs/Amount"
+        }
+      },
+      "required": [
+        "asset_id",
+        "spender_id",
+        "amount"
+      ],
+      "title": "Allowance",
+      "type": "object"
+    },
+    "Amount": {
+      "additionalProperties": false,
+      "description": "A token amount as integer base units. Never a float.\n\n``base_units`` is the on-chain integer (wei-like) as a decimal string;\n``decimals`` records the token scale for display only.",
+      "properties": {
+        "base_units": {
+          "title": "Base Units",
+          "type": "string"
+        },
+        "decimals": {
+          "title": "Decimals",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "base_units",
+        "decimals"
+      ],
+      "title": "Amount",
+      "type": "object"
+    },
+    "TokenBalance": {
+      "additionalProperties": false,
+      "properties": {
+        "asset_id": {
+          "pattern": "^[a-z0-9]+:[a-z0-9\\-]+$",
+          "title": "Asset Id",
+          "type": "string"
+        },
+        "amount": {
+          "$ref": "#/$defs/Amount"
+        }
+      },
+      "required": [
+        "asset_id",
+        "amount"
+      ],
+      "title": "TokenBalance",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "chain_id": {
+      "title": "Chain Id",
+      "type": "integer"
+    },
+    "address": {
+      "title": "Address",
+      "type": "string"
+    },
+    "native_balance": {
+      "$ref": "#/$defs/Amount"
+    },
+    "token_balances": {
+      "items": {
+        "$ref": "#/$defs/TokenBalance"
+      },
+      "title": "Token Balances",
+      "type": "array"
+    },
+    "allowances": {
+      "items": {
+        "$ref": "#/$defs/Allowance"
+      },
+      "title": "Allowances",
+      "type": "array"
+    },
+    "as_of_block": {
+      "title": "As Of Block",
+      "type": "integer"
+    },
+    "stale": {
+      "default": false,
+      "title": "Stale",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "chain_id",
+    "address",
+    "native_balance",
+    "as_of_block"
+  ],
+  "title": "Portfolio",
+  "type": "object"
+}

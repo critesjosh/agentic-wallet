@@ -1,0 +1,26 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "allowed": {
+      "title": "Allowed",
+      "type": "boolean"
+    },
+    "violations": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Violations",
+      "type": "array"
+    },
+    "requires_elevated_confirmation": {
+      "default": false,
+      "title": "Requires Elevated Confirmation",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "allowed"
+  ],
+  "title": "PolicyResult",
+  "type": "object"
+}

@@ -1,0 +1,82 @@
+{
+  "$defs": {
+    "Amount": {
+      "additionalProperties": false,
+      "description": "A token amount as integer base units. Never a float.\n\n``base_units`` is the on-chain integer (wei-like) as a decimal string;\n``decimals`` records the token scale for display only.",
+      "properties": {
+        "base_units": {
+          "title": "Base Units",
+          "type": "string"
+        },
+        "decimals": {
+          "title": "Decimals",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "base_units",
+        "decimals"
+      ],
+      "title": "Amount",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "quote_id": {
+      "title": "Quote Id",
+      "type": "string"
+    },
+    "chain_id": {
+      "title": "Chain Id",
+      "type": "integer"
+    },
+    "input_asset_id": {
+      "pattern": "^[a-z0-9]+:[a-z0-9\\-]+$",
+      "title": "Input Asset Id",
+      "type": "string"
+    },
+    "output_asset_id": {
+      "pattern": "^[a-z0-9]+:[a-z0-9\\-]+$",
+      "title": "Output Asset Id",
+      "type": "string"
+    },
+    "amount_in": {
+      "$ref": "#/$defs/Amount"
+    },
+    "amount_out": {
+      "$ref": "#/$defs/Amount"
+    },
+    "router_id": {
+      "pattern": "^[a-z0-9]+:[a-z0-9\\-]+$",
+      "title": "Router Id",
+      "type": "string"
+    },
+    "max_slippage_bps": {
+      "title": "Max Slippage Bps",
+      "type": "integer"
+    },
+    "issued_at_block": {
+      "title": "Issued At Block",
+      "type": "integer"
+    },
+    "expires_at": {
+      "title": "Expires At",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "quote_id",
+    "chain_id",
+    "input_asset_id",
+    "output_asset_id",
+    "amount_in",
+    "amount_out",
+    "router_id",
+    "max_slippage_bps",
+    "issued_at_block",
+    "expires_at"
+  ],
+  "title": "SwapQuote",
+  "type": "object"
+}

@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Current architecture, delivery status, testable features, and roadmap for Agentic Wallet." />
+    <title>Agentic Wallet · Project Map</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --ink: #f4f1e8;
+        --muted: #aaa99f;
+        --surface: #151917;
+        --surface-2: #1b211e;
+        --line: #303b35;
+        --lime: #b8f35b;
+        --lime-soft: #b8f35b1c;
+        --amber: #ffc65c;
+        --amber-soft: #ffc65c1a;
+        --slate: #858f89;
+        --red: #ff8674;
+        --max: 1180px;
+      }
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        background:
+          radial-gradient(circle at 82% 0%, #263721 0, transparent 28rem),
+          #0d100e;
+        color: var(--ink);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.55;
+      }
+      a { color: inherit; }
+      .shell { width: min(calc(100% - 2rem), var(--max)); margin: 0 auto; }
+      .eyebrow, .label {
+        color: var(--lime);
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: .73rem;
+        font-weight: 700;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+      }
+      nav {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        border-bottom: 1px solid #ffffff12;
+        background: #0d100ed9;
+        backdrop-filter: blur(14px);
+      }
+      .nav-inner { min-height: 3.8rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+      .brand { display: flex; align-items: center; gap: .65rem; text-decoration: none; font-weight: 750; }
+      .brand-mark { width: .75rem; height: .75rem; border: 2px solid var(--lime); border-radius: 50%; box-shadow: 0 0 0 .25rem var(--lime-soft); }
+      .nav-links { display: flex; gap: .5rem; align-items: center; }
+      .nav-links a { color: var(--muted); text-decoration: none; font-size: .86rem; padding: .45rem .65rem; border-radius: .4rem; }
+      .nav-links a:hover, .nav-links a:focus-visible { color: var(--ink); background: #ffffff0b; outline: none; }
+      .nav-links .chat-link { color: #11150f; background: var(--lime); font-weight: 750; }
+      header { padding: clamp(4.5rem, 10vw, 8rem) 0 4rem; }
+      .hero-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(17rem, .6fr); gap: clamp(2rem, 7vw, 6rem); align-items: end; }
+      h1 { max-width: 12ch; margin: .8rem 0 1.35rem; font-size: clamp(3rem, 8vw, 6.8rem); line-height: .9; letter-spacing: -.065em; }
+      .lede { max-width: 42rem; color: #cbc9c0; font-size: clamp(1.05rem, 2vw, 1.3rem); }
+      .snapshot { border-top: 1px solid var(--line); padding-top: 1.2rem; }
+      .snapshot-row { display: grid; grid-template-columns: 5.4rem 1fr; gap: 1rem; padding: .65rem 0; border-bottom: 1px solid #ffffff0e; font-size: .9rem; }
+      .snapshot-row span:first-child { color: var(--muted); }
+      .live-dot { display: inline-block; width: .55rem; height: .55rem; margin-right: .45rem; border-radius: 50%; background: var(--amber); }
+      main section { padding: 5rem 0; border-top: 1px solid var(--line); }
+      .section-head { display: grid; grid-template-columns: minmax(12rem, .45fr) minmax(0, 1fr); gap: 2rem; margin-bottom: 2.5rem; }
+      h2 { margin: 0; max-width: 18ch; font-size: clamp(2rem, 4vw, 3.65rem); line-height: 1; letter-spacing: -.045em; }
+      .section-head p { margin: .25rem 0 0; max-width: 43rem; color: var(--muted); font-size: 1rem; }
+      .status-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+      .status-card { min-height: 15rem; padding: 1.35rem; border: 1px solid var(--line); border-radius: .8rem; background: linear-gradient(145deg, #1b211e, #111512); }
+      .status-card h3 { margin: 1.1rem 0 .6rem; font-size: 1.3rem; }
+      .status-card p { color: var(--muted); margin: 0; font-size: .92rem; }
+      .pill { display: inline-flex; align-items: center; gap: .4rem; padding: .28rem .55rem; border-radius: 99px; font-size: .7rem; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+      .pill::before { content: ""; width: .4rem; height: .4rem; border-radius: 50%; background: currentColor; }
+      .working { color: var(--lime); background: var(--lime-soft); }
+      .partial { color: var(--amber); background: var(--amber-soft); }
+      .locked { color: var(--slate); background: #858f8917; }
+      .boundary { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #ffffff0e; color: #d7d5cd; font-size: .84rem; }
+      .architecture { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; align-items: stretch; }
+      .lane { position: relative; padding: 1.6rem; border-radius: .8rem; background: var(--surface); border: 1px solid var(--line); }
+      .lane:not(:last-child)::after { content: "\2192"; position: absolute; right: -1.55rem; top: 50%; color: var(--lime); font-size: 1.4rem; }
+      .lane-number { color: var(--lime); font-family: ui-monospace, monospace; font-size: .8rem; }
+      .lane h3 { margin: .8rem 0 .4rem; font-size: 1.3rem; }
+      .lane > p { min-height: 4.3rem; margin: 0 0 1.2rem; color: var(--muted); font-size: .9rem; }
+      .lane ul { list-style: none; padding: 0; margin: 0; }
+      .lane li { padding: .58rem 0; border-top: 1px solid #ffffff0e; font-size: .84rem; }
+      .lane.locked-lane { border-style: dashed; background: transparent; }
+      .invariant { margin-top: 1.25rem; padding: 1.1rem 1.25rem; border-left: 3px solid var(--lime); background: var(--lime-soft); font-weight: 650; }
+      .roadmap { display: grid; gap: 0; }
+      .phase { display: grid; grid-template-columns: 6rem minmax(12rem, .55fr) minmax(0, 1fr); gap: 1.4rem; padding: 1.35rem 0; border-top: 1px solid var(--line); align-items: start; }
+      .phase:last-child { border-bottom: 1px solid var(--line); }
+      .phase-index { color: var(--muted); font-family: ui-monospace, monospace; font-size: .8rem; padding-top: .25rem; }
+      .phase h3 { margin: 0; font-size: 1.05rem; }
+      .phase-copy { color: var(--muted); font-size: .9rem; }
+      .phase-copy strong { display: block; margin-bottom: .25rem; color: var(--ink); font-weight: 650; }
+      .test-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+      .test-card { padding: 1.4rem; border-radius: .8rem; background: var(--surface-2); border: 1px solid var(--line); }
+      .test-card h3 { margin: 0 0 .4rem; font-size: 1.05rem; }
+      .test-card p { margin: 0 0 1rem; color: var(--muted); font-size: .87rem; }
+      pre { margin: 0; padding: .9rem; overflow-x: auto; border-radius: .45rem; background: #090b0a; color: #d7ffc1; font: .78rem/1.55 ui-monospace, SFMono-Regular, Menlo, monospace; }
+      .limits { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+      .limit-list { margin: 0; padding: 0; list-style: none; }
+      .limit-list li { padding: .8rem 0; border-top: 1px solid var(--line); color: var(--muted); }
+      .limit-list strong { color: var(--ink); }
+      footer { padding: 3rem 0 5rem; color: var(--muted); font-size: .82rem; }
+      .footer-inner { display: flex; justify-content: space-between; gap: 1rem; }
+      @media (max-width: 820px) {
+        .hero-grid, .section-head, .architecture, .status-grid, .test-grid, .limits { grid-template-columns: 1fr; }
+        .lane:not(:last-child)::after { content: "\2193"; right: auto; top: auto; bottom: -1.65rem; left: 50%; }
+        .lane > p { min-height: 0; }
+        .phase { grid-template-columns: 4rem 1fr; }
+        .phase-copy { grid-column: 2; }
+      }
+      @media (max-width: 560px) {
+        .nav-links a:not(.chat-link) { display: none; }
+        h1 { font-size: clamp(3rem, 17vw, 5rem); }
+        .phase { grid-template-columns: 1fr; gap: .35rem; }
+        .phase-copy { grid-column: 1; }
+        .footer-inner { display: block; }
+      }
+      @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+    </style>
+  </head>
+  <body>
+    <nav aria-label="Project navigation">
+      <div class="shell nav-inner">
+        <a class="brand" href="/project"><span class="brand-mark" aria-hidden="true"></span> Agentic Wallet</a>
+        <div class="nav-links">
+          <a href="#architecture">Architecture</a>
+          <a href="#roadmap">Roadmap</a>
+          <a href="#test-now">Test now</a>
+          <a class="chat-link" href="/">Open demo</a>
+        </div>
+      </div>
+    </nav>
+
+    <header>
+      <div class="shell hero-grid">
+        <div>
+          <div class="eyebrow">Build report · July 22, 2026</div>
+          <h1>Where the project stands.</h1>
+          <p class="lede">The safety core and read-only proof are real. The product can interpret a small set of wallet questions through Gemma 4 E2B and execute typed fixture-backed reads. It cannot touch real funds.</p>
+        </div>
+        <div class="snapshot" aria-label="Current snapshot">
+          <div class="snapshot-row"><span>Milestone</span><strong>Web read-only POC</strong></div>
+          <div class="snapshot-row"><span>Target</span><strong>Gemma 4 E2B on mobile</strong></div>
+          <div class="snapshot-row"><span>Chain</span><strong>Base fixture</strong></div>
+          <div class="snapshot-row"><span>Runtime</span><strong><span class="live-dot" id="runtime-dot"></span><span id="runtime">Checking this server…</span></strong></div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section id="now">
+        <div class="shell">
+          <div class="section-head">
+            <h2>What works today</h2>
+            <p>Three layers are taking shape at different speeds. The page is intentionally conservative: “working” means exercised by code and tests, not merely described in the plan.</p>
+          </div>
+          <div class="status-grid">
+            <article class="status-card">
+              <span class="pill working">Working</span>
+              <h3>Read-only chat POC</h3>
+              <p>Ask questions naturally or request the fixture portfolio, ETH/USDC/WETH balances, allowances, or registry. Display-only conversation is separated from the optional typed proposal, and deterministic code validates arguments before execution.</p>
+              <div class="boundary">Local Ollama, local Transformers, llama.cpp HTTP, OpenRouter, and a deterministic fallback share one provider seam.</div>
+            </article>
+            <article class="status-card">
+              <span class="pill working">Working in core</span>
+              <h3>Unsigned safety flow</h3>
+              <p>Code can construct transfer and pinned-route swap plans, simulate expected balance changes, apply wallet policy, bind approval to a C1 digest, and invalidate stale or mutated approval.</p>
+              <div class="boundary">This flow is tested at the Python layer but is not yet connected end-to-end to the chat interface or live providers.</div>
+            </article>
+            <article class="status-card">
+              <span class="pill locked">Not enabled</span>
+              <h3>No signing or key custody</h3>
+              <p>There is a typed EIP-1559 signing-request schema, but no Ethereum MCP signer, secure key store, transaction broadcast, or receipt monitor. The web app explicitly reports <code>signing: false</code>.</p>
+              <div class="boundary">A signing request from chat is rejected before model inference. No private key is available to the model or current server.</div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="architecture">
+        <div class="shell">
+          <div class="section-head">
+            <h2>The trust split</h2>
+            <p>The model is useful but never trusted with authority. Every consequential boundary remains outside model weights, including address resolution, arithmetic, policy, approval freshness, and signing.</p>
+          </div>
+          <div class="architecture" aria-label="Architecture flow">
+            <article class="lane">
+              <div class="lane-number">01 / PROPOSE</div>
+              <h3>Chat + Gemma</h3>
+              <p>Understands the request and proposes one narrow, structured action.</p>
+              <ul>
+                <li>Swappable inference provider</li>
+                <li>Structured dialogue + typed proposals</li>
+                <li>Untuned E2B baseline today</li>
+                <li>No secrets and no authority</li>
+              </ul>
+            </article>
+            <article class="lane">
+              <div class="lane-number">02 / ENFORCE</div>
+              <h3>Deterministic harness</h3>
+              <p>Resolves trusted identifiers, checks exact values, simulates, and enforces policy.</p>
+              <ul>
+                <li>Versioned typed schemas</li>
+                <li>Registry as root of trust</li>
+                <li>Workflow state machine</li>
+                <li>C1 approval digest + freshness</li>
+              </ul>
+            </article>
+            <article class="lane locked-lane">
+              <div class="lane-number">03 / AUTHORIZE</div>
+              <h3>Wallet signer</h3>
+              <p>Will render and sign only the exact user-approved transaction after every guard passes.</p>
+              <ul>
+                <li>Secure OS-backed key custody</li>
+                <li>Single-use authorization</li>
+                <li>Signer-side human review</li>
+                <li>Currently absent and locked</li>
+              </ul>
+            </article>
+          </div>
+          <div class="invariant">Model proposes → deterministic code enforces → wallet holds signing authority.</div>
+        </div>
+      </section>
+
+      <section id="roadmap">
+        <div class="shell">
+          <div class="section-head">
+            <h2>Plan progress</h2>
+            <p>The original numbered phases are useful, but delivery is deliberately overlapping: the mobile-runtime spike started early to de-risk the eventual on-device product.</p>
+          </div>
+          <div class="roadmap">
+            <article class="phase"><div class="phase-index">01 · DONE</div><h3>Schemas + state machine</h3><div class="phase-copy"><strong>The foundation is implemented.</strong>Strict models, canonical serialization, approval digesting, terminal states, quote expiry, and re-simulation edges have tests.</div></article>
+            <article class="phase"><div class="phase-index">02 · PART</div><h3>Read-only harness</h3><div class="phase-copy"><strong>Fixture reads work; live-chain reads do not.</strong>Portfolio, balances, allowances, and registry are available. Transaction history, RPC-backed data, provider privacy controls, and signed registry updates remain.</div></article>
+            <article class="phase"><div class="phase-index">03 · PART</div><h3>Baseline evaluation</h3><div class="phase-copy"><strong>E2B has a historical six-case baseline, not a passing release gate.</strong>Local Ollama produced 5/6 passing cases and Android llama.cpp produced 3/6. The benchmark now has 22 argument-scored train/held-out cases and needs a fresh baseline run. E4B comparison and real-device metrics remain.</div></article>
+            <article class="phase"><div class="phase-index">04 · PART</div><h3>Planning + simulation</h3><div class="phase-copy"><strong>The deterministic Python flow works.</strong>Transfer/swap construction, gas reserve, quote expiry, state diffs, policy, and approval invalidation exist. A real quote route, simulator, human summary, and chat integration remain.</div></article>
+            <article class="phase"><div class="phase-index">05 · PART</div><h3>Dataset generator</h3><div class="phase-copy"><strong>Seed train and held-out evaluation files exist.</strong>The programmatic generator, versioned validation pipeline, larger adversarial families, and error-driven expansion are still to build.</div></article>
+            <article class="phase"><div class="phase-index">06 · NEXT</div><h3>QLoRA fine-tuning</h3><div class="phase-copy"><strong>Not started by design.</strong>First settle the LiteRT conversion path and expand the benchmark so training is aimed at measured failures rather than anecdotes.</div></article>
+            <article class="phase"><div class="phase-index">07 · SPIKE</div><h3>On-device integration</h3><div class="phase-copy"><strong>Runtime feasibility is partially proven.</strong>The GGUF emulator path ran but was slow and unreliable. A stock 2.59 GB LiteRT-LM artifact completed desktop CPU inference; its structured-output behavior, Android packaging, real-device latency, memory, and thermals remain gates.</div></article>
+            <article class="phase"><div class="phase-index">08 · LOCKED</div><h3>User-confirmed signing</h3><div class="phase-copy"><strong>Schema scaffolding only.</strong>Implement the Ethereum MCP signer after the read/simulate experience is connected and reviewed. Keys must stay in secure storage and outside model context.</div></article>
+          </div>
+        </div>
+      </section>
+
+      <section id="test-now">
+        <div class="shell">
+          <div class="section-head">
+            <h2>What you can test now</h2>
+            <p>The fastest useful test is the web chat backed by your local Ollama copy of Gemma 4 E2B. The test suite exercises the lower-level safety contracts separately.</p>
+          </div>
+          <div class="test-grid">
+            <article class="test-card">
+              <h3>1. Read-only web demo</h3>
+              <p>Starts locally on port 8000 and uses <code>gemma4:e2b</code> through Ollama by default.</p>
+              <pre>ollama serve
+./scripts/run_web_poc.sh
+# open http://127.0.0.1:8000</pre>
+            </article>
+            <article class="test-card">
+              <h3>2. Try these chat prompts</h3>
+              <p>These cover valid reads, missing information, and the hard read-only boundary.</p>
+              <pre>Show my portfolio
+What is my USDC balance?
+Show my allowances
+Show the asset registry
+Sign and send 1 ETH</pre>
+            </article>
+            <article class="test-card">
+              <h3>3. Safety and workflow tests</h3>
+              <p>Runs the schema, adversarial provider, state-machine, planning, simulation, policy, approval, and web tests.</p>
+              <pre>.venv/bin/pytest</pre>
+            </article>
+            <article class="test-card">
+              <h3>4. Untuned E2B benchmark</h3>
+              <p>Runs the 22-case, argument-scored behavioral baseline against local Ollama. Any critical failure means the model is not release-ready.</p>
+              <pre>ollama serve
+.venv/bin/python scripts/run_local_benchmark.py \
+  --provider ollama --model-id gemma4:e2b</pre>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="limits">
+        <div class="shell">
+          <div class="section-head">
+            <h2>What this proves—and doesn’t</h2>
+            <p>The current build is a capability and boundary proof. It should not be evaluated as a functioning self-custody wallet yet.</p>
+          </div>
+          <div class="limits">
+            <ul class="limit-list">
+              <li><strong>Proves:</strong> a small target model can sit behind a replaceable provider contract.</li>
+              <li><strong>Proves:</strong> invalid or unavailable tool calls fail closed.</li>
+              <li><strong>Proves:</strong> deterministic plans can be bound to simulation, policy, and explicit approval.</li>
+              <li><strong>Proves:</strong> state-changing chat requests are blocked in the current demo.</li>
+            </ul>
+            <ul class="limit-list">
+              <li><strong>Does not prove:</strong> accurate behavior on a broad production benchmark.</li>
+              <li><strong>Does not prove:</strong> acceptable speed, memory, or thermals on a real phone.</li>
+              <li><strong>Does not prove:</strong> correctness of live quotes, RPC data, or simulations.</li>
+              <li><strong>Does not prove:</strong> secure transaction signing or safe mainnet operation.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="shell footer-inner">
+        <span>Agentic Wallet · local-first inference, typed external facts</span>
+        <a href="/">Return to the read-only demo →</a>
+      </div>
+    </footer>
+
+    <script>
+      const runtime = document.getElementById("runtime");
+      const runtimeDot = document.getElementById("runtime-dot");
+      fetch("/capabilities")
+        .then(response => {
+          if (!response.ok) throw new Error("unavailable");
+          return response.json();
+        })
+        .then(capabilities => {
+          const labels = {
+            "server-deterministic": "Deterministic fallback online",
+            "server-model": `Local ${capabilities.model_id || "model"} online`,
+            "remote-model": `Remote ${capabilities.model_id || "model"} online`
+          };
+          runtime.textContent = labels[capabilities.inference_location] || "Server online";
+          runtimeDot.style.background = "var(--lime)";
+        })
+        .catch(() => {
+          runtime.textContent = "Static page · API unavailable";
+          runtimeDot.style.background = "var(--red)";
+        });
+    </script>
+  </body>
+</html>

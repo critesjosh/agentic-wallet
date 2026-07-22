@@ -1,0 +1,39 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "from_address": {
+      "pattern": "^0x[0-9a-fA-F]{40}$",
+      "title": "From Address",
+      "type": "string"
+    },
+    "envelope_digest": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Envelope Digest",
+      "type": "string"
+    },
+    "transaction_signing_hash": {
+      "pattern": "^0x[0-9a-fA-F]{64}$",
+      "title": "Transaction Signing Hash",
+      "type": "string"
+    },
+    "raw_transaction": {
+      "pattern": "^0x[0-9a-fA-F]*$",
+      "title": "Raw Transaction",
+      "type": "string"
+    },
+    "transaction_hash": {
+      "pattern": "^0x[0-9a-fA-F]{64}$",
+      "title": "Transaction Hash",
+      "type": "string"
+    }
+  },
+  "required": [
+    "from_address",
+    "envelope_digest",
+    "transaction_signing_hash",
+    "raw_transaction",
+    "transaction_hash"
+  ],
+  "title": "SignedTransactionResult",
+  "type": "object"
+}

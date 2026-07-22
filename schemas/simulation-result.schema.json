@@ -1,0 +1,75 @@
+{
+  "$defs": {
+    "BalanceChange": {
+      "additionalProperties": false,
+      "properties": {
+        "asset_id": {
+          "pattern": "^[a-z0-9]+:[a-z0-9\\-]+$",
+          "title": "Asset Id",
+          "type": "string"
+        },
+        "delta_base_units": {
+          "title": "Delta Base Units",
+          "type": "string"
+        }
+      },
+      "required": [
+        "asset_id",
+        "delta_base_units"
+      ],
+      "title": "BalanceChange",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "plan_id": {
+      "title": "Plan Id",
+      "type": "string"
+    },
+    "success": {
+      "title": "Success",
+      "type": "boolean"
+    },
+    "block": {
+      "title": "Block",
+      "type": "integer"
+    },
+    "gas_used": {
+      "title": "Gas Used",
+      "type": "integer"
+    },
+    "balance_changes": {
+      "items": {
+        "$ref": "#/$defs/BalanceChange"
+      },
+      "title": "Balance Changes",
+      "type": "array"
+    },
+    "unexpected_transfers": {
+      "items": {
+        "$ref": "#/$defs/BalanceChange"
+      },
+      "title": "Unexpected Transfers",
+      "type": "array"
+    },
+    "mismatch": {
+      "default": false,
+      "title": "Mismatch",
+      "type": "boolean"
+    },
+    "logs_summary": {
+      "default": "",
+      "title": "Logs Summary",
+      "type": "string"
+    }
+  },
+  "required": [
+    "plan_id",
+    "success",
+    "block",
+    "gas_used"
+  ],
+  "title": "SimulationResult",
+  "type": "object"
+}

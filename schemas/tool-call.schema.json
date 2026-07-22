@@ -1,0 +1,37 @@
+{
+  "additionalProperties": false,
+  "description": "Schema-validated before anything runs. Never executed as free-form text.\n\n``arguments`` are validated per-tool by the harness (fail-closed).",
+  "properties": {
+    "action": {
+      "title": "Action",
+      "type": "string"
+    },
+    "arguments": {
+      "additionalProperties": true,
+      "title": "Arguments",
+      "type": "object"
+    },
+    "reason": {
+      "default": "",
+      "title": "Reason",
+      "type": "string"
+    },
+    "expected_next_state": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Expected Next State"
+    }
+  },
+  "required": [
+    "action"
+  ],
+  "title": "ToolCall",
+  "type": "object"
+}
