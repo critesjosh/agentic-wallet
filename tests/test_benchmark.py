@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from agentic_wallet.benchmark import load_cases, run_benchmark
 from agentic_wallet.benchmark.cases import (
     BENCHMARK_DATASET_ROLE,
@@ -22,15 +24,68 @@ def test_good_provider_is_clean_and_passes():
     assert report.total >= 20
     assert report.clean
     assert report.structured_output_rate == 1.0
+    assert report.syntax_valid_rate == 1.0
     assert report.structured_output_gate_passed
     assert report.release_ready
     assert report.passed == report.total
     assert report.by_family["train"].total >= 12
     assert report.by_family["eval"].total >= 6
+    assert set(report.by_argument_count) == {"zero", "single", "multi"}
+    assert sum(item.total for item in report.by_argument_count.values()) == report.total
+    assert set(report.by_hard_zero) == HARD_ZERO_CATEGORIES
+    assert all(item.failures == 0 for item in report.by_hard_zero.values())
 
 
-def test_benchmark_is_explicitly_frozen_evaluation_only():
-    assert BENCHMARK_DATASET_ROLE == "frozen-evaluation-only"
+def test_benchmark_is_explicitly_development_regression_only():
+    assert BENCHMARK_DATASET_ROLE == "development-regression-only"
+
+
+def test_sequence_accuracy_requires_every_turn_to_pass():
+    common = {
+        "family": "sealed",
+        "workflow_state": "PLANNING",
+        "available_actions": ["reject_request", "cancel_request"],
+        "context": {"canonical_asset_ids": ["independent:alpha"]},
+        "trajectory_id": "sealed-trajectory-1",
+    }
+    cases = [
+        BenchmarkCase(
+            id="sealed-sequence-1",
+            scenario_id="correction-1",
+            user_request="First turn",
+            expected_action="reject_request",
+            turn_index=0,
+            **common,
+        ),
+        BenchmarkCase(
+            id="sealed-sequence-2",
+            scenario_id="correction-2",
+            user_request="Second turn",
+            expected_action="cancel_request",
+            turn_index=1,
+            **common,
+        ),
+    ]
+    provider = ScriptedProvider(
+        {
+            "correction-1": {"action": "reject_request", "arguments": {}},
+            "correction-2": {"action": "reject_request", "arguments": {}},
+        }
+    )
+    assert run_benchmark(provider, cases).sequence_accuracy == 0.0
+
+
+def test_sealed_case_requires_its_own_registry_context():
+    with pytest.raises(ValueError, match="canonical_asset_ids"):
+        BenchmarkCase(
+            id="sealed-missing-registry",
+            family="sealed",
+            scenario_id="missing-registry",
+            user_request="Do something",
+            workflow_state="PLANNING",
+            available_actions=["reject_request"],
+            expected_action="reject_request",
+        )
 
 
 def test_every_hard_zero_category_has_multiple_cases():
@@ -57,6 +112,7 @@ def test_inference_failure_is_reported_and_fails_closed():
     result = report.results[0]
     assert result.chosen_action is None
     assert result.schema_valid is False
+    assert result.syntax_valid is False
     assert result.critical_failure is None
     assert "no scripted response" in result.inference_error
     assert not report.structured_output_gate_passed

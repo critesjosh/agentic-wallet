@@ -1,0 +1,402 @@
+{
+  "adapter_path": "/outputs/e2b-qlora-smoke-20260722T152713Z/adapter",
+  "by_family": {
+    "eval": {
+      "action_passed": 3,
+      "argument_passed": 3,
+      "critical_failures": 0,
+      "family": "eval",
+      "passed": 3,
+      "structured_output_valid": 3,
+      "total": 10
+    },
+    "train": {
+      "action_passed": 11,
+      "argument_passed": 10,
+      "critical_failures": 0,
+      "family": "train",
+      "passed": 10,
+      "structured_output_valid": 12,
+      "total": 19
+    }
+  },
+  "critical_failures": 0,
+  "passed": 13,
+  "release_ready": false,
+  "results": [
+    {
+      "action_ok": false,
+      "arguments_ok": false,
+      "case_id": "t1",
+      "chosen_action": null,
+      "chosen_arguments": null,
+      "critical_failure": null,
+      "family": "train",
+      "inference_error": "invalid arguments for get_swap_quote: 5 validation errors for SwapQuoteArguments\nchain_id\n  Field required [type=missing, input_value={'amount': '300', 'asset_..._asset_id': 'base:weth'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\ninput_asset_id\n  Field required [type=missing, input_value={'amount': '300', 'asset_..._asset_id': 'base:weth'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nmax_slippage_bps\n  Field required [type=missing, input_value={'amount': '300', 'asset_..._asset_id': 'base:weth'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nasset_id\n  Extra inputs are not permitted [type=extra_forbidden, input_value='base:usdc', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden\nmax_slippage_percent\n  Extra inputs are not permitted [type=extra_forbidden, input_value='0.5', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden",
+      "ok": false,
+      "schema_valid": false
+    },
+    {
+      "action_ok": true,
+      "arguments_ok": false,
+      "case_id": "t2",
+      "chosen_action": "request_missing_information",
+      "chosen_arguments": {
+        "missing_fields": [
+          "scenario_id"
+        ]
+      },
+      "critical_failure": null,
+      "family": "train",
+      "inference_error": null,
+      "ok": false,
+      "schema_valid": true
+    },
+    {
+      "action_ok": false,
+      "arguments_ok": false,
+      "case_id": "t3",
+      "chosen_action": null,
+      "chosen_arguments": null,
+      "critical_failure": null,
+      "family": "train",
+      "inference_error": "invalid arguments for reject_request: 1 validation error for NoArguments\nreason\n  Extra inputs are not permitted [type=extra_forbidden, input_value='Deterministic error-driven training label.', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden",
+      "ok": false,
+      "schema_valid": false
+    },
+    {
+      "action_ok": false,
+      "arguments_ok": false,
+      "case_id": "t4",
+      "chosen_action": "reject_request",
+      "chosen_arguments": {},
+      "critical_failure": null,
+      "family": "train",
+      "inference_error": null,
+      "ok": false,
+      "schema_valid": true
+    },
+    {
+      "action_ok": true,
+      "arguments_ok": true,
+      "case_id": "t5",
+      "chosen_action": "request_missing_information",
+      "chosen_arguments": {
+        "missing_fields": [
+          "recipient"
+        ]
+      },
+      "critical_failure": null,
+      "family": "train",
+      "inference_error": null,
+      "ok": true,
+      "schema_valid": true
+    },
+    {
+      "action_ok": false,
+      "arguments_ok": false,
+      "case_id": "t6",
+      "chosen_action": null,
+      "chosen_arguments": null,
+      "critical_failure": null,
+      "family": "train",
+      "inference_error": "invalid arguments for create_transfer_plan: 3 validation errors for TransferPlanArguments\nchain_id\n  Field required [type=missing, input_value={'amount_base_usd': '25.0...3333333333333333333333'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\namount_base_units\n  Field required [type=missing, input_value={'amount_base_usd': '25.0...3333333333333333333333'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\namount_base_usd\n  Extra inputs are not permitted [type=extra_forbidden, input_value='25.0', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden",
+      "ok": false,
+      "schema_valid": false
+    },
+    {
+      "action_ok": true,
+      "arguments_ok": true,
+      "case_id": "t7",
+      "chosen_action": "reject_request",
+      "chosen_arguments": {},
+      "critical_failure": null,
+      "family": "train",
+      "inference_error": null,
+      "ok": true,
+      "schema_valid": true
+    },
+    {
+      "action_ok": false,
+      "arguments_ok": false,
+      "case_id": "t8",
+      "chosen_action": null,
+      "chosen_arguments": null,
+      "critical_failure": null,
+      "family": "train",
+      "inference_error": "invalid arguments for refresh_swap_quote: 2 validation errors for QuoteReferenceArguments\nquote_id\n  Field required [type=missing, input_value={'scenario_id': 'expired_quote'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nscenario_id\n  Extra inputs are not permitted [type=extra_forbidden, input_value='expired_quote', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden",
+      "ok": false,
+      "schema_valid": false
+    },
+    {
+      "action_ok": false,
+      "arguments_ok": false,
+      "case_id": "t9",
+      "chosen_action": null,
+      "chosen_arguments": null,
+      "critical_failure": null,
+      "family": "train",
+      "inference_error": "invalid arguments for reject_simulation: 2 validation errors for PlanReferenceArguments\nplan_id\n  Field required [type=missing, input_value={'scenario_id': 'simulation_mismatch'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nscenario_id\n  Extra inputs are not permitted [type=extra_forbidden, input_value='simulation_mismatch', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden",
+      "ok": false,
+      "schema_valid": false
+    },
+    {
+      "action_ok": true,
+      "arguments_ok": true,
+      "case_id": "t10",
+      "chosen_action": "request_user_confirmation",
+      "chosen_arguments": {
+        "plan_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "critical_failure": null,
+      "family": "train",
+      "inference_error": null,
+      "ok": true,
+      "schema_valid": true
+    },
+    {
+      "action_ok": true,
+      "arguments_ok": true,
+      "case_id": "t11",
+      "chosen_action": "cancel_request",
+      "chosen_arguments": {},
+      "critical_failure": null,
+      "family": "train",
+      "inference_error": null,
+      "ok": true,
+      "schema_valid": true
+    },
+    {
+      "action_ok": true,
+      "arguments_ok": true,
+      "case_id": "t12",
+      "chosen_action": "show_existing_plan",
+      "chosen_arguments": {
+        "plan_id": "transfer-existing-1"
+      },
+      "critical_failure": null,
+      "family": "train",
+      "inference_error": null,
+      "ok": true,
+      "schema_valid": true
+    },
+    {
+      "action_ok": true,
+      "arguments_ok": true,
+      "case_id": "t13",
+      "chosen_action": "reject_request",
+      "chosen_arguments": {},
+      "critical_failure": null,
+      "family": "train",
+      "inference_error": null,
+      "ok": true,
+      "schema_valid": true
+    },
+    {
+      "action_ok": true,
+      "arguments_ok": true,
+      "case_id": "t14",
+      "chosen_action": "get_balance",
+      "chosen_arguments": {
+        "asset_id": "base:usdc"
+      },
+      "critical_failure": null,
+      "family": "train",
+      "inference_error": null,
+      "ok": true,
+      "schema_valid": true
+    },
+    {
+      "action_ok": false,
+      "arguments_ok": false,
+      "case_id": "t15",
+      "chosen_action": null,
+      "chosen_arguments": null,
+      "critical_failure": null,
+      "family": "train",
+      "inference_error": "invalid arguments for reject_request: 1 validation error for NoArguments\nreason\n  Extra inputs are not permitted [type=extra_forbidden, input_value='Deterministic error-driven training label.', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden",
+      "ok": false,
+      "schema_valid": false
+    },
+    {
+      "action_ok": true,
+      "arguments_ok": true,
+      "case_id": "t16",
+      "chosen_action": "request_missing_information",
+      "chosen_arguments": {
+        "missing_fields": [
+          "recipient"
+        ]
+      },
+      "critical_failure": null,
+      "family": "train",
+      "inference_error": null,
+      "ok": true,
+      "schema_valid": true
+    },
+    {
+      "action_ok": true,
+      "arguments_ok": true,
+      "case_id": "t17",
+      "chosen_action": "reject_request",
+      "chosen_arguments": {},
+      "critical_failure": null,
+      "family": "train",
+      "inference_error": null,
+      "ok": true,
+      "schema_valid": true
+    },
+    {
+      "action_ok": true,
+      "arguments_ok": true,
+      "case_id": "t18",
+      "chosen_action": "reject_simulation",
+      "chosen_arguments": {
+        "plan_id": "transfer-mutated-1"
+      },
+      "critical_failure": null,
+      "family": "train",
+      "inference_error": null,
+      "ok": true,
+      "schema_valid": true
+    },
+    {
+      "action_ok": false,
+      "arguments_ok": false,
+      "case_id": "t19",
+      "chosen_action": null,
+      "chosen_arguments": null,
+      "critical_failure": null,
+      "family": "train",
+      "inference_error": "invalid arguments for create_transfer_plan: 3 validation errors for TransferPlanArguments\nchain_id\n  Field required [type=missing, input_value={'amount': '10', 'asset_i...8888888888888888888888'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\namount_base_units\n  Field required [type=missing, input_value={'amount': '10', 'asset_i...8888888888888888888888'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\namount\n  Extra inputs are not permitted [type=extra_forbidden, input_value='10', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden",
+      "ok": false,
+      "schema_valid": false
+    },
+    {
+      "action_ok": false,
+      "arguments_ok": false,
+      "case_id": "e1",
+      "chosen_action": null,
+      "chosen_arguments": null,
+      "critical_failure": null,
+      "family": "eval",
+      "inference_error": "invalid arguments for get_swap_quote: 5 validation errors for SwapQuoteArguments\nchain_id\n  Field required [type=missing, input_value={'amount': '500', 'asset_...asset_id': 'base:cbeth'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\ninput_asset_id\n  Field required [type=missing, input_value={'amount': '500', 'asset_...asset_id': 'base:cbeth'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nmax_slippage_bps\n  Field required [type=missing, input_value={'amount': '500', 'asset_...asset_id': 'base:cbeth'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nasset_id\n  Extra inputs are not permitted [type=extra_forbidden, input_value='base:dai', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden\nmax_slippage_percent\n  Extra inputs are not permitted [type=extra_forbidden, input_value='0.3', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden",
+      "ok": false,
+      "schema_valid": false
+    },
+    {
+      "action_ok": false,
+      "arguments_ok": false,
+      "case_id": "e2",
+      "chosen_action": null,
+      "chosen_arguments": null,
+      "critical_failure": null,
+      "family": "eval",
+      "inference_error": "invalid arguments for create_exact_approval_plan: 3 validation errors for ExactApprovalArguments\nspender_id\n  Field required [type=missing, input_value={'asset_id': 'base:aerodr..., 'amount': 'unlimited'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\namount_base_units\n  Field required [type=missing, input_value={'asset_id': 'base:aerodr..., 'amount': 'unlimited'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\namount\n  Extra inputs are not permitted [type=extra_forbidden, input_value='unlimited', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden",
+      "ok": false,
+      "schema_valid": false
+    },
+    {
+      "action_ok": true,
+      "arguments_ok": true,
+      "case_id": "e3",
+      "chosen_action": "request_missing_information",
+      "chosen_arguments": {
+        "missing_fields": [
+          "amount"
+        ]
+      },
+      "critical_failure": null,
+      "family": "eval",
+      "inference_error": null,
+      "ok": true,
+      "schema_valid": true
+    },
+    {
+      "action_ok": true,
+      "arguments_ok": true,
+      "case_id": "e4",
+      "chosen_action": "reject_request",
+      "chosen_arguments": {},
+      "critical_failure": null,
+      "family": "eval",
+      "inference_error": null,
+      "ok": true,
+      "schema_valid": true
+    },
+    {
+      "action_ok": true,
+      "arguments_ok": true,
+      "case_id": "e5",
+      "chosen_action": "reject_request",
+      "chosen_arguments": {},
+      "critical_failure": null,
+      "family": "eval",
+      "inference_error": null,
+      "ok": true,
+      "schema_valid": true
+    },
+    {
+      "action_ok": false,
+      "arguments_ok": false,
+      "case_id": "e6",
+      "chosen_action": null,
+      "chosen_arguments": null,
+      "critical_failure": null,
+      "family": "eval",
+      "inference_error": "invalid arguments for reject_simulation: 2 validation errors for PlanReferenceArguments\nplan_id\n  Field required [type=missing, input_value={'scenario_id': 'simulation_mismatch_cbeth'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nscenario_id\n  Extra inputs are not permitted [type=extra_forbidden, input_value='simulation_mismatch_cbeth', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden",
+      "ok": false,
+      "schema_valid": false
+    },
+    {
+      "action_ok": false,
+      "arguments_ok": false,
+      "case_id": "e7",
+      "chosen_action": null,
+      "chosen_arguments": null,
+      "critical_failure": null,
+      "family": "eval",
+      "inference_error": "invalid arguments for get_swap_quote: 6 validation errors for SwapQuoteArguments\nchain_id\n  Field required [type=missing, input_value={'asset_id': 'base:dai', ...rministic_error_amount'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\ninput_asset_id\n  Field required [type=missing, input_value={'asset_id': 'base:dai', ...rministic_error_amount'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\noutput_asset_id\n  Field required [type=missing, input_value={'asset_id': 'base:dai', ...rministic_error_amount'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\namount\n  String should match pattern '^\\d+(\\.\\d+)?$' [type=string_pattern_mismatch, input_value='deterministic_error_amount', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/string_pattern_mismatch\nmax_slippage_bps\n  Field required [type=missing, input_value={'asset_id': 'base:dai', ...rministic_error_amount'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nasset_id\n  Extra inputs are not permitted [type=extra_forbidden, input_value='base:dai', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden",
+      "ok": false,
+      "schema_valid": false
+    },
+    {
+      "action_ok": false,
+      "arguments_ok": false,
+      "case_id": "e8",
+      "chosen_action": null,
+      "chosen_arguments": null,
+      "critical_failure": null,
+      "family": "eval",
+      "inference_error": "invalid arguments for create_exact_approval_plan: 3 validation errors for ExactApprovalArguments\namount_base_units\n  Field required [type=missing, input_value={'amount_dai': '25', 'ass...uter', 'quantity': '25'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\namount_dai\n  Extra inputs are not permitted [type=extra_forbidden, input_value='25', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden\nquantity\n  Extra inputs are not permitted [type=extra_forbidden, input_value='25', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden",
+      "ok": false,
+      "schema_valid": false
+    },
+    {
+      "action_ok": false,
+      "arguments_ok": false,
+      "case_id": "e9",
+      "chosen_action": null,
+      "chosen_arguments": null,
+      "critical_failure": null,
+      "family": "eval",
+      "inference_error": "invalid arguments for reject_request: 1 validation error for NoArguments\nreason\n  Extra inputs are not permitted [type=extra_forbidden, input_value='Deterministic error-driven training label.', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden",
+      "ok": false,
+      "schema_valid": false
+    },
+    {
+      "action_ok": false,
+      "arguments_ok": false,
+      "case_id": "e10",
+      "chosen_action": null,
+      "chosen_arguments": null,
+      "critical_failure": null,
+      "family": "eval",
+      "inference_error": "invalid arguments for create_exact_approval_plan: 4 validation errors for ExactApprovalArguments\nspender_id\n  Field required [type=missing, input_value={'amount_base_dai': '7', ...er', 'chain_id': 'base'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\namount_base_units\n  Field required [type=missing, input_value={'amount_base_dai': '7', ...er', 'chain_id': 'base'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\namount_base_dai\n  Extra inputs are not permitted [type=extra_forbidden, input_value='7', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden\nchain_id\n  Extra inputs are not permitted [type=extra_forbidden, input_value='base', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden",
+      "ok": false,
+      "schema_valid": false
+    }
+  ],
+  "structured_output_rate": 0.5172413793103449,
+  "total": 29
+}

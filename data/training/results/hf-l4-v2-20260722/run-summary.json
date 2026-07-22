@@ -1,0 +1,25 @@
+{
+  "adapter_bucket": "hf://buckets/critesjosh/agentic-wallet-smoke/e2b-qlora-smoke-20260722T152713Z/adapter",
+  "benchmark_role": "development-regression-only",
+  "critical_failures": 0,
+  "dataset_sha256": "45ebe2a45c973f0bdec5540b604dc613b9dcb70a21a91eb2bc14268b54179e26",
+  "dataset_version": "wallet-sft-v2-error-driven",
+  "exact_passed": 13,
+  "family_results": {
+    "eval": {"exact_passed": 3, "schema_valid": 3, "total": 10},
+    "train": {"exact_passed": 10, "schema_valid": 12, "total": 19}
+  },
+  "job_id": "critesjosh/6a60e09a13e6ef894d54bfb1",
+  "method_caveats": [
+    "v2 changed both training data and optimizer-step count relative to v1",
+    "v2 scenarios were selected from failures on the 29-case development suite",
+    "held-out asset markers do not provide structural scenario independence"
+  ],
+  "model_id": "google/gemma-4-E2B-it",
+  "model_revision": "3e22461f65e89153144f8adb70e3b8c2cc9845a7",
+  "optimizer_steps": 150,
+  "schema_valid": 15,
+  "source_revision": "uncommitted-v2-experiment-based-on-9294875",
+  "source_tree_sha256": "f86f8515edede270b27b5735ab222fac25e584d4c6f4c5b9bb08ea61b8589e48",
+  "total": 29
+}

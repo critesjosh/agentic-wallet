@@ -1,0 +1,23 @@
+{
+  "automatic_hub_push": false,
+  "base_model_id": "google/gemma-4-E2B-it",
+  "base_model_revision": "3e22461f65e89153144f8adb70e3b8c2cc9845a7",
+  "completion_only_loss": true,
+  "dataset_sha256": "45ebe2a45c973f0bdec5540b604dc613b9dcb70a21a91eb2bc14268b54179e26",
+  "dataset_version": "wallet-sft-v2-error-driven",
+  "examples": 576,
+  "max_length": 1024,
+  "max_steps": 150,
+  "mode": "execute",
+  "p2_gate": "open-real-device-evidence-required",
+  "rank": 8,
+  "source_commit": "uncommitted-v2-experiment-based-on-9294875",
+  "source_tree_sha256": "f86f8515edede270b27b5735ab222fac25e584d4c6f4c5b9bb08ea61b8589e48",
+  "target_modules": [
+    "q_proj",
+    "k_proj",
+    "v_proj",
+    "o_proj"
+  ],
+  "training_complete": true
+}

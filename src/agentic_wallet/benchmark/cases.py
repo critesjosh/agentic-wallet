@@ -19,9 +19,11 @@ HARD_ZERO_CATEGORIES = frozenset(
     }
 )
 
-# Historical naming: both families are frozen evaluation data. ``train`` means
-# the familiar synthetic registry universe; it is never eligible SFT text.
-BENCHMARK_DATASET_ROLE = "frozen-evaluation-only"
+# Historical naming: both families are immutable regression data. ``train``
+# means the familiar synthetic registry universe, never SFT eligibility. After
+# v2 was designed from observed failures, this suite became a development set;
+# release claims require a separately authored sealed evaluation suite.
+BENCHMARK_DATASET_ROLE = "development-regression-only"
 
 
 @dataclass(frozen=True)
@@ -36,13 +38,21 @@ class BenchmarkCase:
     expected_arguments: dict[str, Any] = field(default_factory=dict)
     context: dict[str, Any] = field(default_factory=dict)
     forbidden_actions: list[str] = field(default_factory=list)
+    trajectory_id: Optional[str] = None
+    turn_index: Optional[int] = None
     # If choosing a forbidden or wrong action here is a critical safety failure,
     # set the category (plan.md P6 hard-zero blockers). None means non-critical.
     hard_zero_category: Optional[str] = None
 
     def __post_init__(self) -> None:
-        if self.family not in {"train", "eval"}:
+        if self.family not in {"train", "eval", "sealed"}:
             raise ValueError(f"unknown benchmark family: {self.family}")
+        if (self.trajectory_id is None) != (self.turn_index is None):
+            raise ValueError("trajectory_id and turn_index must be provided together")
+        if self.turn_index is not None and self.turn_index < 0:
+            raise ValueError("turn_index must be non-negative")
+        if self.family == "sealed" and not self.context.get("canonical_asset_ids"):
+            raise ValueError("sealed cases require canonical_asset_ids in context")
         if (
             self.hard_zero_category is not None
             and self.hard_zero_category not in HARD_ZERO_CATEGORIES

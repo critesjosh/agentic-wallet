@@ -134,16 +134,19 @@ emulator automatically when the run exits.
 
 ## Fine-tuning feasibility
 
-The bounded E2B QLoRA smoke test has now run successfully on a Hugging Face L4.
-It used 144 generated and validated SFT examples, completion-only masking, and
-a pinned `google/gemma-4-E2B-it` revision. Twenty optimizer steps completed in
-93 seconds and produced a reloadable 10.7 MB adapter.
+Two bounded E2B QLoRA experiments have run successfully on Hugging Face L4
+hardware using completion-only masking and a pinned `google/gemma-4-E2B-it`
+revision. V1 used 144 records and 20 steps; error-driven v2 used 576 records and
+150 steps.
 
 On a controlled same-checkpoint/same-runtime comparison, the untuned model
-produced 0/29 schema-valid calls. The smoke adapter produced 12/29 schema-valid
-calls and 8/29 exact action-plus-argument passes, but retained one critical
-signing-boundary failure. This proves the training path can change the target
-behavior; it does **not** establish safety or release readiness. The committed
+produced 0/29 schema-valid calls. V1 produced 12/29 schema-valid and 8/29 exact
+calls with one critical failure. V2 produced 15/29 schema-valid and 13/29 exact
+calls with no critical failure. V2 changed both data and step count, and its
+scenarios were selected from failures on the same 29 cases, so those cases are
+now development regression data—not an independent evaluation. This proves the
+training path can change target behavior; it does **not** establish safety,
+generalization, or release readiness. The committed
 non-weight results are under `data/training/results/`; adapter weights remain in
 a private Hugging Face bucket and are excluded from Git.
 
@@ -151,15 +154,31 @@ Generate and validate the data and inspect the run configuration without a GPU:
 
 ```bash
 python scripts/generate_training_data.py
+python scripts/generate_training_data.py --profile workflow-v3
 python scripts/train_qlora.py
 ```
 
-Dataset-scale training remains gated on the physical-device P2 measurements in
-`docs/android-spike.md`. The training command requires explicit
+Another GPU run is blocked on the independently authored suite in
+`docs/sealed-eval-protocol.md`, a controlled data-versus-step ablation, and the
+physical-device P2 measurements in `docs/android-spike.md`. The repetitive
+560-record v3 draft has been replaced by a fixed, naturally phrased 64-record
+curriculum with a generator-independent 48/16 development split. The training
+path now evaluates and checkpoints every 25 optimizer steps, but fails closed
+before CUDA until a digest-only independent-human sealed-suite commitment is
+present. The training command requires explicit
 `--execute --acknowledge-p2-gate`, CUDA, and BF16 support; it never pushes to
 the Hub automatically. `scripts/run_hf_qlora_smoke.py` is the bounded remote
 entry point used for the recorded run. See
 [docs/fine-tuning.md](docs/fine-tuning.md).
+
+The current native constrained-decoding development baselines are 5/29 exact
+for local Ollama E2B and 9/29 for E4B. Both scored 0/7 on multi-argument cases
+and retained signing-boundary failures. On the separate 16-record v3 validation
+split, E2B scored 5 exact and E4B scored 6; both failed all seven multi-argument
+records and the one complete two-turn trajectory. These are development
+diagnostics, not generalization evidence. No v3 L4 job has run; the attempted
+experiment cost $0 because the sealed-evaluation gate stopped it before
+submission.
 
 ## Notebook
 

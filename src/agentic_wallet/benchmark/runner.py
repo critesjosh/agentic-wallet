@@ -27,6 +27,7 @@ class CaseResult:
     case_id: str
     family: str
     ok: bool
+    syntax_valid: bool
     schema_valid: bool
     chosen_action: Optional[str]
     chosen_arguments: Optional[dict]
@@ -34,6 +35,10 @@ class CaseResult:
     arguments_ok: bool
     critical_failure: Optional[str]  # category if a hard-zero blocker tripped
     inference_error: Optional[str] = None
+    expected_arguments: dict = field(default_factory=dict)
+    hard_zero_category: Optional[str] = None
+    trajectory_id: Optional[str] = None
+    turn_index: Optional[int] = None
 
 
 @dataclass(frozen=True)
@@ -43,8 +48,16 @@ class FamilyMetrics:
     passed: int
     action_passed: int
     argument_passed: int
+    syntax_valid: int
     structured_output_valid: int
     critical_failures: int
+
+
+@dataclass(frozen=True)
+class HardZeroMetrics:
+    category: str
+    total: int
+    failures: int
 
 
 @dataclass
@@ -75,8 +88,30 @@ class BenchmarkReport:
         return sum(result.schema_valid for result in self.results) / self.total
 
     @property
+    def syntax_valid_rate(self) -> float:
+        if not self.results:
+            return 0.0
+        return sum(result.syntax_valid for result in self.results) / self.total
+
+    @property
     def structured_output_gate_passed(self) -> bool:
         return self.structured_output_rate >= MIN_STRUCTURED_OUTPUT_RATE
+
+    @property
+    def sequence_accuracy(self) -> float:
+        trajectory_ids = {
+            result.trajectory_id for result in self.results if result.trajectory_id
+        }
+        if not trajectory_ids:
+            return 0.0
+        return sum(
+            all(
+                result.ok
+                for result in self.results
+                if result.trajectory_id == trajectory_id
+            )
+            for trajectory_id in trajectory_ids
+        ) / len(trajectory_ids)
 
     @property
     def release_ready(self) -> bool:
@@ -92,11 +127,56 @@ class BenchmarkReport:
                 passed=sum(item.ok for item in items),
                 action_passed=sum(item.action_ok for item in items),
                 argument_passed=sum(item.arguments_ok for item in items),
+                syntax_valid=sum(item.syntax_valid for item in items),
                 structured_output_valid=sum(item.schema_valid for item in items),
                 critical_failures=sum(bool(item.critical_failure) for item in items),
             )
             for family in families
             if (items := [result for result in self.results if result.family == family])
+        }
+
+    @property
+    def by_argument_count(self) -> dict[str, FamilyMetrics]:
+        buckets = {
+            "zero": [r for r in self.results if len(r.expected_arguments) == 0],
+            "single": [r for r in self.results if len(r.expected_arguments) == 1],
+            "multi": [r for r in self.results if len(r.expected_arguments) > 1],
+        }
+        return {
+            name: FamilyMetrics(
+                family=name,
+                total=len(items),
+                passed=sum(item.ok for item in items),
+                action_passed=sum(item.action_ok for item in items),
+                argument_passed=sum(item.arguments_ok for item in items),
+                syntax_valid=sum(item.syntax_valid for item in items),
+                structured_output_valid=sum(item.schema_valid for item in items),
+                critical_failures=sum(bool(item.critical_failure) for item in items),
+            )
+            for name, items in buckets.items()
+            if items
+        }
+
+    @property
+    def by_hard_zero(self) -> dict[str, HardZeroMetrics]:
+        categories = sorted(
+            {
+                result.hard_zero_category
+                for result in self.results
+                if result.hard_zero_category is not None
+            }
+        )
+        return {
+            category: HardZeroMetrics(
+                category=category,
+                total=sum(
+                    result.hard_zero_category == category for result in self.results
+                ),
+                failures=sum(
+                    result.critical_failure == category for result in self.results
+                ),
+            )
+            for category in categories
         }
 
 
@@ -110,11 +190,13 @@ def run_benchmark(
             "user_request": case.user_request,
             "workflow_state": case.workflow_state,
             **case.context,
-            "canonical_asset_ids": [
-                entry.asset_id for entry in BENCHMARK_REGISTRIES[case.family].entries()
-            ],
         }
+        if "canonical_asset_ids" not in context:
+            context["canonical_asset_ids"] = [
+                entry.asset_id for entry in BENCHMARK_REGISTRIES[case.family].entries()
+            ]
         schema_valid = True
+        syntax_valid = True
         chosen: Optional[str] = None
         chosen_arguments: Optional[dict] = None
         inference_error: Optional[str] = None
@@ -125,6 +207,14 @@ def run_benchmark(
         except InferenceError as exc:
             schema_valid = False  # fail-closed: no action taken
             inference_error = str(exc)
+            syntax_valid = any(
+                marker in inference_error
+                for marker in (
+                    "invalid tool-call schema",
+                    "invalid arguments for",
+                    "not available in this state",
+                )
+            )
 
         safe_failure = chosen in SAFE_FAIL_CLOSED_ACTIONS
         did_forbidden = (
@@ -156,6 +246,7 @@ def run_benchmark(
                 case.id,
                 case.family,
                 ok,
+                syntax_valid,
                 schema_valid,
                 chosen,
                 chosen_arguments,
@@ -163,6 +254,10 @@ def run_benchmark(
                 arguments_ok,
                 critical,
                 inference_error,
+                case.expected_arguments,
+                case.hard_zero_category,
+                case.trajectory_id,
+                case.turn_index,
             )
         )
     return report

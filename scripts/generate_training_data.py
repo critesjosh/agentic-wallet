@@ -7,12 +7,14 @@ import hashlib
 import json
 from pathlib import Path
 
-from agentic_wallet.benchmark import load_cases
+from agentic_wallet.benchmark import BENCHMARK_DATASET_ROLE, load_cases
 from agentic_wallet.training import (
     ERROR_DRIVEN_GENERATOR_VERSION,
     GENERATOR_VERSION,
+    NATURAL_CURRICULUM_VERSION,
     generate_error_driven_training_examples,
     generate_training_examples,
+    load_natural_curriculum,
     validate_training_dataset,
 )
 from agentic_wallet.training.config import (
@@ -20,6 +22,7 @@ from agentic_wallet.training.config import (
     BASE_MODEL_REVISION,
     DATASET_VERSION,
     ERROR_DRIVEN_DATASET_VERSION,
+    WORKFLOW_DATASET_VERSION,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -42,6 +45,16 @@ PROFILES = {
         "dataset_version": ERROR_DRIVEN_DATASET_VERSION,
         "generator_version": ERROR_DRIVEN_GENERATOR_VERSION,
         "generate": generate_error_driven_training_examples,
+    },
+    "workflow-v3": {
+        "output": ROOT / "data" / "training" / "sft-v3-workflow.jsonl",
+        "source": ROOT / "data" / "training" / "natural_v3_source.jsonl",
+        "tool_count": None,
+        "dialogue_count": None,
+        "seed": None,
+        "dataset_version": WORKFLOW_DATASET_VERSION,
+        "generator_version": NATURAL_CURRICULUM_VERSION,
+        "generate": None,
     },
 }
 
@@ -69,11 +82,17 @@ def main() -> None:
         BENCHMARK / "eval_family.jsonl",
     ]
     frozen = [case for path in benchmark_paths for case in load_cases(path)]
-    examples = profile["generate"](
-        tool_count=tool_count,
-        dialogue_count=dialogue_count,
-        seed=seed,
-    )
+    source = profile.get("source")
+    if source is not None:
+        if any(value is not None for value in (args.tool_count, args.dialogue_count, args.seed)):
+            raise ValueError("static natural curriculum does not accept count or seed overrides")
+        examples = load_natural_curriculum(source)
+    else:
+        examples = profile["generate"](
+            tool_count=tool_count,
+            dialogue_count=dialogue_count,
+            seed=seed,
+        )
     report = validate_training_dataset(examples, frozen)
 
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -87,19 +106,26 @@ def main() -> None:
         "generator_version": profile["generator_version"],
         "profile": args.profile,
         "seed": seed,
+        "source": (
+            {"path": str(source.relative_to(ROOT)), "sha256": _sha256(source)}
+            if source is not None
+            else None
+        ),
         "base_model_id": BASE_MODEL_ID,
         "base_model_revision": BASE_MODEL_REVISION,
         "dataset_sha256": _sha256(output),
         "frozen_benchmark": {
             path.name: _sha256(path) for path in benchmark_paths
         },
-        "benchmark_role": "frozen-evaluation-only",
+        "benchmark_role": BENCHMARK_DATASET_ROLE,
         "validation": {
             "total": report.total,
             "tool_calls": report.tool_calls,
             "dialogue_turns": report.dialogue_turns,
             "label_counts": report.label_counts,
             "max_benchmark_similarity": round(report.max_benchmark_similarity, 6),
+            "coverage_counts": report.coverage_counts,
+            "split_counts": report.split_counts,
         },
     }
     manifest_path = output.with_suffix(".manifest.json")

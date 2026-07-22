@@ -1,0 +1,9 @@
+{
+  "author_independence_attested": false,
+  "author_role": null,
+  "case_count": 0,
+  "created_at": null,
+  "rubric_version": "sealed-wallet-eval-v1",
+  "sha256": null,
+  "status": "awaiting-independent-human-author"
+}

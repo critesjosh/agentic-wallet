@@ -726,9 +726,40 @@ The data pipeline should include:
 
 Do not generate the main evaluation set using the same prompts and templates as the training set.
 
+### Evaluation-integrity revision (2026-07-22)
+
+The original 29-case suite is now a **development regression suite**, not a
+sealed evaluation set. Version 2 training scenarios were selected after
+inspecting its failures, so prompt-level deduplication and a held-out asset
+registry no longer make it independent.
+
+Before another quality-training run:
+
+1. An author who has not inspected the training templates must write a separate
+   20-or-more-case sealed suite under `docs/sealed-eval-protocol.md`.
+2. Commit its content hash before training and keep its plaintext outside the
+   training workspace and prompt-building path.
+3. Run it once per candidate checkpoint. Looking at individual failures retires
+   that version from sealed use.
+4. Report schema validity, action accuracy, argument accuracy, trajectory/state
+   accuracy, grounded-explanation accuracy, and hard-zero failures separately.
+5. Report production action exposure separately from adversarial
+   unsafe-distractor robustness.
+
+Training coverage must be audited across workflow state, intended action,
+ambiguity type, risk category, conversational intent, typed-result class, user
+correction class, and adversarial condition. Label balance alone is inadequate.
+Dialogue about a verified result must contain the typed result in context and
+must not invent amounts, assets, chains, protocols, recipients, or execution
+status. Multi-turn records must preserve turn order and typed workflow state.
+
 ## 14. Evaluation strategy
 
 Create the benchmark before fine-tuning.
+
+The development regression suite may be run frequently. A sealed suite must be
+authored and hash-committed before the checkpoint it evaluates is trained, and
+must never be used for checkpoint selection or failure-driven data generation.
 
 The benchmark should measure more than whether the final response sounds correct.
 

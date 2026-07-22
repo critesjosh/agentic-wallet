@@ -11,13 +11,15 @@ boundaries enough for local mobile use. It does not grant the model authority:
 typed validation, workflow state, policy, approval digests, and the wallet
 signer remain deterministic boundaries.
 
-## Frozen evaluation boundary
+## Development regression boundary
 
 Every case in `data/benchmark/train_family.jsonl` and
-`data/benchmark/eval_family.jsonl` is evaluation-only. The historical `train`
-name means the familiar synthetic registry universe, not SFT eligibility. The
-29-case benchmark now includes at least two cases per declared hard-zero
-category, including `wrong-asset`.
+`data/benchmark/eval_family.jsonl` remains excluded from SFT text. The historical
+`train` name means the familiar synthetic registry universe, not SFT
+eligibility. Because v2 scenarios were chosen after inspecting failures on
+these cases, the suite is now development regression data rather than an
+independent quality evaluation. A new sealed suite must follow
+`docs/sealed-eval-protocol.md` before another quality-training run.
 
 Generated training examples use only `TRAIN_REGISTRY`. Validation rejects:
 
@@ -166,9 +168,109 @@ classes and retain a generator-independent held-out evaluation set.
    BF16-to-GGUF attempt already OOM-killed near 16.1 GB RSS.
 4. Obtain explicit approval before any additional paid GPU work beyond bounded
    evaluation or smoke testing.
-5. Expand the dataset beyond the 144-example plumbing set before claiming a
-   quality experiment.
+5. Hash-commit an independently authored sealed suite and replace repetitive
+   template morphology with naturally phrased canonical-argument examples.
 
-After conversion, viability still requires 100% structured output on the
-frozen suite and zero hard-zero critical failures. Training loss alone is not a
-success metric.
+After conversion, viability still requires 100% structured output on the sealed
+suite and zero hard-zero critical failures. Training loss alone is not a success
+metric.
+
+## 2026-07-22 error-driven v2 result
+
+The second bounded job used the same pinned base checkpoint, NF4/BF16 load,
+rank-8 projection targets, completion-only objective, effective batch size 8,
+greedy provider, L4 hardware, and 29 development-regression cases. It changed
+both the dataset and training duration: 576 records and 150 optimizer steps
+(about 2.1 dataset passes), versus v1's 144 records and 20 steps. Therefore the
+improvement is not attributable to data alone.
+
+| Run | Exact action + arguments | Schema-valid | Critical failures |
+| --- | ---: | ---: | ---: |
+| Untuned Transformers control | 0/29 | 0/29 (0.0%) | 0 |
+| V1, 20 steps | 8/29 | 12/29 (41.4%) | 1 |
+| V2 error-driven, 150 steps | 13/29 | 15/29 (51.7%) | 0 |
+
+V2 familiar cases scored 10/19 exact and 12/19 schema-valid. Held-out assets
+remained 3/10 exact and schema-valid. Five exact passes were no-argument safe
+actions, so aggregate exact accuracy overstates multi-argument construction.
+Persistent failures invented aliases such as `asset_id`, `amount`,
+`max_slippage_percent`, `amount_dai`, and `scenario_id` instead of the canonical
+swap, base-unit, quote-ID, and plan-ID fields. Three no-argument proposals copied
+the constant training reason into `arguments`; v3 now trains an empty top-level
+reason to remove that boilerplate without weakening `extra="forbid"`.
+
+The completed job is `critesjosh/6a60e09a13e6ef894d54bfb1`; its private adapter
+is under
+`hf://buckets/critesjosh/agentic-wallet-smoke/e2b-qlora-smoke-20260722T152713Z`.
+Non-weight evidence is in `data/training/results/hf-l4-v2-20260722/` and is bound
+to source-tree SHA-256
+`f86f8515edede270b27b5735ab222fac25e584d4c6f4c5b9bb08ea61b8589e48`.
+
+## V3 corpus candidate and next blockers
+
+`sft-v3-workflow.jsonl` is generated and validated but has not been trained. The
+old 560-record templated candidate was replaced rather than trained. The current
+curriculum expands 64 fixed natural-language source records into 48 training and
+16 development-validation records across eight balanced families. It includes
+four ordered two-turn recipient corrections and eight explanations grounded in
+typed balance, allowance, quote, or simulation results. Its manifest reports a
+coverage matrix over workflow state, action, ambiguity, risk, dialogue intent,
+result type, user correction, and adversarial condition. Production examples
+cannot expose benchmark-only unsafe actions; adversarial examples may expose
+them only as non-target distractors. Repair-turn examples were deliberately
+omitted because the runtime has no bounded retry path.
+
+Training now evaluates and saves every 25 optimizer steps, records training and
+validation loss plus schema/action/argument/safety/sequence metrics, keeps at
+most three checkpoints, and selects the best checkpoint using development
+semantic exact accuracy. The sealed suite is not available to this selection
+path. Workflow-v3 `--execute` fails before CUDA unless a digest-only independent
+human commitment is present.
+
+Claude Sonnet 4.6 reviewed a sanitized methods/results packet through OpenRouter.
+The review agreed that another GPU run should be blocked until:
+
+1. An independently authored sealed suite is hash-committed before training.
+2. Natural surface variation replaces repeated machine-coded “drill” morphology
+   for the canonical argument failures.
+3. A controlled ablation holds either dataset or optimizer steps constant.
+4. The target constrained-decoding runtime is evaluated alongside greedy
+   post-hoc validation.
+5. The training source is committed and the physical-device P2 gate is closed.
+
+The highest-value next training comparison is a small, naturally phrased
+canonical-argument curriculum versus the current v2 data at the same step
+count—not a larger repetition of the same templates. Preference tuning remains
+premature.
+
+## Native constrained-decoding development baseline
+
+The local Ollama artifacts were evaluated through the native JSON-schema API;
+deterministic validation then measured semantic correctness separately.
+
+| Artifact | JSON syntax | Full typed schema | Exact | Multi-argument exact | Critical |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `gemma4:e2b` (3.3 GB) | 7/29 | 7/29 | 5/29 | 0/7 | 2 |
+| `gemma4:e4b` (9.6 GB) | 27/29 | 11/29 | 9/29 | 0/7 | 1 |
+
+E2B failed both signing-boundary cases; E4B failed one. E4B's native constraint
+substantially improved JSON syntax, but action-specific canonical arguments
+remained the bottleneck. Each local run completed in roughly two to three
+minutes and incurred no paid-infrastructure cost.
+
+The fixed 16-record v3 development-validation split adds one genuine two-turn
+recipient-correction trajectory. Under the same local runtimes, E2B produced
+6/16 schema-valid and 5/16 exact outputs; E4B produced 7/16 schema-valid and
+6/16 exact outputs. Both scored 0/7 on multi-argument records and 0/1 on the
+complete trajectory. Neither produced a hard-zero failure on this small split;
+invalid outputs failed closed. This is checkpoint-development evidence only,
+not sealed evaluation or a generalization result.
+
+The v2 PEFT adapter could not be compared honestly under Ollama. Ollama found
+the safetensors but failed conversion/config resolution, and its E2B base is the
+separate mobile/QAT artifact rather than the pinned Transformers base used for
+v2. The 13/29 v2 greedy result is retained only as a non-comparable development
+reference. See `data/training/results/constrained-runtime-comparison-20260722.json`.
+
+No L4 job was launched for v3 because the independent-human sealed-suite gate
+was not satisfied. Authorized paid cost for this attempted experiment: **$0**.

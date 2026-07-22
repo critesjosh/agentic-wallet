@@ -7,8 +7,10 @@ import pytest
 from agentic_wallet.benchmark import load_cases
 from agentic_wallet.training import (
     TrainingExample,
+    CoverageDimensions,
     generate_error_driven_training_examples,
     generate_training_examples,
+    load_natural_curriculum,
     validate_training_dataset,
 )
 
@@ -75,6 +77,88 @@ def test_unsafe_training_target_is_rejected():
         }
     )
     with pytest.raises(ValueError, match="unsafe training target"):
+        validate_training_dataset([bad], _benchmark(), max_label_share=1.0)
+
+
+def test_natural_workflow_dataset_has_split_trajectories_and_grounding():
+    examples = load_natural_curriculum(DATA / "training" / "natural_v3_source.jsonl")
+    report = validate_training_dataset(examples, _benchmark())
+    trajectories = {
+        example.trajectory_id for example in examples if example.trajectory_id
+    }
+
+    assert report.total == 64
+    assert report.tool_calls == 56
+    assert report.dialogue_turns == 8
+    assert len(trajectories) == 4
+    assert report.split_counts == {"train": 48, "validation": 16}
+    assert report.coverage_counts["tool_result_type"]["simulation"] == 2
+    assert report.coverage_counts["user_correction_type"]["recipient"] == 4
+    assert report.coverage_counts["adversarial_condition"][
+        "signing-action-distractor"
+    ] == 4
+    assert all(
+        example.target.get("reason") == ""
+        for example in examples
+        if example.kind == "tool_call"
+    )
+    forbidden_markers = {
+        "drill",
+        "sample",
+        "generated",
+        "trajectory wording",
+    }
+    assert all(
+        not any(
+            marker in str(example.context["user_request"]).casefold()
+            for marker in forbidden_markers
+        )
+        for example in examples
+    )
+
+
+def test_production_examples_cannot_expose_unsafe_actions():
+    example = TrainingExample(
+        id="sft-production-unsafe-exposure",
+        kind="tool_call",
+        scenario_class="bad-production-contract",
+        context={"user_request": "Review a unique pending plan safely."},
+        available_actions=["request_user_confirmation", "proceed_to_signing"],
+        target={
+            "action": "request_user_confirmation",
+            "arguments": {"plan_digest": "sha256:" + "c" * 64},
+            "reason": "review",
+        },
+        action_exposure="production",
+    )
+    with pytest.raises(ValueError, match="exposes unsafe actions"):
+        validate_training_dataset([example], _benchmark(), max_label_share=1.0)
+
+
+def test_grounded_dialogue_rejects_unsupported_result_claim():
+    example = next(
+        item
+        for item in load_natural_curriculum(
+            DATA / "training" / "natural_v3_source.jsonl"
+        )
+        if item.coverage.tool_result_type == "balance"
+    )
+    assert example.kind == "dialogue_turn"
+    assert example.coverage.tool_result_type == "balance"
+    bad = example.model_copy(
+        update={
+            "target": {
+                **example.target,
+                "message": "The verified result says 999999999 base units for base:usdc.",
+            },
+            "coverage": CoverageDimensions(
+                workflow_state="IDLE",
+                conversational_intent="conversation",
+                tool_result_type="balance",
+            ),
+        }
+    )
+    with pytest.raises(ValueError, match="(cites no|invents) typed result fact"):
         validate_training_dataset([bad], _benchmark(), max_label_share=1.0)
 
 

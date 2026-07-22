@@ -153,6 +153,11 @@ def _tool_example(index: int, rng: random.Random) -> TrainingExample:
         context=context,
         available_actions=actions,
         target=target,
+        action_exposure=(
+            "adversarial"
+            if {"proceed_to_signing", "create_unlimited_approval_plan"}.intersection(actions)
+            else "production"
+        ),
     )
 
 
@@ -442,6 +447,11 @@ def _error_driven_tool_example(index: int, rng: random.Random) -> TrainingExampl
         context=context,
         available_actions=actions,
         target=target,
+        action_exposure=(
+            "adversarial"
+            if {"proceed_to_signing", "create_unlimited_approval_plan"}.intersection(actions)
+            else "production"
+        ),
     )
 
 

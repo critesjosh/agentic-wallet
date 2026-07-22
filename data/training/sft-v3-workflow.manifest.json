@@ -1,0 +1,92 @@
+{
+  "base_model_id": "google/gemma-4-E2B-it",
+  "base_model_revision": "3e22461f65e89153144f8adb70e3b8c2cc9845a7",
+  "benchmark_role": "development-regression-only",
+  "dataset_sha256": "9e91a5c3b5e992da50ea0875aeffcd83b52a86d82e86e0c919be78be63ed4b5c",
+  "dataset_version": "wallet-sft-v3-workflow",
+  "frozen_benchmark": {
+    "eval_family.jsonl": "d410832d3841852e323167a4856108a4640c066db364fc250523023acdd8f066",
+    "train_family.jsonl": "3905abebf59c1728dfcb3c31a4db092e8decd3e10e943006c90acabd145dd84b"
+  },
+  "generator_version": "wallet-natural-curriculum-v3-1",
+  "profile": "workflow-v3",
+  "seed": null,
+  "source": {
+    "path": "data/training/natural_v3_source.jsonl",
+    "sha256": "ac3c644f97e762a0b634563eb49831bf103052f9d9ab6adeec573d2b708490ff"
+  },
+  "validation": {
+    "coverage_counts": {
+      "adversarial_condition": {
+        "none": 48,
+        "signing-action-distractor": 4,
+        "typed-untrusted-data": 8,
+        "unlimited-approval-distractor": 4
+      },
+      "ambiguity_type": {
+        "missing-recipient": 4,
+        "none": 60
+      },
+      "conversational_intent": {
+        "conversation": 8,
+        "none": 56
+      },
+      "intended_action": {
+        "create_exact_approval_plan": 8,
+        "create_transfer_plan": 4,
+        "get_swap_quote": 16,
+        "none": 8,
+        "refresh_swap_quote": 8,
+        "reject_simulation": 8,
+        "request_missing_information": 4,
+        "request_user_confirmation": 8
+      },
+      "risk_category": {
+        "none": 16,
+        "prompt-injection": 8,
+        "signing-boundary-violation": 8,
+        "stale-quote": 8,
+        "unexpected-transfer": 8,
+        "unlimited-approval": 8,
+        "wrong-recipient": 8
+      },
+      "tool_result_type": {
+        "allowance": 2,
+        "balance": 2,
+        "none": 56,
+        "quote": 2,
+        "simulation": 2
+      },
+      "user_correction_type": {
+        "none": 60,
+        "recipient": 4
+      },
+      "workflow_state": {
+        "AWAITING_CONFIRMATION": 8,
+        "IDLE": 8,
+        "PLANNING": 28,
+        "QUOTE_EXPIRED": 8,
+        "SIMULATING": 8,
+        "UNDERSTANDING_INTENT": 4
+      }
+    },
+    "dialogue_turns": 8,
+    "label_counts": {
+      "dialogue:conversation": 8,
+      "tool:create_exact_approval_plan": 8,
+      "tool:create_transfer_plan": 4,
+      "tool:get_swap_quote": 16,
+      "tool:refresh_swap_quote": 8,
+      "tool:reject_simulation": 8,
+      "tool:request_missing_information": 4,
+      "tool:request_user_confirmation": 8
+    },
+    "max_benchmark_similarity": 0.660194,
+    "split_counts": {
+      "train": 48,
+      "validation": 16
+    },
+    "tool_calls": 56,
+    "total": 64
+  }
+}

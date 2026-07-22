@@ -37,7 +37,9 @@ def main() -> None:
     report = run_benchmark(provider, cases)
     print(f"adapter: {args.adapter_path or 'none (untuned base)'}")
     print(f"passed: {report.passed}/{report.total}")
+    print(f"syntax_valid_rate: {report.syntax_valid_rate:.3f}")
     print(f"structured_output_rate: {report.structured_output_rate:.3f}")
+    print(f"sequence_accuracy: {report.sequence_accuracy:.3f}")
     print(f"critical_failures: {len(report.critical_failures)}")
     print(f"release_ready: {report.release_ready}")
     for family, metrics in report.by_family.items():
@@ -45,8 +47,22 @@ def main() -> None:
             f"family[{family}]: passed={metrics.passed}/{metrics.total} "
             f"actions={metrics.action_passed}/{metrics.total} "
             f"arguments={metrics.argument_passed}/{metrics.total} "
+            f"syntax={metrics.syntax_valid}/{metrics.total} "
             f"structured={metrics.structured_output_valid}/{metrics.total} "
             f"critical={metrics.critical_failures}"
+        )
+    for bucket, metrics in report.by_argument_count.items():
+        print(
+            f"arguments[{bucket}]: passed={metrics.passed}/{metrics.total} "
+            f"actions={metrics.action_passed}/{metrics.total} "
+            f"arguments={metrics.argument_passed}/{metrics.total} "
+            f"syntax={metrics.syntax_valid}/{metrics.total} "
+            f"structured={metrics.structured_output_valid}/{metrics.total} "
+            f"critical={metrics.critical_failures}"
+        )
+    for category, metrics in report.by_hard_zero.items():
+        print(
+            f"hard_zero[{category}]: failures={metrics.failures}/{metrics.total}"
         )
     for result in report.results:
         print(
@@ -61,11 +77,21 @@ def main() -> None:
             "passed": report.passed,
             "total": report.total,
             "structured_output_rate": report.structured_output_rate,
+            "syntax_valid_rate": report.syntax_valid_rate,
+            "sequence_accuracy": report.sequence_accuracy,
             "critical_failures": len(report.critical_failures),
             "release_ready": report.release_ready,
             "by_family": {
                 family: asdict(metrics)
                 for family, metrics in report.by_family.items()
+            },
+            "by_argument_count": {
+                bucket: asdict(metrics)
+                for bucket, metrics in report.by_argument_count.items()
+            },
+            "by_hard_zero": {
+                category: asdict(metrics)
+                for category, metrics in report.by_hard_zero.items()
             },
             "results": [asdict(result) for result in report.results],
         }

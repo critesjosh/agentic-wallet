@@ -17,8 +17,10 @@ from typing import Any
 
 from agentic_wallet.benchmark import load_cases
 from agentic_wallet.training import (
+    evaluate_development_examples,
     load_training_examples,
     tokenize_completion_only,
+    validate_sealed_commitment,
     validate_training_dataset,
 )
 from agentic_wallet.training.config import (
@@ -27,10 +29,14 @@ from agentic_wallet.training.config import (
     LORA_EXCLUDE_PATTERN,
     LORA_TARGET_MODULES,
     SUPPORTED_DATASET_VERSIONS,
+    WORKFLOW_DATASET_VERSION,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_DATASET = ROOT / "data" / "training" / "sft-v1.jsonl"
+DEFAULT_SEALED_COMMITMENT = (
+    ROOT / "data" / "benchmark" / "sealed-suite-v1.commitment.json"
+)
 BENCHMARK_DIR = ROOT / "data" / "benchmark"
 
 
@@ -103,11 +109,28 @@ def main() -> None:
     parser.add_argument("--learning-rate", type=float, default=2e-4)
     parser.add_argument("--rank", type=int, default=8)
     parser.add_argument("--seed", type=int, default=17)
+    parser.add_argument("--eval-steps", type=int, default=25)
+    parser.add_argument("--save-steps", type=int, default=25)
+    parser.add_argument("--semantic-eval-limit", type=int, default=32)
+    parser.add_argument(
+        "--sealed-commitment", type=Path, default=DEFAULT_SEALED_COMMITMENT
+    )
     parser.add_argument("--execute", action="store_true")
     parser.add_argument("--acknowledge-p2-gate", action="store_true")
     args = parser.parse_args()
     manifest = args.manifest or args.dataset.with_suffix(".manifest.json")
     examples, dataset_metadata, report = _validate_inputs(args.dataset, manifest)
+    train_examples = [example for example in examples if example.split == "train"]
+    validation_examples = [
+        example for example in examples if example.split == "validation"
+    ]
+    if dataset_metadata["dataset_version"] == WORKFLOW_DATASET_VERSION:
+        if not train_examples or not validation_examples:
+            raise ValueError("workflow-v3 requires explicit train and validation splits")
+    if args.eval_steps <= 0 or args.save_steps <= 0:
+        raise ValueError("eval and save steps must be positive")
+    if args.eval_steps != args.save_steps:
+        raise ValueError("eval and save steps must match for checkpoint selection")
 
     run_plan = {
         "mode": "execute" if args.execute else "dry-run",
@@ -116,9 +139,14 @@ def main() -> None:
         "dataset_version": dataset_metadata["dataset_version"],
         "dataset_sha256": dataset_metadata["dataset_sha256"],
         "examples": report.total,
+        "train_examples": len(train_examples),
+        "validation_examples": len(validation_examples),
         "max_steps": args.max_steps,
         "max_length": args.max_length,
         "rank": args.rank,
+        "eval_steps": args.eval_steps,
+        "save_steps": args.save_steps,
+        "semantic_eval_limit": args.semantic_eval_limit,
         "target_modules": list(LORA_TARGET_MODULES),
         "completion_only_loss": True,
         "automatic_hub_push": False,
@@ -132,6 +160,9 @@ def main() -> None:
             "Refusing training: --acknowledge-p2-gate is required for the mechanical "
             "smoke run; it does not authorize dataset-scale training."
         )
+    sealed_commitment = None
+    if dataset_metadata["dataset_version"] == WORKFLOW_DATASET_VERSION:
+        sealed_commitment = validate_sealed_commitment(args.sealed_commitment)
 
     try:
         import torch
@@ -181,11 +212,18 @@ def main() -> None:
         ),
     )
     model.config.use_cache = False
-    records = [
+    train_records = [
         tokenize_completion_only(processor, example, max_length=args.max_length)
-        for example in examples
+        for example in train_examples
     ]
-    train_dataset = Dataset.from_list(records)
+    validation_records = [
+        tokenize_completion_only(processor, example, max_length=args.max_length)
+        for example in validation_examples
+    ]
+    train_dataset = Dataset.from_list(train_records)
+    validation_dataset = (
+        Dataset.from_list(validation_records) if validation_records else None
+    )
     training_args = TrainingArguments(
         output_dir=str(args.output_dir),
         max_steps=args.max_steps,
@@ -196,17 +234,73 @@ def main() -> None:
         gradient_checkpointing=True,
         logging_steps=1,
         save_strategy="steps",
-        save_steps=args.max_steps,
+        save_steps=args.save_steps,
+        eval_strategy="steps" if validation_dataset is not None else "no",
+        eval_steps=args.eval_steps if validation_dataset is not None else None,
+        load_best_model_at_end=validation_dataset is not None,
+        metric_for_best_model=(
+            "eval_semantic_exact_accuracy"
+            if validation_dataset is not None
+            else None
+        ),
+        greater_is_better=True if validation_dataset is not None else None,
+        save_total_limit=3,
         report_to="none",
         remove_unused_columns=False,
         seed=args.seed,
         data_seed=args.seed,
         optim="paged_adamw_8bit",
     )
-    trainer = Trainer(
+    class InstrumentedTrainer(Trainer):
+        def evaluate(self, *eval_args: Any, **eval_kwargs: Any) -> dict[str, float]:
+            metrics = super().evaluate(*eval_args, **eval_kwargs)
+            if not validation_examples:
+                return metrics
+            from agentic_wallet.providers import LocalTransformersProvider
+
+            provider = LocalTransformersProvider(
+                model_id=BASE_MODEL_ID,
+                revision=BASE_MODEL_REVISION,
+                max_new_tokens=256,
+                device="cuda",
+            )
+            provider._processor = processor
+            provider._model = self.model
+            was_training = self.model.training
+            self.model.eval()
+            semantic_examples = validation_examples[: args.semantic_eval_limit]
+            report = evaluate_development_examples(provider, semantic_examples)
+            semantic = report.to_dict(include_results=False)
+            semantic_metrics = {
+                f"eval_semantic_{key}": float(value)
+                for key, value in semantic.items()
+                if isinstance(value, (int, float))
+            }
+            metrics.update(semantic_metrics)
+            self.log(semantic_metrics)
+            args.output_dir.mkdir(parents=True, exist_ok=True)
+            metrics_path = args.output_dir / "development_metrics.jsonl"
+            with metrics_path.open("a") as handle:
+                handle.write(
+                    json.dumps(
+                        {
+                            "global_step": self.state.global_step,
+                            "loss_metrics": metrics,
+                            "semantic": semantic,
+                        },
+                        sort_keys=True,
+                    )
+                    + "\n"
+                )
+            if was_training:
+                self.model.train()
+            return metrics
+
+    trainer = InstrumentedTrainer(
         model=model,
         args=training_args,
         train_dataset=train_dataset,
+        eval_dataset=validation_dataset,
         data_collator=_collator(processor.tokenizer),
     )
     trainer.train()
@@ -218,6 +312,11 @@ def main() -> None:
         "source_commit": _source_commit(),
         "source_tree_sha256": os.environ.get("AGENTIC_WALLET_SOURCE_TREE_SHA256"),
         "training_complete": True,
+        "best_checkpoint": trainer.state.best_model_checkpoint,
+        "best_metric": trainer.state.best_metric,
+        "checkpoint_selection_source": "development-validation-only",
+        "sealed_suite_used_for_selection": False,
+        "sealed_commitment": sealed_commitment,
     }
     (args.output_dir / "training_metadata.json").write_text(
         json.dumps(training_metadata, indent=2, sort_keys=True) + "\n"

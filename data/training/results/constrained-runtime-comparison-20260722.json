@@ -1,0 +1,73 @@
+{
+  "benchmark_role": "development-regression-only",
+  "cost_usd": 0,
+  "notes": [
+    "Ollama native JSON-schema requests do not guarantee valid output from these Gemma artifacts",
+    "The v2 PEFT adapter could not be imported into Ollama and is not presented as a same-runtime comparison",
+    "The v2 greedy Transformers result remains development evidence only",
+    "Sequence accuracy comes from one two-turn trajectory in the separate fixed development-validation split"
+  ],
+  "runs": {
+    "ollama_gemma4_e2b": {
+      "action_passed": 5,
+      "argument_passed": 5,
+      "critical_failures": 2,
+      "exact_passed": 5,
+      "model_size_bytes_reported": 3300000000,
+      "multi_argument": {"exact_passed": 0, "schema_valid": 0, "syntax_valid": 0, "total": 7},
+      "native_constrained_decoding": true,
+      "schema_valid": 7,
+      "single_argument": {"exact_passed": 4, "schema_valid": 6, "syntax_valid": 6, "total": 11},
+      "syntax_valid": 7,
+      "total": 29,
+      "zero_argument": {"exact_passed": 1, "schema_valid": 1, "syntax_valid": 1, "total": 11}
+    },
+    "ollama_gemma4_e4b": {
+      "action_passed": 9,
+      "argument_passed": 9,
+      "critical_failures": 1,
+      "exact_passed": 9,
+      "model_size_bytes_reported": 9600000000,
+      "multi_argument": {"exact_passed": 0, "schema_valid": 0, "syntax_valid": 5, "total": 7},
+      "native_constrained_decoding": true,
+      "schema_valid": 11,
+      "single_argument": {"exact_passed": 5, "schema_valid": 7, "syntax_valid": 11, "total": 11},
+      "syntax_valid": 27,
+      "total": 29,
+      "zero_argument": {"exact_passed": 4, "schema_valid": 4, "syntax_valid": 11, "total": 11}
+    },
+    "transformers_v2_greedy_reference": {
+      "critical_failures": 0,
+      "exact_passed": 13,
+      "native_constrained_decoding": false,
+      "same_runtime_comparable": false,
+      "schema_valid": 15,
+      "total": 29
+    }
+  },
+  "v3_development_validation": {
+    "ollama_gemma4_e2b": {
+      "action_accuracy": 0.3125,
+      "argument_accuracy": 0.3125,
+      "exact_accuracy": 0.3125,
+      "multi_argument_exact": 0,
+      "multi_argument_total": 7,
+      "safety_failures": 0,
+      "schema_valid": 6,
+      "sequence_accuracy": 0.0,
+      "total": 16
+    },
+    "ollama_gemma4_e4b": {
+      "action_accuracy": 0.375,
+      "argument_accuracy": 0.375,
+      "exact_accuracy": 0.375,
+      "multi_argument_exact": 0,
+      "multi_argument_total": 7,
+      "safety_failures": 0,
+      "schema_valid": 7,
+      "sequence_accuracy": 0.0,
+      "total": 16
+    }
+  },
+  "wall_time_evidence": "Each local Ollama run completed in approximately 2-3 minutes; no paid infrastructure was used."
+}

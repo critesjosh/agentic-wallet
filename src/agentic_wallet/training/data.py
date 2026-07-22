@@ -10,7 +10,7 @@ from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from ..benchmark.cases import BenchmarkCase
 from ..benchmark.registries import EVAL_REGISTRY, TRAIN_REGISTRY
@@ -20,9 +20,24 @@ from ..schemas.tool_call import ToolCall
 from ..tool_contract import validate_dialogue_turn, validate_tool_arguments
 
 TrainingKind = Literal["tool_call", "dialogue_turn"]
+ActionExposure = Literal["production", "adversarial"]
+DatasetSplit = Literal["train", "validation"]
 FORBIDDEN_TRAINING_TARGETS = frozenset(
     {"proceed_to_signing", "create_unlimited_approval_plan"}
 )
+
+
+class CoverageDimensions(StrictModel):
+    """Auditable dimensions that label counts alone cannot expose."""
+
+    workflow_state: str = "unspecified"
+    intended_action: str = "unspecified"
+    ambiguity_type: str = "none"
+    risk_category: str = "none"
+    conversational_intent: str = "none"
+    tool_result_type: str = "none"
+    user_correction_type: str = "none"
+    adversarial_condition: str = "none"
 
 
 class TrainingExample(StrictModel):
@@ -35,8 +50,24 @@ class TrainingExample(StrictModel):
     available_actions: list[str] = Field(min_length=1)
     suggested_action_ids: list[str] = Field(default_factory=list)
     target: dict[str, Any]
+    split: DatasetSplit = "train"
+    action_exposure: ActionExposure | None = None
+    trajectory_id: str | None = Field(default=None, pattern=r"^trajectory-[a-z0-9-]+$")
+    turn_index: int | None = Field(default=None, ge=0)
+    coverage: CoverageDimensions = Field(default_factory=CoverageDimensions)
 
-
+    @model_validator(mode="after")
+    def _trajectory_fields_are_paired(self) -> "TrainingExample":
+        if self.action_exposure is None:
+            unsafe_available = FORBIDDEN_TRAINING_TARGETS.intersection(
+                self.available_actions
+            )
+            self.action_exposure = (
+                "adversarial" if unsafe_available else "production"
+            )
+        if (self.trajectory_id is None) != (self.turn_index is None):
+            raise ValueError("trajectory_id and turn_index must be provided together")
+        return self
 @dataclass(frozen=True)
 class DatasetValidationReport:
     total: int
@@ -44,6 +75,8 @@ class DatasetValidationReport:
     dialogue_turns: int
     label_counts: dict[str, int]
     max_benchmark_similarity: float
+    coverage_counts: dict[str, dict[str, int]]
+    split_counts: dict[str, int]
 
 
 def load_training_examples(path: str | Path) -> list[TrainingExample]:
@@ -104,6 +137,14 @@ def _assert_train_registry_arguments(action: str, arguments: dict[str, Any]) -> 
 
 
 def _validate_target(example: TrainingExample) -> str:
+    unsafe_available = FORBIDDEN_TRAINING_TARGETS.intersection(
+        example.available_actions
+    )
+    if example.action_exposure == "production" and unsafe_available:
+        raise ValueError(
+            f"production example {example.id} exposes unsafe actions: "
+            f"{sorted(unsafe_available)}"
+        )
     if example.kind == "tool_call":
         try:
             call = ToolCall.model_validate(example.target)
@@ -132,7 +173,51 @@ def _validate_target(example: TrainingExample) -> str:
         _assert_train_registry_arguments(
             turn.proposed_action.action, turn.proposed_action.arguments
         )
+    _assert_grounded_dialogue(example, turn.message)
     return f"dialogue:{turn.intent}"
+
+
+def _scalar_facts(value: Any) -> set[str]:
+    if isinstance(value, dict):
+        return {fact for child in value.values() for fact in _scalar_facts(child)}
+    if isinstance(value, list):
+        return {fact for child in value for fact in _scalar_facts(child)}
+    if isinstance(value, (str, int)):
+        return {str(value).casefold()}
+    return set()
+
+
+def _assert_grounded_dialogue(example: TrainingExample, message: str) -> None:
+    lowered = message.casefold()
+    forbidden_execution_claims = (
+        "i signed",
+        "i submitted",
+        "i sent",
+        "transaction completed",
+    )
+    if any(claim in lowered for claim in forbidden_execution_claims):
+        raise ValueError(f"dialogue target claims wallet execution: {example.id}")
+
+    if example.coverage.tool_result_type == "none":
+        return
+    if "verified_tool_result" not in example.context:
+        raise ValueError(f"grounded dialogue lacks typed tool result: {example.id}")
+    facts = _scalar_facts(example.context["verified_tool_result"])
+    referenced = {fact for fact in facts if fact in lowered}
+    if not referenced:
+        raise ValueError(f"grounded dialogue cites no typed result fact: {example.id}")
+    mentioned_values = set(
+        re.findall(r"(?<![a-z0-9-])\d+(?![a-z0-9-])", lowered)
+    )
+    mentioned_values.update(
+        re.findall(r"(?<![a-z0-9])[a-z0-9]+:[a-z0-9-]+", lowered)
+    )
+    unsupported = sorted(value for value in mentioned_values if value not in facts)
+    if unsupported:
+        raise ValueError(
+            f"grounded dialogue invents typed result facts for {example.id}: "
+            f"{unsupported}"
+        )
 
 
 def validate_training_dataset(
@@ -152,9 +237,14 @@ def validate_training_dataset(
 
     fingerprints: set[str] = set()
     labels: Counter[str] = Counter()
+    splits: Counter[str] = Counter()
+    coverage: dict[str, Counter[str]] = {
+        field: Counter() for field in CoverageDimensions.model_fields
+    }
     benchmark_prompts = [_normalized(case.user_request) for case in frozen_benchmark]
     benchmark_ids = {case.id for case in frozen_benchmark}
     max_similarity = 0.0
+    trajectory_turns: dict[str, list[int]] = {}
 
     for example in examples:
         if example.id in benchmark_ids:
@@ -162,6 +252,17 @@ def validate_training_dataset(
         _assert_no_eval_universe(example)
         label = _validate_target(example)
         labels[label] += 1
+        splits[example.split] += 1
+        for field in coverage:
+            coverage[field][getattr(example.coverage, field)] += 1
+        if example.trajectory_id is not None:
+            trajectory_turns.setdefault(example.trajectory_id, []).append(
+                int(example.turn_index)
+            )
+            if not isinstance(example.context.get("conversation_history"), list):
+                raise ValueError(
+                    f"trajectory example lacks conversation history: {example.id}"
+                )
 
         fingerprint = json.dumps(
             {
@@ -189,6 +290,10 @@ def validate_training_dataset(
                     f"({similarity:.3f})"
                 )
 
+    for trajectory_id, indexes in trajectory_turns.items():
+        if sorted(indexes) != list(range(len(indexes))):
+            raise ValueError(f"trajectory turns are not contiguous: {trajectory_id}")
+
     largest_share = max(labels.values()) / len(examples)
     if largest_share > max_label_share:
         raise ValueError(
@@ -200,4 +305,8 @@ def validate_training_dataset(
         dialogue_turns=sum(example.kind == "dialogue_turn" for example in examples),
         label_counts=dict(sorted(labels.items())),
         max_benchmark_similarity=max_similarity,
+        coverage_counts={
+            field: dict(sorted(counts.items())) for field, counts in coverage.items()
+        },
+        split_counts=dict(sorted(splits.items())),
     )
