@@ -7,6 +7,7 @@ from typing import Any
 
 from ..tool_contract import (
     dialogue_route_prompt,
+    legacy_dialogue_route_prompt,
     dialogue_turn_prompt,
     tool_call_prompt,
 )
@@ -21,7 +22,12 @@ def instruction_prompt(example: TrainingExample) -> str:
     if example.kind == "tool_call":
         return tool_call_prompt(example.context, example.available_actions)
     if example.kind == "dialogue_route":
-        return dialogue_route_prompt(
+        renderer = (
+            dialogue_route_prompt
+            if set(example.target) == {"proposed_action"}
+            else legacy_dialogue_route_prompt
+        )
+        return renderer(
             example.context,
             example.available_actions,
             example.suggested_action_ids,

@@ -19,7 +19,7 @@ from ..tool_contract import (
     dialogue_route_prompt,
     tool_call_prompt,
     validate_dialogue_turn,
-    validate_dialogue_route,
+    validate_dialogue_route_decision,
 )
 
 
@@ -179,7 +179,7 @@ class LocalTransformersProvider(InferenceProvider):
             )
         )
         self.last_raw_output = raw
-        return validate_dialogue_route(
+        return validate_dialogue_route_decision(
             raw, available_actions, suggested_action_ids
         )
 

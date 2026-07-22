@@ -188,6 +188,20 @@ def test_candidate_pipeline_removes_free_generated_transfer_arguments():
     assert report.tool_calls == 104
     assert report.dialogue_routes == 128
     assert candidate_routes
+    minimal_routes = [
+        item
+        for item in examples
+        if item.kind == "dialogue_route"
+        and item.coverage.tool_result_type == "none"
+    ]
+    grounded_routes = [
+        item
+        for item in examples
+        if item.kind == "dialogue_route"
+        and item.coverage.tool_result_type != "none"
+    ]
+    assert all(set(item.target) == {"proposed_action"} for item in minimal_routes)
+    assert all("message" in item.target for item in grounded_routes)
     assert all(
         item.target.get("action") != "create_transfer_plan_from_candidate"
         for item in examples

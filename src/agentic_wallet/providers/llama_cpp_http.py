@@ -26,7 +26,7 @@ from ..tool_contract import (
     tool_call_json_schema,
     tool_call_prompt,
     validate_dialogue_turn,
-    validate_dialogue_route,
+    validate_dialogue_route_decision,
 )
 
 JSONTransport = Callable[[str, dict[str, Any], float], dict[str, Any]]
@@ -163,7 +163,7 @@ class LlamaCppHTTPProvider(InferenceProvider):
                 "llama.cpp completion must be a JSON object"
             )
         self.last_raw_output = raw
-        return validate_dialogue_route(
+        return validate_dialogue_route_decision(
             raw, available_actions, suggested_action_ids
         )
 

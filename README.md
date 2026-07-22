@@ -198,7 +198,11 @@ evidence while adapting future routing data to the safer runtime. It contains
 232 records (174 train, 58 development-validation). Candidate transfers appear
 only as route decisions; the eight obsolete free-generated transfer-argument
 and repair records are absent because deterministic code now owns those fields.
-V5 has not been trained or evaluated yet.
+The production route target is now only the allowlisted `proposed_action`; code
+owns the display envelope. V5 has not been fine-tuned yet. On the matching
+untuned local E2B development pilot, raw routing was 7/12 while deterministic
+required-fact checks produced 12/12 correct guarded outcomes and contained all
+six hazardous cases.
 
 The training path evaluates and checkpoints every 25 optimizer steps. The
 training command requires explicit

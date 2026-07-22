@@ -20,7 +20,7 @@ from ..tool_contract import (
     tool_call_json_schema,
     tool_call_messages,
     validate_dialogue_turn,
-    validate_dialogue_route,
+    validate_dialogue_route_decision,
 )
 
 OpenRouterTransport = Callable[
@@ -235,7 +235,7 @@ class OpenRouterProvider(InferenceProvider):
             "provider": response.get("provider"),
             "usage": response.get("usage", {}),
         }
-        return validate_dialogue_route(
+        return validate_dialogue_route_decision(
             raw, available_actions, suggested_action_ids
         )
 

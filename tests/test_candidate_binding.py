@@ -12,7 +12,7 @@ from agentic_wallet.candidate_binding import (
 from agentic_wallet.inference import InferenceError, InferenceProvider
 from agentic_wallet.schemas.dialogue import DialogueRoute
 from agentic_wallet.tool_contract import (
-    CANDIDATE_CONTRACT_VERSION,
+    CANDIDATE_ROUTE_CONTRACT_VERSION,
     dialogue_route_messages,
     validate_production_actions,
     validate_tool_arguments,
@@ -124,6 +124,12 @@ def test_missing_or_ambiguous_recipient_forces_clarification() -> None:
     with pytest.raises(RequiredFactsMissing) as exc:
         provider.propose_tool_call_with_repair(context, ACTION)
     assert exc.value.fields == ["recipient"]
+    assert provider.tool_calls == 0
+
+    clarification = provider.propose_tool_call_with_repair(
+        context, "request_missing_information"
+    )
+    assert clarification.arguments == {"missing_fields": ["recipient"]}
     assert provider.tool_calls == 0
 
     second = "0x4444444444444444444444444444444444444444"
@@ -246,8 +252,8 @@ def test_candidate_route_uses_a_new_versioned_inference_contract() -> None:
         [ACTION, "request_missing_information"],
         [],
     )
-    assert CANDIDATE_CONTRACT_VERSION in messages[0]["content"]
-    assert CANDIDATE_CONTRACT_VERSION in messages[1]["content"]
+    assert CANDIDATE_ROUTE_CONTRACT_VERSION in messages[0]["content"]
+    assert CANDIDATE_ROUTE_CONTRACT_VERSION in messages[1]["content"]
 
 
 def test_benchmark_guard_replaces_missing_recipient_route_with_clarification() -> None:

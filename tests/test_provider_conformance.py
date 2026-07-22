@@ -52,7 +52,11 @@ def _providers(raw: dict):
     return [
         OllamaProvider(
             model="gemma4:e2b",
-            transport=lambda *_: {"message": {"content": content}},
+            transport=lambda *_: {
+                "message": {"content": content},
+                "done": True,
+                "done_reason": "stop",
+            },
         ),
         LlamaCppHTTPProvider(transport=lambda *_: {"content": content}),
         OpenRouterProvider(
@@ -89,7 +93,11 @@ def test_http_providers_receive_identical_schema_and_contract_prompt():
 
     def ollama_transport(_url, payload, _timeout):
         captured["ollama"] = payload
-        return {"message": {"content": __import__("json").dumps(VALID)}}
+        return {
+            "message": {"content": __import__("json").dumps(VALID)},
+            "done": True,
+            "done_reason": "stop",
+        }
 
     def llama_transport(_url, payload, _timeout):
         captured["llama"] = payload
@@ -110,6 +118,7 @@ def test_http_providers_receive_identical_schema_and_contract_prompt():
     ).propose_tool_call(CONTEXT, ACTIONS)
 
     assert captured["ollama"]["format"] == expected_schema
+    assert captured["ollama"]["think"] is False
     assert captured["llama"]["json_schema"] == expected_schema
     assert captured["openrouter"]["response_format"]["json_schema"]["schema"] == expected_schema
     assert CONTRACT_VERSION in captured["ollama"]["messages"][0]["content"]

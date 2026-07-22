@@ -262,6 +262,48 @@ transcripts here.
   multi-field extraction, held-out action families, and complete typed
   trajectories. Do not tune against a future sealed suite.
 
+## 2026-07-22 - Candidate-binding route produced truncated or incomplete output
+
+- Model/runtime: local Ollama 0.30.10 with `gemma4:e2b` (3.3 GB), temperature
+  zero, seed zero, and the native JSON-schema `format` request.
+- Input class: a 12-case development pilot for
+  `wallet-tool-call-v3-candidate-binding`: six complete transfer drafts and six
+  missing, ambiguous, conflicting-chain, human-unit, untrusted-text, or
+  transaction-history recipient cases.
+- Expected: six `create_transfer_plan_from_candidate` routes and six
+  `request_missing_information` routes. Complete transfers would have all four
+  arguments assembled deterministically without an argument-generation call;
+  incomplete transfers would fail closed as clarifications.
+- Observed: 0/12 routes were usable. With the provider's normal request, Ollama
+  closed every response while it was still emitting the `thinking` field,
+  returned `done: false`, and left `message.content` empty; the initial and
+  bounded repair calls both failed. A one-case diagnostic with `think: false`
+  completed, but returned a Markdown-fenced object containing only
+  `proposed_action`, omitting the other required route fields. This confirms a
+  runtime/contract failure rather than an argument-binding failure.
+- Safety outcome: all 12 cases failed closed and no tool, plan, wallet action,
+  or transaction ran. All six hazardous cases were contained, but all six
+  valid requests were also unavailable, so this is 100% containment and 0%
+  task completion—not a usable product result.
+- Deterministic mitigation: reject `done: false` as an explicit transport
+  failure, make thinking mode a provider-level setting, retain strict full-turn
+  validation, and test the target Ollama renderer/parser independently from
+  model semantic accuracy. Do not silently accept partial fenced objects.
+- Fine-tuning target: complete v3 dialogue-route envelopes for the longer
+  candidate action name and safe clarification contrasts. Fine-tuning cannot
+  repair an Ollama response that terminates before final content, so the runtime
+  failure must be fixed first.
+
+Resolution: the response path now sends `think: false`, requires `done: true`,
+normal `done_reason: stop`, and non-empty content before strict JSON parsing,
+and uses a one-field allowlisted route schema. The repeated 12-case pilot then
+scored 12/12 guarded outcomes with zero transport or schema errors in 9.08
+seconds; all 12 routes were valid on the first attempt and no repair ran. Raw
+semantic routing was only 7/12: E2B chose the transfer route on
+five incomplete requests, and the deterministic required-fact gate safely
+converted each to `request_missing_information`. This is a runtime-validity
+fix, not evidence that clarification routing has been learned.
+
 ## Entry template
 
 ### YYYY-MM-DD - Short failure name

@@ -416,11 +416,16 @@ or forces clarification for missing or ambiguous fields.
 `candidate-pipeline-v5` is generated from the same fixed natural source while
 leaving v4 and its result artifacts unchanged. It has 232 records: 128 dialogue
 routes and 104 remaining argument calls, split 174/58. The eight old transfer
-argument-generation and repair records are intentionally removed. Dataset
-SHA-256:
-`f23554fc062030eb405aca5f7f0ea503c1dc25b649b9a6806bdc325806e13cd0`.
+argument-generation and repair records are intentionally removed. Of the route
+records, 112 now train the production one-field `proposed_action` decision;
+the 16 grounded narration records retain their factual display-only envelope.
+Dataset SHA-256:
+`642e194c7d4af8b70c4385323c30448ff1f2599c80f6d714ec16eeb5f4053baf`.
 
-No v5 training or model evaluation has run. The immediate code gate is that no
+No v5 fine-tuning run has occurred. An untuned local Ollama E2B development
+pilot of the matching minimal route contract scored 7/12 raw routes and 12/12
+guarded end-to-end results, with all six hazardous cases contained. The
+immediate code gate is that no
 literal recipient can validate under the new action, absent or multiple
 recipient candidates cannot reach planning, and an unknown candidate ID fails
 closed during deterministic binding. Future evaluation must measure routing

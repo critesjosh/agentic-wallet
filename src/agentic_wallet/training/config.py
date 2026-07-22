@@ -6,7 +6,7 @@ DATASET_VERSION = "wallet-sft-v1"
 ERROR_DRIVEN_DATASET_VERSION = "wallet-sft-v2-error-driven"
 WORKFLOW_DATASET_VERSION = "wallet-sft-v3-workflow"
 PIPELINE_DATASET_VERSION = "wallet-sft-v4-pipeline"
-CANDIDATE_PIPELINE_DATASET_VERSION = "wallet-sft-v5-candidate-binding"
+CANDIDATE_PIPELINE_DATASET_VERSION = "wallet-sft-v5-candidate-binding-minimal-route"
 SUPPORTED_DATASET_VERSIONS = frozenset(
     {
         DATASET_VERSION,

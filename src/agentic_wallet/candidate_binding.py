@@ -214,7 +214,10 @@ def deterministic_candidate_tool_call(
     Other actions continue through their normal selected-action model call.
     """
 
-    if action != CANDIDATE_TRANSFER_ACTION:
+    candidate_context = "trusted_recipient_candidates" in context
+    if action not in {CANDIDATE_TRANSFER_ACTION, "request_missing_information"}:
+        return None
+    if action == "request_missing_information" and not candidate_context:
         return None
     request = context.get("user_request")
     request = request if isinstance(request, str) else ""
@@ -238,7 +241,16 @@ def deterministic_candidate_tool_call(
     elif not _request_matches_chain(request, chain_id):
         missing.append("chain_id")
     if missing:
+        if action == "request_missing_information":
+            return ToolCall(
+                action=action,
+                arguments={"missing_fields": missing},
+                reason="Deterministically derived from missing trusted facts.",
+            )
         raise RequiredFactsMissing(missing)
+
+    if action == "request_missing_information":
+        return None
 
     return ToolCall(
         action=action,

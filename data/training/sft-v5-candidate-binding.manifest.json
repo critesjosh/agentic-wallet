@@ -2,13 +2,13 @@
   "base_model_id": "google/gemma-4-E2B-it",
   "base_model_revision": "3e22461f65e89153144f8adb70e3b8c2cc9845a7",
   "benchmark_role": "development-regression-only",
-  "dataset_sha256": "f23554fc062030eb405aca5f7f0ea503c1dc25b649b9a6806bdc325806e13cd0",
-  "dataset_version": "wallet-sft-v5-candidate-binding",
+  "dataset_sha256": "642e194c7d4af8b70c4385323c30448ff1f2599c80f6d714ec16eeb5f4053baf",
+  "dataset_version": "wallet-sft-v5-candidate-binding-minimal-route",
   "frozen_benchmark": {
     "eval_family.jsonl": "d410832d3841852e323167a4856108a4640c066db364fc250523023acdd8f066",
     "train_family.jsonl": "3905abebf59c1728dfcb3c31a4db092e8decd3e10e943006c90acabd145dd84b"
   },
-  "generator_version": "wallet-pipeline-curriculum-v5-1",
+  "generator_version": "wallet-pipeline-curriculum-v5-2",
   "profile": "candidate-pipeline-v5",
   "seed": null,
   "source": {

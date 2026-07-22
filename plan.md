@@ -82,6 +82,13 @@ only for immutable historical benchmark compatibility and must not be exposed
 by production state allowlists. Per-field experiments for other multi-argument
 actions, snapshot binding, and sealed evaluation remain open.
 
+The production routing wire format is also reduced to one constrained field,
+`proposed_action`. The server deterministically supplies display-only route
+metadata. Ollama inference disables thinking and rejects incomplete envelopes
+before JSON validation. This keeps historical v4 five-field artifacts
+reproducible while matching the production contract and v5 curriculum to what
+the target E2B runtime can emit reliably.
+
 ## 1. Project summary
 
 This project explores a private, low-cost crypto wallet agent that runs primarily on local mobile hardware.

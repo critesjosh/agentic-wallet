@@ -18,11 +18,15 @@ from ..tool_contract import (
     tool_call_messages,
     dialogue_route_json_schema,
     dialogue_route_messages,
-    validate_dialogue_route,
+    validate_dialogue_route_decision,
     validate_dialogue_turn,
 )
 
 OllamaTransport = Callable[[str, dict[str, Any], float], dict[str, Any]]
+
+
+class OllamaIncompleteResponseError(ProposalValidationError):
+    """Ollama closed or truncated a response before a normal final message."""
 
 
 def _transport(url: str, payload: dict[str, Any], timeout: float) -> dict[str, Any]:
@@ -90,18 +94,46 @@ class OllamaProvider(InferenceProvider):
             "messages": messages,
             "stream": False,
             "format": schema,
+            "think": False,
             "options": {"temperature": 0, "seed": 0},
             "keep_alive": self.keep_alive,
         }
         response = self._transport(
             f"{self.base_url}/api/chat", payload, self.timeout
         )
+        self.last_response_metadata = {
+            key: response.get(key)
+            for key in (
+                "model",
+                "done",
+                "done_reason",
+                "total_duration",
+                "load_duration",
+                "prompt_eval_count",
+                "eval_count",
+            )
+        }
+        if response.get("done") is not True:
+            self.last_raw_output = {"incomplete_response": True}
+            raise OllamaIncompleteResponseError(
+                "Ollama returned an incomplete response (done was not true)"
+            )
+        if response.get("done_reason") != "stop":
+            self.last_raw_output = {"incomplete_response": True}
+            raise OllamaIncompleteResponseError(
+                "Ollama response did not end with the normal stop reason"
+            )
         try:
             content = response["message"]["content"]
         except (KeyError, TypeError) as exc:
             raise InferenceError("Ollama response has no message content") from exc
         if not isinstance(content, str):
             raise InferenceError("Ollama message content must be a string")
+        if not content:
+            self.last_raw_output = {"incomplete_response": True}
+            raise OllamaIncompleteResponseError(
+                "Ollama returned empty message content"
+            )
         try:
             raw = json.loads(content)
         except json.JSONDecodeError as exc:
@@ -115,17 +147,6 @@ class OllamaProvider(InferenceProvider):
                 "Ollama completion must be a JSON object"
             )
         self.last_raw_output = raw
-        self.last_response_metadata = {
-            key: response.get(key)
-            for key in (
-                "model",
-                "done_reason",
-                "total_duration",
-                "load_duration",
-                "prompt_eval_count",
-                "eval_count",
-            )
-        }
         return raw
 
     def propose_dialogue_route(
@@ -140,7 +161,7 @@ class OllamaProvider(InferenceProvider):
                 context, available_actions, suggested_action_ids
             ),
         )
-        return validate_dialogue_route(
+        return validate_dialogue_route_decision(
             raw, available_actions, suggested_action_ids
         )
 

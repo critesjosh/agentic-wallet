@@ -10,7 +10,7 @@ from .data import TrainingExample
 from .natural_curriculum import load_natural_curriculum
 
 PIPELINE_CURRICULUM_VERSION = "wallet-pipeline-curriculum-v4-2"
-CANDIDATE_PIPELINE_CURRICULUM_VERSION = "wallet-pipeline-curriculum-v5-1"
+CANDIDATE_PIPELINE_CURRICULUM_VERSION = "wallet-pipeline-curriculum-v5-2"
 _LEGACY_TRANSFER_ACTION = "create_transfer_plan"
 _CANDIDATE_TRANSFER_ACTION = "create_transfer_plan_from_candidate"
 
@@ -293,6 +293,11 @@ def load_candidate_pipeline_curriculum(path: str | Path) -> list[TrainingExample
         target = dict(example.target)
         if target.get("proposed_action") == _LEGACY_TRANSFER_ACTION:
             target["proposed_action"] = _CANDIDATE_TRANSFER_ACTION
+        if (
+            example.kind == "dialogue_route"
+            and example.coverage.tool_result_type == "none"
+        ):
+            target = {"proposed_action": target["proposed_action"]}
         context = prepare_inference_context(example.context)
         previous = context.get("previous_output")
         if isinstance(previous, dict):

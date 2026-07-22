@@ -19,6 +19,7 @@ from ..schemas.common import StrictModel
 from ..schemas.tool_call import ToolCall
 from ..tool_contract import (
     validate_dialogue_route,
+    validate_dialogue_route_decision,
     validate_dialogue_turn,
     validate_tool_arguments,
 )
@@ -168,7 +169,12 @@ def _validate_target(example: TrainingExample) -> str:
 
     if example.kind == "dialogue_route":
         try:
-            route = validate_dialogue_route(
+            validator = (
+                validate_dialogue_route_decision
+                if set(example.target) == {"proposed_action"}
+                else validate_dialogue_route
+            )
+            route = validator(
                 example.target,
                 example.available_actions,
                 example.suggested_action_ids,

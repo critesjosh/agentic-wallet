@@ -28,11 +28,7 @@ CONVERSATION = {
     "suggested_actions": ["get_balance"],
 }
 ROUTE = {
-    "message": "I will check the typed balance.",
-    "intent": "propose_tool",
     "proposed_action": "get_balance",
-    "reason": "explicit request",
-    "suggested_actions": [],
 }
 
 
@@ -56,7 +52,11 @@ def _providers(raw: dict):
     return [
         OllamaProvider(
             model="gemma4:e2b",
-            transport=lambda *_: {"message": {"content": content}},
+            transport=lambda *_: {
+                "message": {"content": content},
+                "done": True,
+                "done_reason": "stop",
+            },
         ),
         LlamaCppHTTPProvider(transport=lambda *_: {"content": content}),
         OpenRouterProvider(
@@ -82,7 +82,23 @@ def test_all_providers_accept_display_only_conversation(provider):
 def test_all_providers_accept_argument_free_route(provider):
     route = provider.propose_dialogue_route(CONTEXT, ACTIONS, SUGGESTIONS)
     assert route.proposed_action == "get_balance"
+    assert route.intent == "propose_tool"
     assert "arguments" not in route.model_dump()
+
+
+@pytest.mark.parametrize(
+    "provider",
+    _providers(
+        {
+            "proposed_action": "get_balance",
+            "message": "An extra model-controlled field.",
+        }
+    ),
+    ids=lambda item: item.name,
+)
+def test_route_decision_rejects_every_extra_model_field(provider):
+    with pytest.raises(InferenceError, match="expected only proposed_action"):
+        provider.propose_dialogue_route(CONTEXT, ACTIONS, SUGGESTIONS)
 
 
 def test_native_providers_constrain_the_route_schema():
@@ -92,7 +108,11 @@ def test_native_providers_constrain_the_route_schema():
 
     def ollama_transport(_url, payload, _timeout):
         captured["ollama"] = payload["format"]
-        return {"message": {"content": content}}
+        return {
+            "message": {"content": content},
+            "done": True,
+            "done_reason": "stop",
+        }
 
     def llama_transport(_url, payload, _timeout):
         captured["llama"] = payload["json_schema"]
@@ -154,7 +174,11 @@ def test_native_providers_receive_the_same_dialogue_schema():
 
     def ollama_transport(_url, payload, _timeout):
         captured["ollama"] = payload["format"]
-        return {"message": {"content": content}}
+        return {
+            "message": {"content": content},
+            "done": True,
+            "done_reason": "stop",
+        }
 
     def llama_transport(_url, payload, _timeout):
         captured["llama"] = payload["json_schema"]
