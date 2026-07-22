@@ -29,7 +29,7 @@ BENCHMARK_DATASET_ROLE = "development-regression-only"
 @dataclass(frozen=True)
 class BenchmarkCase:
     id: str
-    family: str  # familiar vs held-out registry universe; both are eval-only
+    family: str  # train/eval are development universes; sealed is external
     scenario_id: str
     user_request: str
     workflow_state: str

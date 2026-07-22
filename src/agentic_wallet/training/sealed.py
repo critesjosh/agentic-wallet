@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from pathlib import Path
 from typing import Any
+
+from ..benchmark import BenchmarkCase, load_cases
 
 
 def validate_sealed_commitment(path: str | Path) -> dict[str, Any]:
@@ -34,3 +37,21 @@ def validate_sealed_commitment(path: str | Path) -> dict[str, Any]:
     ):
         raise ValueError("sealed suite digest is invalid")
     return metadata
+
+
+def load_verified_sealed_cases(
+    suite_path: str | Path, commitment_path: str | Path
+) -> tuple[list[BenchmarkCase], dict[str, Any]]:
+    """Verify the pre-training commitment before returning external cases."""
+
+    commitment = validate_sealed_commitment(commitment_path)
+    suite = Path(suite_path)
+    payload = suite.read_bytes()
+    if hashlib.sha256(payload).hexdigest() != commitment["sha256"]:
+        raise ValueError("sealed suite digest does not match its commitment")
+    cases = load_cases(suite)
+    if len(cases) != commitment["case_count"]:
+        raise ValueError("sealed suite case count does not match its commitment")
+    if any(case.family != "sealed" for case in cases):
+        raise ValueError("every sealed-suite record must use family=sealed")
+    return cases, commitment

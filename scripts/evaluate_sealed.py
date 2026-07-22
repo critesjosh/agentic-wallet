@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 from dataclasses import asdict
 from pathlib import Path
 
-from agentic_wallet.benchmark import load_cases, run_benchmark
+from agentic_wallet.benchmark import run_benchmark
 from agentic_wallet.providers import LocalTransformersProvider, OllamaProvider
-from agentic_wallet.training import validate_sealed_commitment
+from agentic_wallet.training import load_verified_sealed_cases
 from agentic_wallet.training.config import BASE_MODEL_ID, BASE_MODEL_REVISION
 
 
@@ -31,15 +30,7 @@ def main() -> None:
     parser.add_argument("--json-output", type=Path, required=True)
     args = parser.parse_args()
 
-    commitment = validate_sealed_commitment(args.commitment)
-    payload = args.suite.read_bytes()
-    if hashlib.sha256(payload).hexdigest() != commitment["sha256"]:
-        raise SystemExit("sealed suite digest does not match its commitment")
-    cases = load_cases(args.suite)
-    if len(cases) != commitment["case_count"]:
-        raise SystemExit("sealed suite case count does not match its commitment")
-    if any(case.family != "sealed" for case in cases):
-        raise SystemExit("every sealed-suite record must use family=sealed")
+    cases, commitment = load_verified_sealed_cases(args.suite, args.commitment)
 
     if args.provider == "ollama":
         if args.adapter_path is not None:
