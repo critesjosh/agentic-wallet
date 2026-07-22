@@ -89,6 +89,7 @@ def main() -> None:
     env = os.environ.copy()
     env["PYTHONPATH"] = str(WORKSPACE / "src")
     env["AGENTIC_WALLET_SOURCE_TREE_SHA256"] = source_tree_sha256
+    env.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
     import torch
 

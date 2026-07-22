@@ -234,6 +234,7 @@ def main() -> None:
         output_dir=str(args.output_dir),
         max_steps=args.max_steps,
         per_device_train_batch_size=1,
+        per_device_eval_batch_size=1,
         gradient_accumulation_steps=8,
         learning_rate=args.learning_rate,
         bf16=True,
@@ -259,6 +260,7 @@ def main() -> None:
     )
     class InstrumentedTrainer(Trainer):
         def evaluate(self, *eval_args: Any, **eval_kwargs: Any) -> dict[str, float]:
+            torch.cuda.empty_cache()
             metrics = super().evaluate(*eval_args, **eval_kwargs)
             if not validation_examples:
                 return metrics

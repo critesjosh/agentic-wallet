@@ -303,3 +303,11 @@ The 29-case benchmark remains development regression data. The new remote run
 may select checkpoints using only the committed 60-record v4 validation split
 and may report the 29-case regression suite, but it cannot make an independent
 generalization or release-safety claim without the still-sealed suite.
+
+The first v4 L4 attempt (`critesjosh/6a60fcf413e6ef894d54c152`) reached step 25
+but OOMed before producing an evaluation result because Trainer inherited its
+default evaluation batch size and attempted a 3.6 GiB logits allocation while
+the quantized training model and optimizer were resident. This is an evaluation
+configuration failure, not a model result. Evaluation now uses batch size one,
+clears unused CUDA cache first, and enables expandable allocator segments. The
+partial checkpoint is not used for comparison.
