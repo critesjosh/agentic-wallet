@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from agentic_wallet.inference import ScriptedProvider
+from agentic_wallet.inference import InferenceProvider, ScriptedProvider
+from agentic_wallet.schemas.dialogue import DialogueRoute
 from agentic_wallet.training import (
     CoverageDimensions,
     TrainingExample,
@@ -111,3 +112,40 @@ def test_development_metrics_count_risky_wrong_arguments_as_safety_failure():
     assert payload["argument_accuracy"] == 0.0
     assert payload["safety_failures"] == 1
     assert payload["hard_zero"]["wrong-recipient"]["failures"] == 1
+
+
+class _MinimalRouteProvider(InferenceProvider):
+    def propose_tool_call(self, context, available_actions):
+        raise AssertionError("minimal route evaluation must not request arguments")
+
+    def propose_dialogue_route(
+        self, context, available_actions, suggested_action_ids
+    ) -> DialogueRoute:
+        return DialogueRoute(
+            message="Server-normalized display text.",
+            intent="propose_tool",
+            proposed_action="create_transfer_plan_from_candidate",
+        )
+
+
+def test_minimal_route_evaluation_does_not_expect_model_generated_intent():
+    example = TrainingExample(
+        id="sft-eval-minimal-route",
+        kind="dialogue_route",
+        scenario_class="minimal-route",
+        context={"phase": "route_dialogue", "user_request": "Draft a transfer."},
+        available_actions=[
+            "create_transfer_plan_from_candidate",
+            "request_missing_information",
+        ],
+        target={"proposed_action": "create_transfer_plan_from_candidate"},
+        split="validation",
+    )
+
+    payload = evaluate_development_examples(
+        _MinimalRouteProvider(), [example]
+    ).to_dict()
+
+    assert payload["schema_valid_rate"] == 1.0
+    assert payload["action_accuracy"] == 1.0
+    assert payload["exact_accuracy"] == 1.0

@@ -166,7 +166,11 @@ def evaluate_development_examples(
             proposed = example.target.get("proposed_action")
             expected_action = None if proposed in {None, "none"} else str(proposed)
             expected_arguments = dict(example.target.get("arguments", {}))
-            expected_intent = str(example.target["intent"])
+            # The production minimal-route contract deliberately gives the
+            # model no display intent field. Code normalizes it after the sole
+            # allowlisted decision validates, so it is not a model metric.
+            if "intent" in example.target:
+                expected_intent = str(example.target["intent"])
 
         schema_valid = True
         chosen_action: str | None = None

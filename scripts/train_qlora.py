@@ -30,6 +30,7 @@ from agentic_wallet.training.config import (
     LORA_EXCLUDE_PATTERN,
     LORA_TARGET_MODULES,
     SUPPORTED_DATASET_VERSIONS,
+    CANDIDATE_PIPELINE_DATASET_VERSION,
     PIPELINE_DATASET_VERSION,
     WORKFLOW_DATASET_VERSION,
 )
@@ -129,6 +130,7 @@ def main() -> None:
     if dataset_metadata["dataset_version"] in {
         WORKFLOW_DATASET_VERSION,
         PIPELINE_DATASET_VERSION,
+        CANDIDATE_PIPELINE_DATASET_VERSION,
     }:
         if not train_examples or not validation_examples:
             raise ValueError(

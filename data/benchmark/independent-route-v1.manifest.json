@@ -1,0 +1,11 @@
+{
+  "author": "Claude Fable 5 via OpenRouter",
+  "authored_before_v5_training": true,
+  "case_count": 40,
+  "dataset_sha256": "7b419289edea32c1e4967b8febc21bcce95be70e877aabff849004cc7624a385",
+  "release_claim_eligible": false,
+  "role": "development-evaluation-only-not-sealed",
+  "source_sha256": "51399ac5b5f00031d9825dc3e608c5fadef9d315a5c962fd73f70e204b2cf80e",
+  "suite": "independent-route-v1",
+  "training_data_used_for_authorship": false
+}

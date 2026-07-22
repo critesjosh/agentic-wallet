@@ -44,6 +44,13 @@ EVALUATE_BASE = os.environ.get("AGENTIC_WALLET_EVALUATE_BASE") == "1"
 SKIP_DEVELOPMENT_EVALUATION = (
     os.environ.get("AGENTIC_WALLET_SKIP_DEVELOPMENT_EVALUATION") == "1"
 )
+SEMANTIC_EVAL_LIMIT = int(
+    os.environ.get("AGENTIC_WALLET_SEMANTIC_EVAL_LIMIT", "20")
+)
+INDEPENDENT_EVAL_PATH = os.environ.get("AGENTIC_WALLET_INDEPENDENT_EVAL")
+EVALUATE_DEVELOPMENT_BASE = (
+    os.environ.get("AGENTIC_WALLET_EVALUATE_DEVELOPMENT_BASE") == "1"
+)
 
 
 def _source_tree_sha256() -> str:
@@ -84,6 +91,13 @@ def main() -> None:
         raise SystemExit("bounded experiment max steps must remain between 1 and 200")
     if not DATASET_PATH.is_file():
         raise SystemExit(f"training dataset not found: {DATASET_PATH}")
+    if not 1 <= SEMANTIC_EVAL_LIMIT <= 200:
+        raise SystemExit("semantic evaluation limit must be between 1 and 200")
+    independent_eval = (
+        Path(INDEPENDENT_EVAL_PATH) if INDEPENDENT_EVAL_PATH else None
+    )
+    if independent_eval is not None and not independent_eval.is_file():
+        raise SystemExit(f"independent evaluation not found: {independent_eval}")
 
     timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     output_dir = OUTPUT_ROOT / f"e2b-qlora-smoke-{timestamp}"
@@ -106,6 +120,10 @@ def main() -> None:
         ),
         "dataset": str(DATASET_PATH),
         "max_steps": MAX_STEPS,
+        "semantic_eval_limit": SEMANTIC_EVAL_LIMIT,
+        "independent_evaluation": (
+            str(independent_eval) if independent_eval is not None else None
+        ),
         "python": sys.version,
         "source_revision": os.environ.get("AGENTIC_WALLET_SOURCE_REVISION"),
         "source_tree_sha256": source_tree_sha256,
@@ -121,6 +139,7 @@ def main() -> None:
         "training": False,
         "evaluation": False,
         "development_evaluation": False,
+        "independent_evaluation": False,
     }
     try:
         adapter_path: Path | None
@@ -146,6 +165,8 @@ def main() -> None:
                     str(MAX_STEPS),
                     "--dataset",
                     str(DATASET_PATH),
+                    "--semantic-eval-limit",
+                    str(SEMANTIC_EVAL_LIMIT),
                     "--output-dir",
                     str(adapter_path),
                 ],
@@ -186,6 +207,28 @@ def main() -> None:
         if SKIP_DEVELOPMENT_EVALUATION:
             status["development_evaluation"] = "skipped"
         else:
+            if EVALUATE_DEVELOPMENT_BASE:
+                base_development_command = [
+                    sys.executable,
+                    str(WORKSPACE / "scripts" / "evaluate_development.py"),
+                    "--provider",
+                    "transformers",
+                    "--dataset",
+                    str(DATASET_PATH),
+                    "--json-output",
+                    str(output_dir / "base_development_evaluation.json"),
+                ]
+                base_development = subprocess.run(
+                    base_development_command,
+                    check=True,
+                    text=True,
+                    capture_output=True,
+                    env=env,
+                )
+                _emit(base_development)
+                (output_dir / "base_development_evaluation.log").write_text(
+                    base_development.stdout + base_development.stderr
+                )
             development_command = [
                 sys.executable,
                 str(WORKSPACE / "scripts" / "evaluate_development.py"),
@@ -212,6 +255,56 @@ def main() -> None:
                 development.stdout + development.stderr
             )
             status["development_evaluation"] = True
+
+        if independent_eval is not None:
+            if EVALUATE_DEVELOPMENT_BASE:
+                base_independent_command = [
+                    sys.executable,
+                    str(WORKSPACE / "scripts" / "evaluate_development.py"),
+                    "--provider",
+                    "transformers",
+                    "--dataset",
+                    str(independent_eval),
+                    "--json-output",
+                    str(output_dir / "base_independent_evaluation.json"),
+                ]
+                base_independent = subprocess.run(
+                    base_independent_command,
+                    check=True,
+                    text=True,
+                    capture_output=True,
+                    env=env,
+                )
+                _emit(base_independent)
+                (output_dir / "base_independent_evaluation.log").write_text(
+                    base_independent.stdout + base_independent.stderr
+                )
+            independent_command = [
+                sys.executable,
+                str(WORKSPACE / "scripts" / "evaluate_development.py"),
+                "--provider",
+                "transformers",
+                "--dataset",
+                str(independent_eval),
+                "--json-output",
+                str(output_dir / "independent_evaluation.json"),
+            ]
+            if adapter_path is not None:
+                independent_command.extend(
+                    ["--adapter-path", str(adapter_path)]
+                )
+            independent = subprocess.run(
+                independent_command,
+                check=True,
+                text=True,
+                capture_output=True,
+                env=env,
+            )
+            _emit(independent)
+            (output_dir / "independent_evaluation.log").write_text(
+                independent.stdout + independent.stderr
+            )
+            status["independent_evaluation"] = True
     except subprocess.CalledProcessError as exc:
         if exc.stdout:
             print(exc.stdout, end="", flush=True)
