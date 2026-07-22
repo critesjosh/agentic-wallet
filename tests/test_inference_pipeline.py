@@ -78,7 +78,9 @@ def test_repair_stops_after_exactly_one_retry():
             {"action": "get_balance", "arguments": {}, "reason": ""},
         ]
     )
-    with pytest.raises(InferenceError, match="one bounded repair"):
+    with pytest.raises(
+        InferenceError, match="one bounded repair attempt: invalid arguments"
+    ):
         provider.propose_tool_call_with_repair({}, "get_balance")
     assert len(provider.contexts) == 2
 

@@ -1,12 +1,12 @@
 # Staged benchmark protocol v2
 
-Status: frozen before the v4 adapter evaluation-only rerun.
+Status: v2.1 frozen after the first v2 run exposed two scoring regressions.
 
 The historical 29-case suite remains immutable development-regression data.
 Only its inference protocol changes, because the production model contract was
 split into route and argument stages before v4 training.
 
-For every case, `staged-dialogue-route-v2` performs:
+For every case, `staged-dialogue-route-v2.1` performs:
 
 1. Build a typed `ConversationLedger` from the case workflow state and chain.
    It has no approval field.
@@ -35,3 +35,13 @@ is checkpoint-development evidence and may be optimistic; it is not an
 independent test. The corrected 29 cases were also used during earlier dataset
 design and are development regression data. Neither supports a release,
 generalization, execution-safety, or model-selection claim.
+
+The first staged-v2 execution revealed that the legacy scorer treated a correct
+route followed by rejected arguments as a critical argument failure, even
+though no executable proposal existed. It also lost the final validation error
+when a repair failed, undercounting syntactically valid JSON. V2.1 changes only
+those two semantics: rejected arguments remain an ordinary fail-closed miss,
+while a validated wrong dangerous argument remains critical; and the final
+validation error is retained for syntax classification. Cases, expectations,
+weights, prompts, repairs, and exact-match rules are unchanged. The pre-fix
+artifact remains committed for auditability.

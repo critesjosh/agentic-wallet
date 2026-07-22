@@ -76,7 +76,8 @@ class InferenceProvider(ABC):
                 return self.propose_tool_call(repair_context, [selected_action])
             except InferenceError as second_error:
                 raise InferenceError(
-                    "tool proposal failed after one bounded repair attempt"
+                    "tool proposal failed after one bounded repair attempt: "
+                    f"{second_error}"
                 ) from second_error
 
     def propose_dialogue_route(
@@ -135,7 +136,8 @@ class InferenceProvider(ABC):
                 )
             except InferenceError as second_error:
                 raise InferenceError(
-                    "dialogue route failed after one bounded repair attempt"
+                    "dialogue route failed after one bounded repair attempt: "
+                    f"{second_error}"
                 ) from second_error
 
     def propose_dialogue_turn(

@@ -14,7 +14,8 @@ from agentic_wallet.benchmark.cases import (
 )
 from agentic_wallet.benchmark.examples import GOOD_SCRIPT
 from agentic_wallet.benchmark.registries import BENCHMARK_REGISTRIES
-from agentic_wallet.inference import ScriptedProvider
+from agentic_wallet.inference import InferenceError, InferenceProvider, ScriptedProvider
+from agentic_wallet.schemas.dialogue import DialogueRoute
 
 DATA = Path(__file__).resolve().parents[1] / "data" / "benchmark"
 
@@ -62,7 +63,7 @@ def test_benchmark_uses_route_then_selected_action_arguments():
 
 def test_benchmark_is_explicitly_development_regression_only():
     assert BENCHMARK_DATASET_ROLE == "development-regression-only"
-    assert BENCHMARK_CONTRACT_VERSION == "staged-dialogue-route-v2"
+    assert BENCHMARK_CONTRACT_VERSION == "staged-dialogue-route-v2.1"
 
 
 def test_sequence_accuracy_requires_every_turn_to_pass():
@@ -176,6 +177,29 @@ def test_correct_action_with_wrong_arguments_does_not_pass():
     assert result.action_ok
     assert not result.arguments_ok
     assert not result.ok
+    assert result.critical_failure is None
+
+
+def test_correct_route_with_rejected_arguments_fails_closed_not_critical():
+    class RejectedArgumentsProvider(InferenceProvider):
+        def propose_dialogue_route(
+            self, context, available_actions, suggested_action_ids
+        ):
+            return DialogueRoute(
+                message="I will prepare the validated action.",
+                intent="propose_tool",
+                proposed_action="create_transfer_plan",
+                reason="",
+                suggested_actions=[],
+            )
+
+        def propose_tool_call(self, context, available_actions):
+            raise InferenceError("invalid arguments for create_transfer_plan")
+
+    case = next(item for item in _all_cases() if item.id == "t6")
+    result = run_benchmark(RejectedArgumentsProvider(), [case]).results[0]
+    assert result.chosen_action == case.expected_action
+    assert result.schema_valid is False
     assert result.critical_failure is None
 
 
