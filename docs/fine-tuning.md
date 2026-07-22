@@ -370,6 +370,33 @@ runner has since been moved to the staged production contract, and the same
 adapter must be rerun through that corrected evaluator before reporting a v4
 29-case regression number.
 
+That fixed-weight evaluation-only rerun is complete under
+`staged-dialogue-route-v2.1`. The first staged execution exposed and preserved
+two scorer regressions: rejected arguments were incorrectly counted as executed
+critical failures, and the bounded-repair wrapper hid the final validation error
+from syntax classification. V2.1 changed only those scoring/error-reporting
+semantics and added regression tests; cases, prompts, repairs, weights, and
+expected outputs stayed fixed.
+
+| 29-case protocol | Exact | JSON syntax | Fully typed | Multi-arg exact | Critical |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Retired single-stage (non-comparable) | 0/29 | 29/29 | 0/29 | 0/7 | 0 |
+| Staged v2.1 production contract | 3/29 | 28/29 | 4/29 | 0/7 | 11 |
+
+The staged score is not model improvement over the retired score; it is the same
+adapter measured under the contract it was trained to use. It passes only three
+familiar-family cases and zero held-out-family cases. Eleven genuine wrong or
+forbidden route selections remain after removing fail-closed argument rejections
+from critical scoring. This reinforces the full v4 split's conclusion: routing
+can look strong on the narrow development curriculum while collapsing on the
+older regression distribution, and canonical multi-argument construction
+remains unsolved.
+
+The successful evaluation-only job is
+`critesjosh/6a610e9a13e6ef894d54c249`, sourced from commit `eddb2df`. Two prior
+launches failed before startup with Hugging Face volume-mount errors; a fresh
+immutable source mount resolved the infrastructure issue. No retraining occurred.
+
 All evidence is development-only. No sealed suite was opened. Non-weight run
 artifacts are under `data/training/results/hf-l4-v4-pipeline-20260722/`; weights
 remain private at

@@ -1,0 +1,7 @@
+{
+  "development_evaluation": "skipped",
+  "evaluation": true,
+  "existing_adapter": "/outputs/e2b-qlora-smoke-20260722T175116Z/adapter",
+  "output_dir": "/outputs/e2b-qlora-smoke-20260722T184055Z",
+  "training": "reused"
+}

@@ -55,6 +55,24 @@ The model's prose remains display-only throughout. The v4 curriculum trains the
 same stage contracts and repair contexts; development evaluation remains
 separate from the unopened sealed suite.
 
+### Post-v4 deterministic hardening priorities (2026-07-22)
+
+The first v4 run showed that route and simple-field behavior improved while
+joint multi-argument construction and trajectories did not. The next iteration
+therefore reduces what the model is allowed to compose before adding more
+training: recipients and assets are selected from trusted candidate IDs; a
+deterministic required-field gate forces clarification before argument
+generation; joint and per-field extraction are compared under the same frozen
+development cases; canonicalization remains code-owned; and typed state carries
+facts across turns. Free-generated recipient addresses are not an acceptable
+production contract.
+
+Transaction-readiness additionally requires adversarial coverage for untrusted
+names and memos, address-poisoning provenance, required narration warnings, and
+fact-snapshot freshness. It remains blocked until multi-argument and trajectory
+gates pass with no hard-zero failures and a separately authored sealed suite is
+evaluated once under `docs/sealed-eval-protocol.md`.
+
 ## 1. Project summary
 
 This project explores a private, low-cost crypto wallet agent that runs primarily on local mobile hardware.

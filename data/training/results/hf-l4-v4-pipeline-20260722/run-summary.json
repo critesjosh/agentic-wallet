@@ -44,6 +44,17 @@
     "structured_output_rate": 0.0,
     "syntax_valid_rate": 1.0
   },
+  "staged_regression_29": {
+    "critical_failures": 11,
+    "evaluation_contract": "staged-dialogue-route-v2.1",
+    "evaluation_only_job": "critesjosh/6a610e9a13e6ef894d54c249",
+    "evaluation_running_seconds": 585,
+    "exact": "3/29",
+    "multi_argument_exact": "0/7",
+    "release_ready": false,
+    "structured_output_rate": 0.13793103448275862,
+    "syntax_valid_rate": 0.9655172413793104
+  },
   "max_steps": 50,
   "checkpoint_selection_overlap": "The balanced 20-record selection subset is contained in the same 60-record development partition.",
   "release_ready": false,

@@ -1,0 +1,11 @@
+{
+  "cuda_available": true,
+  "cuda_bf16_supported": true,
+  "cuda_device": "NVIDIA L4",
+  "dataset": "/workspace/data/training/sft-v4-pipeline.jsonl",
+  "max_steps": 50,
+  "python": "3.12.12 (main, Feb  3 2026, 05:51:02) [GCC 12.2.0]",
+  "source_revision": "eddb2df",
+  "source_tree_sha256": "78bde2bd18457a358dba1b4ed5f1cf4acbccfa4676cdcdb2c07526ae9dfeed15",
+  "torch": "2.13.0+cu130"
+}

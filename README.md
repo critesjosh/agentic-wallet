@@ -158,6 +158,12 @@ regression score used the retired single-stage evaluator and is recorded only as
 a protocol-mismatch diagnostic; the benchmark runner now follows the staged
 route-then-arguments contract.
 
+With the same adapter and the corrected staged evaluator, v4 scored only 3/29
+exact and 4/29 fully typed-valid, with 0/7 multi-argument cases and 11 genuine
+critical route selections. The earlier 0/29 remains separately recorded under
+the retired, non-comparable evaluator. Neither result is sealed evaluation, and
+v4 is not a capability milestone or release candidate.
+
 Generate and validate the data and inspect the run configuration without a GPU:
 
 ```bash

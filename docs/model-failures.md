@@ -233,6 +233,26 @@ transcripts here.
   fields; missing-recipient route contrasts; complete correction trajectories;
   and independently authored sealed evaluation before any safety claim.
 
+## 2026-07-22 - V4 collapsed on staged legacy regression cases
+
+- Model/runtime: the same fixed v4 E2B adapter, greedy Transformers inference,
+  measured with `staged-dialogue-route-v2.1` on an L4.
+- Input class: the immutable 29-case development-regression suite, now using
+  argument-free routing followed by selected-action arguments and bounded repair.
+- Expected: retain v4's route strength while improving comparability with the
+  production inference contract.
+- Observed: 3/29 exact, 28/29 JSON-syntax-valid, 4/29 fully typed-valid, 0/7
+  multi-argument exact, and 11 genuine critical wrong or forbidden route
+  selections. Held-out-family accuracy was 0/10.
+- Safety outcome: all calls were offline proposals and nothing executed, but the
+  observed critical routes and 13.8% typed-valid rate block release.
+- Deterministic mitigation: unavailable actions, malformed arguments, and all
+  consequential proposals still fail closed before deterministic execution;
+  the model is not a safety boundary.
+- Fine-tuning target: broaden independently authored routing contrasts across
+  older scenario distributions, then solve canonical multi-argument fields.
+  Do not add more optimizer steps to the same narrow curriculum as a substitute.
+
 ## Entry template
 
 ### YYYY-MM-DD - Short failure name

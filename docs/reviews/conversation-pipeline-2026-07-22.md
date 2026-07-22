@@ -58,5 +58,61 @@ hard-zero failure are core capability and safety gaps. They also requested
 explicit small-sample uncertainty, an explanation of zero trajectory accuracy,
 and disclosure that checkpoint selection uses part of the same 60-record
 development partition. These limitations are now recorded in the fine-tuning
-report and the frozen `staged-dialogue-route-v2` protocol. No release,
+report and the frozen `staged-dialogue-route-v2.1` protocol. No release,
 generalization, execution-safety, or model-selection claim is made.
+
+The final fixed-weight staged-v2.1 rerun scored 3/29 exact with 11 critical
+routes. This resolves the reviewers' methodological question but confirms their
+substantive concern: the adapter has neither robust routing generalization nor
+multi-argument capability. The hard-zero release failure is already decisive
+under the project plan.
+
+## Claude Fable 5 follow-up
+
+Claude Fable 5 reviewed a third sanitized packet after the v4 development run
+and the v2.1 scorer correction. It received the architecture and aggregate
+metrics only, not source files, credentials, wallet data, or model weights.
+
+The review agreed that the authority split is sound, but identified argument
+composition as the immediate bottleneck: v4 scored 30/32 on zero-argument and
+13/14 on single-argument records, but only 1/14 on multi-argument records. Its
+highest-priority recommendations were deterministic rather than weight-based:
+
+1. bind recipients and assets to trusted candidate IDs instead of accepting
+   model-generated literal addresses;
+2. force clarification before argument generation whenever required facts are
+   absent;
+3. compare one-pass joint argument generation with constrained per-field
+   extraction;
+4. keep unit conversion, checksum validation, name resolution, and other
+   canonicalization in deterministic code; and
+5. carry trajectory state as typed facts rather than asking the model to
+   reconstruct it from prose.
+
+The review also highlighted indirect prompt injection through attacker-chosen
+token names, ENS labels, or memos; address-poisoning in candidate lists;
+omission of required warnings from otherwise factually grounded narration;
+fact staleness between reads and approval; and the need to report fail-closed
+rejection rate separately from exact accuracy.
+
+These findings strengthen the existing release gates. Before transaction
+workflows can be treated as usable, the project needs deterministic recipient
+binding, a required-field clarification gate, typed snapshot/freshness binding,
+materially better multi-argument and trajectory results, and a once-only sealed
+evaluation. The model-independent confirmation view must continue to render
+decoded transaction and simulation facts rather than model narration.
+
+The next bounded experiments are:
+
+- candidate-ID binding: no free-generated recipient address and no reachable
+  missing-recipient transaction proposal;
+- joint versus per-field extraction on at least 50 multi-argument development
+  cases, targeting at least 80% exact with zero validated dangerous arguments;
+- adversarial typed-fact tests covering embedded instructions, confusables,
+  provenance, and narration omissions, with zero route or narration compromise;
+- trajectory evaluation with deterministic state carriage and forced
+  clarification, targeting at least 70% complete trajectories and zero
+  critical failures; and
+- an independently authored, single-use sealed suite of at least 100 cases,
+  targeting at least 90% schema validity and zero hard-zero failures before any
+  transaction-readiness claim.
