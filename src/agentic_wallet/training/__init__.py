@@ -29,6 +29,7 @@ from .formatting import (
     tokenize_completion_only,
 )
 from .evaluation import (
+    balanced_semantic_subset,
     DevelopmentCaseResult,
     DevelopmentReport,
     evaluate_development_examples,
@@ -39,6 +40,7 @@ __all__ = [
     "DatasetValidationReport",
     "DevelopmentCaseResult",
     "DevelopmentReport",
+    "balanced_semantic_subset",
     "ERROR_DRIVEN_GENERATOR_VERSION",
     "GENERATOR_VERSION",
     "NATURAL_CURRICULUM_VERSION",

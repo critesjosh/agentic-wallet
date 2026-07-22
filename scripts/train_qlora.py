@@ -17,6 +17,7 @@ from typing import Any
 
 from agentic_wallet.benchmark import load_cases
 from agentic_wallet.training import (
+    balanced_semantic_subset,
     evaluate_development_examples,
     load_training_examples,
     tokenize_completion_only,
@@ -112,7 +113,7 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=17)
     parser.add_argument("--eval-steps", type=int, default=25)
     parser.add_argument("--save-steps", type=int, default=25)
-    parser.add_argument("--semantic-eval-limit", type=int, default=64)
+    parser.add_argument("--semantic-eval-limit", type=int, default=20)
     parser.add_argument(
         "--sealed-commitment", type=Path, default=DEFAULT_SEALED_COMMITMENT
     )
@@ -276,8 +277,16 @@ def main() -> None:
             provider._model = self.model
             was_training = self.model.training
             self.model.eval()
-            semantic_examples = validation_examples[: args.semantic_eval_limit]
-            report = evaluate_development_examples(provider, semantic_examples)
+            semantic_examples = balanced_semantic_subset(
+                validation_examples, args.semantic_eval_limit
+            )
+            previous_use_cache = self.model.config.use_cache
+            self.model.config.use_cache = True
+            torch.cuda.empty_cache()
+            try:
+                report = evaluate_development_examples(provider, semantic_examples)
+            finally:
+                self.model.config.use_cache = previous_use_cache
             semantic = report.to_dict(include_results=False)
             semantic_metrics = {
                 f"eval_semantic_{key}": float(value)

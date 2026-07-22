@@ -311,3 +311,11 @@ the quantized training model and optimizer were resident. This is an evaluation
 configuration failure, not a model result. Evaluation now uses batch size one,
 clears unused CUDA cache first, and enables expandable allocator segments. The
 partial checkpoint is not used for comparison.
+
+The memory-fixed retry (`critesjosh/6a60fec5d09dc1f57c6c2d92`) confirmed that
+batch-one loss evaluation fits, but full 60-record generation at every
+checkpoint ran with inference caching disabled and could not finish the required
+protocol within the 45-minute bound. It was cancelled without using a partial
+checkpoint. Checkpoint selection now uses a deterministic 20-record round-robin
+across all five runtime phases with inference caching enabled temporarily; the
+post-training evaluation still covers all 60 development records.

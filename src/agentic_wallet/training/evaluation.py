@@ -123,6 +123,32 @@ def _argument_bucket(arguments: dict[str, Any]) -> str:
     return "multi"
 
 
+def balanced_semantic_subset(
+    examples: list[TrainingExample], limit: int
+) -> list[TrainingExample]:
+    """Round-robin runtime phases so checkpoint metrics are not order-biased."""
+
+    buckets: dict[str, list[TrainingExample]] = {}
+    for example in examples:
+        phase = str(example.context.get("phase", example.kind))
+        buckets.setdefault(phase, []).append(example)
+    selected: list[TrainingExample] = []
+    offset = 0
+    while len(selected) < limit:
+        added = False
+        for phase in sorted(buckets):
+            bucket = buckets[phase]
+            if offset < len(bucket):
+                selected.append(bucket[offset])
+                added = True
+                if len(selected) == limit:
+                    break
+        if not added:
+            break
+        offset += 1
+    return selected
+
+
 def evaluate_development_examples(
     provider: InferenceProvider, examples: list[TrainingExample]
 ) -> DevelopmentReport:

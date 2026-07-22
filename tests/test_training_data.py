@@ -8,6 +8,7 @@ from agentic_wallet.benchmark import load_cases
 from agentic_wallet.training import (
     TrainingExample,
     CoverageDimensions,
+    balanced_semantic_subset,
     generate_error_driven_training_examples,
     generate_training_examples,
     load_natural_curriculum,
@@ -168,6 +169,28 @@ def test_pipeline_curriculum_matches_runtime_phases():
         )
         for example in examples
     )
+
+
+def test_pipeline_checkpoint_subset_round_robins_runtime_phases():
+    validation = [
+        item
+        for item in load_pipeline_curriculum(
+            DATA / "training" / "natural_v3_source.jsonl"
+        )
+        if item.split == "validation"
+    ]
+    selected = balanced_semantic_subset(validation, 20)
+    phase_counts: dict[str, int] = {}
+    for item in selected:
+        phase = item.context["phase"]
+        phase_counts[phase] = phase_counts.get(phase, 0) + 1
+    assert phase_counts == {
+        "explain_verified_tool_result": 2,
+        "fill_tool_arguments": 5,
+        "repair_dialogue_route": 5,
+        "repair_tool_arguments": 4,
+        "route_dialogue": 4,
+    }
 
 
 def test_production_examples_cannot_expose_unsafe_actions():

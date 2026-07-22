@@ -36,8 +36,9 @@ negative narration claims, and retaining the wallet as the sole signer.
   facts fall back to deterministic text.
 - The v4 dataset test verifies that user requests in its source-preserving train
   and validation partitions are disjoint.
-- Checkpoint semantic evaluation now covers the complete 60-record v4
-  validation partition by default rather than an order-biased first 32 records.
+- Checkpoint semantic evaluation uses a deterministic 20-record round-robin
+  across all five runtime phases rather than an order-biased prefix. The final
+  adapter is still evaluated against the complete 60-record v4 validation set.
 - The sealed suite remains unavailable and will not be used or represented as
   completed. The next run is research-only development evidence.
 
