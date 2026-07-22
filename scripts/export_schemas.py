@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from agentic_wallet.candidate_binding import TrustedRecipientCandidate
 from agentic_wallet.schemas.approval import ApprovalEnvelope
 from agentic_wallet.schemas.conversation import ConversationLedger
 from agentic_wallet.schemas.dialogue import DialogueRoute, ModelDialogueTurn
@@ -29,6 +30,7 @@ MODELS = {
     "model-dialogue-turn": ModelDialogueTurn,
     "dialogue-route": DialogueRoute,
     "conversation-ledger": ConversationLedger,
+    "trusted-recipient-candidate": TrustedRecipientCandidate,
     "portfolio": Portfolio,
     "transaction-plan": TransactionPlan,
     "simulation-result": SimulationResult,

@@ -248,6 +248,23 @@ def test_model_backed_chat_fails_closed_on_unavailable_signing_proposal():
     assert "no wallet tool was run" in body["reply"].lower()
 
 
+def test_production_chat_rejects_legacy_literal_recipient_action():
+    agent = _model_agent(
+        {
+            "action": "create_transfer_plan",
+            "arguments": {
+                "chain_id": 8453,
+                "asset_id": "base:usdc",
+                "amount_base_units": "2500000",
+                "recipient": "0x3333333333333333333333333333333333333333",
+            },
+        }
+    )
+    body = agent.respond("model-session", "draft a transfer")
+    assert body["data"] is None
+    assert "no wallet tool was run" in body["reply"].lower()
+
+
 def test_read_only_prefilter_uses_words_not_substrings():
     agent = _model_agent({"action": "show_help", "arguments": {}})
     significant = agent.respond("model-session", "is this balance significant?")

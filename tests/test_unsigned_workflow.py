@@ -3,7 +3,9 @@ from pathlib import Path
 import pytest
 
 from agentic_wallet.approval_guard import ApprovalInvalidated
+from agentic_wallet.candidate_binding import prepare_inference_context
 from agentic_wallet.harness import MockReadOnlyHarness
+from agentic_wallet.inference import ScriptedProvider
 from agentic_wallet.policy_engine import WalletPolicy
 from agentic_wallet.schemas.common import Amount
 from agentic_wallet.schemas.simulation_result import BalanceChange
@@ -34,6 +36,32 @@ def _plan(workflow):
         recipient=RECIPIENT,
         gas_reserve=GAS_RESERVE,
     )
+
+
+def test_candidate_bound_transfer_enters_normal_unsigned_workflow():
+    workflow = _workflow()
+    context = prepare_inference_context(
+        {
+            "user_request": (
+                "Draft 25000000 base units of USDC to " + RECIPIENT
+            ),
+            "chain_id": 8453,
+            "canonical_asset_ids": ["base:native", "base:usdc", "base:weth"],
+        }
+    )
+    provider = ScriptedProvider({})
+    call = provider.propose_tool_call_with_repair(
+        context, "create_transfer_plan_from_candidate"
+    )
+
+    plan = workflow.plan_transfer_from_candidate(
+        call=call,
+        context=context,
+        gas_reserve=GAS_RESERVE,
+    )
+    assert plan.recipient_address == RECIPIENT
+    assert plan.expected_outgoing[0].amount.base_units == "25000000"
+    assert workflow.state_machine.state is WorkflowState.PLAN_READY
 
 
 def test_unsigned_happy_path_stops_at_wallet_handoff_boundary():

@@ -402,3 +402,26 @@ All evidence is development-only. No sealed suite was opened. Non-weight run
 artifacts are under `data/training/results/hf-l4-v4-pipeline-20260722/`; weights
 remain private at
 `hf://buckets/critesjosh/agentic-wallet-smoke/e2b-qlora-smoke-20260722T175116Z/adapter`.
+
+## V5 candidate-binding curriculum
+
+The next dataset revision follows the post-v4 deterministic hardening rather
+than asking the model to memorize literal recipient construction. The
+model-facing action is `create_transfer_plan_from_candidate`; its recipient is
+an opaque trusted ID. Deterministic code extracts a current-user address,
+validates checksum rules, resolves the canonical asset and exact base-unit
+amount, and either constructs the typed call without an argument-model request
+or forces clarification for missing or ambiguous fields.
+
+`candidate-pipeline-v5` is generated from the same fixed natural source while
+leaving v4 and its result artifacts unchanged. It has 232 records: 128 dialogue
+routes and 104 remaining argument calls, split 174/58. The eight old transfer
+argument-generation and repair records are intentionally removed. Dataset
+SHA-256:
+`f23554fc062030eb405aca5f7f0ea503c1dc25b649b9a6806bdc325806e13cd0`.
+
+No v5 training or model evaluation has run. The immediate code gate is that no
+literal recipient can validate under the new action, absent or multiple
+recipient candidates cannot reach planning, and an unknown candidate ID fails
+closed during deterministic binding. Future evaluation must measure routing
+and clarification separately from fields the model no longer owns.

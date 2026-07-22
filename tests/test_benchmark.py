@@ -46,9 +46,11 @@ def test_benchmark_uses_route_then_selected_action_arguments():
         def __init__(self, script):
             super().__init__(script)
             self.action_sets = []
+            self.contexts = []
 
         def propose_tool_call(self, context, available_actions):
             self.action_sets.append((context.get("phase"), list(available_actions)))
+            self.contexts.append(context)
             return super().propose_tool_call(context, available_actions)
 
     case = _all_cases()[0]
@@ -59,6 +61,10 @@ def test_benchmark_uses_route_then_selected_action_arguments():
         ("route_dialogue", case.available_actions),
         ("fill_tool_arguments", [case.expected_action]),
     ]
+    assert all(
+        "trusted_recipient_candidates" not in context
+        for context in provider.contexts
+    )
 
 
 def test_benchmark_is_explicitly_development_regression_only():

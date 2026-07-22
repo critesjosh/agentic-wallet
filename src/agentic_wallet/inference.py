@@ -57,6 +57,13 @@ class InferenceProvider(ABC):
     ) -> ToolCall:
         """Try once, then make at most one non-executing schema repair call."""
 
+        from .candidate_binding import deterministic_candidate_tool_call
+
+        deterministic = deterministic_candidate_tool_call(selected_action, context)
+        if deterministic is not None:
+            self.last_attempt_count = 0
+            return deterministic
+
         self.last_attempt_count = 1
         try:
             return self.propose_tool_call(context, [selected_action])

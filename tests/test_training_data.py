@@ -11,6 +11,7 @@ from agentic_wallet.training import (
     balanced_semantic_subset,
     generate_error_driven_training_examples,
     generate_training_examples,
+    load_candidate_pipeline_curriculum,
     load_natural_curriculum,
     load_pipeline_curriculum,
     validate_training_dataset,
@@ -168,6 +169,40 @@ def test_pipeline_curriculum_matches_runtime_phases():
             for marker in forbidden_markers
         )
         for example in examples
+    )
+
+
+def test_candidate_pipeline_removes_free_generated_transfer_arguments():
+    examples = load_candidate_pipeline_curriculum(
+        DATA / "training" / "natural_v3_source.jsonl"
+    )
+    report = validate_training_dataset(examples, _benchmark())
+    candidate_routes = [
+        item
+        for item in examples
+        if item.target.get("proposed_action")
+        == "create_transfer_plan_from_candidate"
+    ]
+
+    assert report.total == 232
+    assert report.tool_calls == 104
+    assert report.dialogue_routes == 128
+    assert candidate_routes
+    assert all(
+        item.target.get("action") != "create_transfer_plan_from_candidate"
+        for item in examples
+        if item.kind == "tool_call"
+    )
+    assert all(
+        item.context["trusted_recipient_candidates"][0]["recipient_id"].startswith(
+            "recipient:user-"
+        )
+        for item in candidate_routes
+    )
+    assert all(
+        "recipient" not in item.target.get("arguments", {})
+        for item in examples
+        if item.kind == "tool_call"
     )
 
 

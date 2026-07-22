@@ -20,7 +20,11 @@ from ..schemas.conversation import ConversationLedger
 from ..schemas.dialogue import SuggestedAction
 from ..schemas.tool_call import ToolCall
 from ..state_machine import StateMachine
-from ..tool_contract import BalanceArguments, validate_tool_arguments
+from ..tool_contract import (
+    BalanceArguments,
+    validate_production_actions,
+    validate_tool_arguments,
+)
 from .narration import render_verified_result, validate_grounded_message
 
 _ASSET_ALIASES = {
@@ -80,6 +84,7 @@ class DemoChatAgent:
         registry: Registry = BASE_REGISTRY,
         provider: InferenceProvider | None = None,
     ) -> None:
+        validate_production_actions(_MODEL_ACTIONS)
         self.harness = harness
         self.registry = registry
         self.provider = provider

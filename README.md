@@ -46,6 +46,7 @@ src/agentic_wallet/
   registry.py     canonical id -> address (primary root of trust, plan.md P4)
   inference.py    InferenceProvider seam (local/remote now, on-device later)
   tool_contract.py shared typed action registry, prompts, and decoding schemas
+  candidate_binding.py  trusted recipient IDs + required-fact clarification
   planning.py     deterministic unsigned transfer and pinned-route swap plans
   simulation.py   normalized before/after diff verification
   policy_engine.py deterministic plan and simulation policy enforcement
@@ -110,6 +111,17 @@ recent messages. It deliberately contains no approval field: history is context,
 never authorization. Observed failures are recorded in
 [`docs/model-failures.md`](docs/model-failures.md).
 
+Candidate-bound transfers now remove recipient-address generation from the
+v3 candidate-binding model contract. Deterministic code extracts a
+checksum-valid address only from
+the current user message (or a separately verified contact), assigns an opaque
+`recipient:*` ID, and constructs the transfer fields without an argument-model
+call. Missing or multiple recipients force clarification before planning.
+Transaction-history addresses are never promoted to candidates automatically.
+The resolved address still enters the existing unsigned planning, simulation,
+policy, and digest-bound approval flow; this adds no signing authority and is
+not yet exposed by the read-only web demo.
+
 Ollama, llama.cpp, and OpenRouter request native schema-constrained decoding.
 The direct Transformers provider currently has post-hoc whole-output validation
 only; it is explicitly non-conformant with the native constrained-decoding
@@ -169,6 +181,7 @@ Generate and validate the data and inspect the run configuration without a GPU:
 ```bash
 python scripts/generate_training_data.py
 python scripts/generate_training_data.py --profile pipeline-v4
+python scripts/generate_training_data.py --profile candidate-pipeline-v5
 python scripts/train_qlora.py --dataset data/training/sft-v4-pipeline.jsonl
 ```
 
@@ -179,6 +192,13 @@ routes (including route repairs) and 112 selected-action argument calls
 conversation ledgers and grounded typed results. This is development data, not
 an independent safety evaluation. The sealed suite remains unavailable and must
 not be opened or used for checkpoint selection.
+
+The generated v5 candidate-binding curriculum preserves v4 as historical
+evidence while adapting future routing data to the safer runtime. It contains
+232 records (174 train, 58 development-validation). Candidate transfers appear
+only as route decisions; the eight obsolete free-generated transfer-argument
+and repair records are absent because deterministic code now owns those fields.
+V5 has not been trained or evaluated yet.
 
 The training path evaluates and checkpoints every 25 optimizer steps. The
 training command requires explicit

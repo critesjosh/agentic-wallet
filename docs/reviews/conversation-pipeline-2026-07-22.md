@@ -116,3 +116,24 @@ The next bounded experiments are:
 - an independently authored, single-use sealed suite of at least 100 cases,
   targeting at least 90% schema validity and zero hard-zero failures before any
   transaction-readiness claim.
+
+## Candidate-binding implementation review
+
+Claude Fable 5 reviewed a sanitized description of the resulting candidate
+implementation. It identified three pre-commit issues: positional IDs could be
+rebound across turns, the historical literal-recipient action needed an
+explicit production rejection rather than a documentation convention, and bare
+human-unit amounts could be confused with base units.
+
+All three were addressed. Recipient IDs now commit to the current request and
+address, with a cross-turn rebinding test. A production action-set validator and
+web-dispatch test reject the legacy action. The amount parser accepts only an
+integer explicitly labeled as base units or wei; bare human-unit and ambiguous
+amounts force clarification. Conflicting explicit chains also force
+clarification rather than being silently replaced by the wallet chain.
+
+The later recommendations remain open: contact-name confusable defenses,
+single-use candidate snapshot expiry, multi-recipient UX, and telemetry for
+clarification and legacy-action rejection. Replay protection for approved
+transactions remains owned by the existing digest, nonce, expiry, and state
+anchor checks rather than the model-facing candidate ID.

@@ -12,6 +12,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Optional
 
+from ..candidate_binding import (
+    CANDIDATE_TRANSFER_ACTION,
+    RequiredFactsMissing,
+    prepare_inference_context,
+)
 from ..inference import InferenceError, InferenceProvider
 from ..schemas.conversation import ConversationLedger
 from .cases import BenchmarkCase
@@ -193,6 +198,10 @@ def run_benchmark(
             "workflow_state": case.workflow_state,
             **case.context,
         }
+        # Preserve the immutable v2.1 prompt exactly. Candidate facts belong only
+        # to the new production contract and its future evaluation suites.
+        if CANDIDATE_TRANSFER_ACTION in case.available_actions:
+            context = prepare_inference_context(context)
         if "canonical_asset_ids" not in context:
             context["canonical_asset_ids"] = [
                 entry.asset_id for entry in BENCHMARK_REGISTRIES[case.family].entries()
@@ -227,6 +236,13 @@ def run_benchmark(
                     chosen,
                 )
                 chosen_arguments = call.arguments
+        except RequiredFactsMissing as exc:
+            if "request_missing_information" in case.available_actions:
+                chosen = "request_missing_information"
+                chosen_arguments = {"missing_fields": exc.fields}
+            else:
+                schema_valid = False
+                inference_error = str(exc)
         except InferenceError as exc:
             schema_valid = False  # fail-closed: no action taken
             inference_error = str(exc)

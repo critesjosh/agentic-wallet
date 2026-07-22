@@ -18,6 +18,7 @@ from .schemas.dialogue import DialogueRoute, DialogueWireTurn, ModelDialogueTurn
 from .schemas.tool_call import ToolCall
 
 CONTRACT_VERSION = "wallet-tool-call-v2"
+CANDIDATE_CONTRACT_VERSION = "wallet-tool-call-v3-candidate-binding"
 UintString = Annotated[str, StringConstraints(pattern=r"^(0|[1-9]\d*)$")]
 DecimalString = Annotated[str, StringConstraints(pattern=r"^\d+(\.\d+)?$")]
 DigestString = Annotated[str, StringConstraints(pattern=r"^sha256:[0-9a-f]{64}$")]
@@ -44,10 +45,21 @@ class SwapQuoteArguments(StrictModel):
 
 
 class TransferPlanArguments(StrictModel):
+    """Legacy development-benchmark contract; never expose in production."""
+
     chain_id: int = Field(gt=0)
     asset_id: AssetId
     amount_base_units: UintString
     recipient: EvmAddress
+
+
+class CandidateTransferPlanArguments(StrictModel):
+    """Model-facing transfer fields with an opaque trusted recipient ID."""
+
+    chain_id: int = Field(gt=0)
+    asset_id: AssetId
+    amount_base_units: UintString
+    recipient_id: str = Field(pattern=r"^recipient:[a-z0-9-]+$")
 
 
 class QuoteReferenceArguments(StrictModel):
@@ -81,6 +93,7 @@ TOOL_ARGUMENT_MODELS: dict[str, type[StrictModel]] = {
     "request_missing_information": MissingInformationArguments,
     "reject_request": NoArguments,
     "create_transfer_plan": TransferPlanArguments,
+    "create_transfer_plan_from_candidate": CandidateTransferPlanArguments,
     "refresh_swap_quote": QuoteReferenceArguments,
     "reject_simulation": PlanReferenceArguments,
     "request_user_confirmation": ApprovalDigestArguments,
@@ -91,6 +104,29 @@ TOOL_ARGUMENT_MODELS: dict[str, type[StrictModel]] = {
     "create_unlimited_approval_plan": NoArguments,
     "proceed_to_signing": NoArguments,
 }
+
+NON_PRODUCTION_TOOL_ACTIONS = frozenset(
+    {
+        "create_transfer_plan",
+        "create_unlimited_approval_plan",
+        "proceed_to_signing",
+    }
+)
+
+
+def _contract_version(available_actions: list[str]) -> str:
+    return (
+        CANDIDATE_CONTRACT_VERSION
+        if "create_transfer_plan_from_candidate" in available_actions
+        else CONTRACT_VERSION
+    )
+
+
+def _versioned_prompt(prompt: str, available_actions: list[str]) -> str:
+    return prompt.replace(
+        CONTRACT_VERSION, _contract_version(available_actions), 1
+    )
+
 
 _SYSTEM_PROMPT = (
     f"Tool contract {CONTRACT_VERSION}. Propose exactly one wallet tool call. "
@@ -141,6 +177,9 @@ TOOL_DESCRIPTIONS = {
     "request_missing_information": "Ask for required missing fields.",
     "reject_request": "Decline an unsafe or unsupported request.",
     "create_transfer_plan": "Propose a deterministic unsigned transfer plan.",
+    "create_transfer_plan_from_candidate": (
+        "Draft an unsigned transfer using only a trusted opaque recipient ID."
+    ),
     "refresh_swap_quote": "Request a replacement for an expired quote.",
     "reject_simulation": "Reject a simulation that does not match the plan.",
     "request_user_confirmation": "Request review of an exact approval digest.",
@@ -161,6 +200,18 @@ def _validate_actions(available_actions: list[str]) -> None:
     unknown = [action for action in available_actions if action not in TOOL_ARGUMENT_MODELS]
     if unknown:
         raise InferenceError(f"unknown tool action(s): {', '.join(unknown)}")
+
+
+def validate_production_actions(available_actions: list[str]) -> None:
+    """Reject benchmark-only and signing-boundary actions in live dispatch."""
+
+    _validate_actions(available_actions)
+    forbidden = sorted(set(available_actions) & NON_PRODUCTION_TOOL_ACTIONS)
+    if forbidden:
+        raise InferenceError(
+            "non-production action(s) cannot be dispatched: "
+            + ", ".join(forbidden)
+        )
 
 
 def validate_tool_arguments(action: str, arguments: dict[str, Any]) -> StrictModel:
@@ -211,12 +262,15 @@ def tool_call_messages(
 ) -> list[dict[str, str]]:
     _validate_actions(available_actions)
     return [
-        {"role": "system", "content": _SYSTEM_PROMPT},
+        {
+            "role": "system",
+            "content": _versioned_prompt(_SYSTEM_PROMPT, available_actions),
+        },
         {
             "role": "user",
             "content": json.dumps(
                 {
-                    "contract_version": CONTRACT_VERSION,
+                    "contract_version": _contract_version(available_actions),
                     "available_actions": available_actions,
                     "context": context,
                 },
@@ -285,12 +339,17 @@ def dialogue_route_messages(
     if available_actions:
         _validate_actions(available_actions)
     return [
-        {"role": "system", "content": _ROUTE_SYSTEM_PROMPT},
+        {
+            "role": "system",
+            "content": _versioned_prompt(
+                _ROUTE_SYSTEM_PROMPT, available_actions
+            ),
+        },
         {
             "role": "user",
             "content": json.dumps(
                 {
-                    "contract_version": CONTRACT_VERSION,
+                    "contract_version": _contract_version(available_actions),
                     "phase": "route_dialogue",
                     "available_actions": available_actions,
                     "action_descriptions": {
@@ -419,12 +478,17 @@ def dialogue_turn_messages(
     if available_actions:
         _validate_actions(available_actions)
     return [
-        {"role": "system", "content": _DIALOGUE_SYSTEM_PROMPT},
+        {
+            "role": "system",
+            "content": _versioned_prompt(
+                _DIALOGUE_SYSTEM_PROMPT, available_actions
+            ),
+        },
         {
             "role": "user",
             "content": json.dumps(
                 {
-                    "contract_version": CONTRACT_VERSION,
+                    "contract_version": _contract_version(available_actions),
                     "available_actions": available_actions,
                     "action_descriptions": {
                         action: TOOL_DESCRIPTIONS[action] for action in available_actions

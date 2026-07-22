@@ -6,12 +6,14 @@ DATASET_VERSION = "wallet-sft-v1"
 ERROR_DRIVEN_DATASET_VERSION = "wallet-sft-v2-error-driven"
 WORKFLOW_DATASET_VERSION = "wallet-sft-v3-workflow"
 PIPELINE_DATASET_VERSION = "wallet-sft-v4-pipeline"
+CANDIDATE_PIPELINE_DATASET_VERSION = "wallet-sft-v5-candidate-binding"
 SUPPORTED_DATASET_VERSIONS = frozenset(
     {
         DATASET_VERSION,
         ERROR_DRIVEN_DATASET_VERSION,
         WORKFLOW_DATASET_VERSION,
         PIPELINE_DATASET_VERSION,
+        CANDIDATE_PIPELINE_DATASET_VERSION,
     }
 )
 LORA_TARGET_MODULES = ("q_proj", "k_proj", "v_proj", "o_proj")

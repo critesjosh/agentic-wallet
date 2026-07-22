@@ -73,6 +73,15 @@ fact-snapshot freshness. It remains blocked until multi-argument and trajectory
 gates pass with no hard-zero failures and a separately authored sealed suite is
 evaluated once under `docs/sealed-eval-protocol.md`.
 
+The first part of this hardening is implemented: model-facing transfers use an
+opaque trusted recipient ID, current-user addresses are parsed and checksum
+validated deterministically, missing or ambiguous recipients force
+clarification before argument inference, and complete transfer arguments are
+assembled without a model call. The legacy literal-recipient action remains
+only for immutable historical benchmark compatibility and must not be exposed
+by production state allowlists. Per-field experiments for other multi-argument
+actions, snapshot binding, and sealed evaluation remain open.
+
 ## 1. Project summary
 
 This project explores a private, low-cost crypto wallet agent that runs primarily on local mobile hardware.

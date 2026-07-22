@@ -5,10 +5,14 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from ..candidate_binding import prepare_inference_context
 from .data import TrainingExample
 from .natural_curriculum import load_natural_curriculum
 
 PIPELINE_CURRICULUM_VERSION = "wallet-pipeline-curriculum-v4-2"
+CANDIDATE_PIPELINE_CURRICULUM_VERSION = "wallet-pipeline-curriculum-v5-1"
+_LEGACY_TRANSFER_ACTION = "create_transfer_plan"
+_CANDIDATE_TRANSFER_ACTION = "create_transfer_plan_from_candidate"
 
 
 def _ledger_context(context: dict[str, Any]) -> dict[str, Any]:
@@ -263,4 +267,57 @@ def load_pipeline_curriculum(path: str | Path) -> list[TrainingExample]:
             )
     if len(output) != 240:
         raise ValueError("pipeline curriculum must contain exactly 240 records")
+    return output
+
+
+def load_candidate_pipeline_curriculum(path: str | Path) -> list[TrainingExample]:
+    """Adapt v4 to the candidate-bound runtime without rewriting its history.
+
+    Candidate transfer arguments are constructed deterministically, so their
+    old free-generation and repair records are intentionally removed. The model
+    is trained only to route to the candidate-bound action or clarification.
+    """
+
+    output: list[TrainingExample] = []
+    for example in load_pipeline_curriculum(path):
+        target_action = example.target.get("action")
+        if example.kind == "tool_call" and target_action == _LEGACY_TRANSFER_ACTION:
+            continue
+
+        available_actions = [
+            _CANDIDATE_TRANSFER_ACTION
+            if action == _LEGACY_TRANSFER_ACTION
+            else action
+            for action in example.available_actions
+        ]
+        target = dict(example.target)
+        if target.get("proposed_action") == _LEGACY_TRANSFER_ACTION:
+            target["proposed_action"] = _CANDIDATE_TRANSFER_ACTION
+        context = prepare_inference_context(example.context)
+        previous = context.get("previous_output")
+        if isinstance(previous, dict):
+            previous = dict(previous)
+            if previous.get("proposed_action") == _LEGACY_TRANSFER_ACTION:
+                previous["proposed_action"] = _CANDIDATE_TRANSFER_ACTION
+            context["previous_output"] = previous
+        coverage = example.coverage
+        if coverage.intended_action == _LEGACY_TRANSFER_ACTION:
+            coverage = coverage.model_copy(
+                update={"intended_action": _CANDIDATE_TRANSFER_ACTION}
+            )
+        output.append(
+            example.model_copy(
+                update={
+                    "id": example.id.replace("sft-v4-", "sft-v5-", 1),
+                    "available_actions": available_actions,
+                    "context": context,
+                    "target": target,
+                    "coverage": coverage,
+                }
+            )
+        )
+    if len(output) != 232:
+        raise ValueError(
+            "candidate pipeline curriculum must contain exactly 232 records"
+        )
     return output

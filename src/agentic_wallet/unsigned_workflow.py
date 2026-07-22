@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from .approval_guard import ApprovalGuard, ApprovalInvalidated
+from .candidate_binding import bind_transfer_candidate
 from .harness import MockReadOnlyHarness
 from .planning import build_swap_plan, build_transfer_plan
 from .policy_engine import WalletPolicy, evaluate_policy
@@ -13,6 +16,7 @@ from .schemas.policy import PolicyResult
 from .schemas.quote import SwapQuote
 from .schemas.simulation_result import BalanceChange, SimulationResult
 from .schemas.transaction_plan import TransactionPlan
+from .schemas.tool_call import ToolCall
 from .simulation import simulate_plan
 from .state_machine import StateMachine, WorkflowState
 
@@ -68,6 +72,31 @@ class UnsignedTransactionWorkflow:
         )
         self.state_machine.transition(WorkflowState.PLAN_READY)
         return self.plan
+
+    def plan_transfer_from_candidate(
+        self,
+        *,
+        call: ToolCall,
+        context: dict[str, Any],
+        gas_reserve: Amount,
+    ) -> TransactionPlan:
+        """Resolve a trusted candidate ID, then enter normal deterministic planning."""
+
+        bound = bind_transfer_candidate(call, context)
+        if bound.chain_id != self.harness.portfolio.chain_id:
+            raise UnsignedWorkflowError(
+                "candidate transfer chain does not match wallet"
+            )
+        asset = self.registry.resolve(bound.asset_id)
+        return self.plan_transfer(
+            asset_id=bound.asset_id,
+            amount=Amount(
+                base_units=bound.amount_base_units,
+                decimals=asset.decimals,
+            ),
+            recipient=bound.recipient,
+            gas_reserve=gas_reserve,
+        )
 
     def plan_swap(
         self, *, quote: SwapQuote, now: int, gas_reserve: Amount

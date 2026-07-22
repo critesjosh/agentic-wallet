@@ -20,6 +20,18 @@ def test_schema_constrains_action_and_shape():
     assert schema["oneOf"][1]["properties"]["arguments"]["additionalProperties"] is False
 
 
+def test_candidate_transfer_schema_never_accepts_literal_recipient():
+    schema = tool_call_json_schema(["create_transfer_plan_from_candidate"])
+    arguments = schema["oneOf"][0]["properties"]["arguments"]
+    assert arguments["required"] == [
+        "chain_id",
+        "asset_id",
+        "amount_base_units",
+        "recipient_id",
+    ]
+    assert "recipient" not in arguments["properties"]
+
+
 def test_provider_sends_constrained_deterministic_request():
     captured = {}
 

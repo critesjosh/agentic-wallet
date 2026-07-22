@@ -9,12 +9,14 @@ from pathlib import Path
 
 from agentic_wallet.benchmark import BENCHMARK_DATASET_ROLE, load_cases
 from agentic_wallet.training import (
+    CANDIDATE_PIPELINE_CURRICULUM_VERSION,
     ERROR_DRIVEN_GENERATOR_VERSION,
     GENERATOR_VERSION,
     NATURAL_CURRICULUM_VERSION,
     PIPELINE_CURRICULUM_VERSION,
     generate_error_driven_training_examples,
     generate_training_examples,
+    load_candidate_pipeline_curriculum,
     load_natural_curriculum,
     load_pipeline_curriculum,
     validate_training_dataset,
@@ -22,6 +24,7 @@ from agentic_wallet.training import (
 from agentic_wallet.training.config import (
     BASE_MODEL_ID,
     BASE_MODEL_REVISION,
+    CANDIDATE_PIPELINE_DATASET_VERSION,
     DATASET_VERSION,
     ERROR_DRIVEN_DATASET_VERSION,
     WORKFLOW_DATASET_VERSION,
@@ -70,6 +73,17 @@ PROFILES = {
         "generator_version": PIPELINE_CURRICULUM_VERSION,
         "generate": None,
         "load": load_pipeline_curriculum,
+    },
+    "candidate-pipeline-v5": {
+        "output": ROOT / "data" / "training" / "sft-v5-candidate-binding.jsonl",
+        "source": ROOT / "data" / "training" / "natural_v3_source.jsonl",
+        "tool_count": None,
+        "dialogue_count": None,
+        "seed": None,
+        "dataset_version": CANDIDATE_PIPELINE_DATASET_VERSION,
+        "generator_version": CANDIDATE_PIPELINE_CURRICULUM_VERSION,
+        "generate": None,
+        "load": load_candidate_pipeline_curriculum,
     },
 }
 
