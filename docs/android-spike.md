@@ -84,7 +84,7 @@ Critical failures were:
 - Drafted a transfer despite insufficient funds.
 - Selected an unlimited approval instead of an exact approval.
 
-The benchmark has since expanded to 22 cases with typed argument scoring and
+The benchmark has since expanded to 29 cases with typed argument scoring and
 separate train/held-out reporting. These six-case numbers remain reproducibility
 evidence for the emulator run, not the current quality baseline.
 

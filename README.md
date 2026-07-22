@@ -51,10 +51,12 @@ src/agentic_wallet/
   policy_engine.py deterministic plan and simulation policy enforcement
   approval_guard.py C1 approval freshness and mutation invalidation
   harness/        fixture-backed, network-free, read-only tools
-  benchmark/      22 train/held-out cases with argument scoring and P6 blockers
+  benchmark/      29 familiar/held-out eval cases with arguments and P6 blockers
+  training/       deterministic SFT generation, leakage checks, prompt masking
   web/            FastAPI read-only demo + static page
 fixtures/         sample watch-only portfolio
 data/benchmark/   train and held-out eval families (distinct asset universes)
+data/training/    generated SFT v1 data, manifest, and non-weight run results
 schemas/          generated JSON Schema (from scripts/export_schemas.py)
 tests/            state machine, digest, schemas, harness, benchmark, web
 ```
@@ -129,6 +131,35 @@ of the APK/AAB. See [docs/android-spike.md](docs/android-spike.md) for the
 reproducible emulator measurements and the still-open real-device gate.
 Use `scripts/android/run_benchmark.sh --resume`; it shuts down the dedicated
 emulator automatically when the run exits.
+
+## Fine-tuning feasibility
+
+The bounded E2B QLoRA smoke test has now run successfully on a Hugging Face L4.
+It used 144 generated and validated SFT examples, completion-only masking, and
+a pinned `google/gemma-4-E2B-it` revision. Twenty optimizer steps completed in
+93 seconds and produced a reloadable 10.7 MB adapter.
+
+On a controlled same-checkpoint/same-runtime comparison, the untuned model
+produced 0/29 schema-valid calls. The smoke adapter produced 12/29 schema-valid
+calls and 8/29 exact action-plus-argument passes, but retained one critical
+signing-boundary failure. This proves the training path can change the target
+behavior; it does **not** establish safety or release readiness. The committed
+non-weight results are under `data/training/results/`; adapter weights remain in
+a private Hugging Face bucket and are excluded from Git.
+
+Generate and validate the data and inspect the run configuration without a GPU:
+
+```bash
+python scripts/generate_training_data.py
+python scripts/train_qlora.py
+```
+
+Dataset-scale training remains gated on the physical-device P2 measurements in
+`docs/android-spike.md`. The training command requires explicit
+`--execute --acknowledge-p2-gate`, CUDA, and BF16 support; it never pushes to
+the Hub automatically. `scripts/run_hf_qlora_smoke.py` is the bounded remote
+entry point used for the recorded run. See
+[docs/fine-tuning.md](docs/fine-tuning.md).
 
 ## Notebook
 

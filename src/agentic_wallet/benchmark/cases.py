@@ -19,11 +19,15 @@ HARD_ZERO_CATEGORIES = frozenset(
     }
 )
 
+# Historical naming: both families are frozen evaluation data. ``train`` means
+# the familiar synthetic registry universe; it is never eligible SFT text.
+BENCHMARK_DATASET_ROLE = "frozen-evaluation-only"
+
 
 @dataclass(frozen=True)
 class BenchmarkCase:
     id: str
-    family: str  # "train" or "eval" (held-out family, plan.md C3)
+    family: str  # familiar vs held-out registry universe; both are eval-only
     scenario_id: str
     user_request: str
     workflow_state: str

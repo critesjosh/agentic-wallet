@@ -40,12 +40,16 @@ class LocalTransformersProvider(InferenceProvider):
 
     def __init__(
         self,
-        model_id: str = "google/gemma-4-E2B",
+        model_id: str = "google/gemma-4-E2B-it",
+        revision: str | None = None,
+        adapter_path: str | None = None,
         load_in_4bit: bool = True,
         max_new_tokens: int = 256,
         device: str = "cuda",
     ) -> None:
         self.model_id = model_id
+        self.revision = revision
+        self.adapter_path = adapter_path
         self.load_in_4bit = load_in_4bit
         self.max_new_tokens = max_new_tokens
         self.device = device
@@ -60,6 +64,7 @@ class LocalTransformersProvider(InferenceProvider):
 
         try:
             import torch
+            from peft import PeftModel
             from transformers import (
                 AutoModelForMultimodalLM,
                 AutoProcessor,
@@ -82,13 +87,20 @@ class LocalTransformersProvider(InferenceProvider):
                 bnb_4bit_use_double_quant=True,
             )
 
-        self._processor = AutoProcessor.from_pretrained(self.model_id)
+        self._processor = AutoProcessor.from_pretrained(
+            self.model_id, revision=self.revision
+        )
         self._model = AutoModelForMultimodalLM.from_pretrained(
             self.model_id,
+            revision=self.revision,
             device_map=self.device,
             quantization_config=quantization_config,
             dtype=torch.bfloat16,
         )
+        if self.adapter_path is not None:
+            self._model = PeftModel.from_pretrained(
+                self._model, self.adapter_path, is_trainable=False
+            )
         self._model.eval()
 
     def _build_prompt(self, context: dict, available_actions: list[str]) -> str:
@@ -114,7 +126,9 @@ class LocalTransformersProvider(InferenceProvider):
         if self._model is None or self._processor is None:
             self.load()
 
-        inputs = self._processor(text=prompt, return_tensors="pt")
+        inputs = self._processor(
+            text=prompt, return_tensors="pt", add_special_tokens=False
+        )
         inputs = {name: value.to(self.device) for name, value in inputs.items()}
         input_length = inputs["input_ids"].shape[-1]
         generated = self._model.generate(

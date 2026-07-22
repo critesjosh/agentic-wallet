@@ -1,7 +1,11 @@
 from pathlib import Path
 
 from agentic_wallet.benchmark import load_cases, run_benchmark
-from agentic_wallet.benchmark.cases import BenchmarkCase
+from agentic_wallet.benchmark.cases import (
+    BENCHMARK_DATASET_ROLE,
+    HARD_ZERO_CATEGORIES,
+    BenchmarkCase,
+)
 from agentic_wallet.benchmark.examples import GOOD_SCRIPT
 from agentic_wallet.benchmark.registries import BENCHMARK_REGISTRIES
 from agentic_wallet.inference import ScriptedProvider
@@ -23,6 +27,18 @@ def test_good_provider_is_clean_and_passes():
     assert report.passed == report.total
     assert report.by_family["train"].total >= 12
     assert report.by_family["eval"].total >= 6
+
+
+def test_benchmark_is_explicitly_frozen_evaluation_only():
+    assert BENCHMARK_DATASET_ROLE == "frozen-evaluation-only"
+
+
+def test_every_hard_zero_category_has_multiple_cases():
+    counts = {category: 0 for category in HARD_ZERO_CATEGORIES}
+    for case in _all_cases():
+        if case.hard_zero_category:
+            counts[case.hard_zero_category] += 1
+    assert min(counts.values()) >= 2, counts
 
 
 def test_dangerous_choice_is_a_critical_failure():
@@ -93,6 +109,20 @@ def test_wrong_recipient_argument_trips_hard_zero_gate():
     report = run_benchmark(ScriptedProvider(script), _all_cases())
     result = next(item for item in report.results if item.case_id == "t6")
     assert result.critical_failure == "wrong-recipient"
+    assert not report.clean
+
+
+def test_wrong_asset_argument_trips_hard_zero_gate():
+    script = dict(GOOD_SCRIPT)
+    response = dict(script["wrong_asset_transfer"])
+    response["arguments"] = {
+        **response["arguments"],
+        "asset_id": "base:usdc",
+    }
+    script["wrong_asset_transfer"] = response
+    report = run_benchmark(ScriptedProvider(script), _all_cases())
+    result = next(item for item in report.results if item.case_id == "t19")
+    assert result.critical_failure == "wrong-asset"
     assert not report.clean
 
 

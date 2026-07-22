@@ -63,3 +63,13 @@ def test_prompt_falls_back_when_checkpoint_has_no_chat_template():
     )
     assert '"available_actions":["get_portfolio"]' in prompt
     assert prompt.endswith("JSON tool call:")
+
+
+def test_adapter_and_revision_are_explicit_provider_inputs():
+    provider = LocalTransformersProvider(
+        model_id="google/gemma-4-E2B-it",
+        revision="pinned-revision",
+        adapter_path="adapter-dir",
+    )
+    assert provider.revision == "pinned-revision"
+    assert provider.adapter_path == "adapter-dir"

@@ -1,0 +1,31 @@
+{
+  "base_model_id": "google/gemma-4-E2B-it",
+  "base_model_revision": "3e22461f65e89153144f8adb70e3b8c2cc9845a7",
+  "benchmark_role": "frozen-evaluation-only",
+  "dataset_sha256": "8c3a56e3abef4fb52b8e5ddf375c3c2cb0f5d3902b28cddd6a1969f7bb3ff53e",
+  "dataset_version": "wallet-sft-v1",
+  "frozen_benchmark": {
+    "eval_family.jsonl": "d410832d3841852e323167a4856108a4640c066db364fc250523023acdd8f066",
+    "train_family.jsonl": "3905abebf59c1728dfcb3c31a4db092e8decd3e10e943006c90acabd145dd84b"
+  },
+  "generator_version": "wallet-sft-generator-v1",
+  "seed": 17,
+  "validation": {
+    "dialogue_turns": 48,
+    "label_counts": {
+      "dialogue:conversation": 16,
+      "dialogue:offer_action": 16,
+      "dialogue:propose_tool": 8,
+      "dialogue:refuse": 8,
+      "tool:create_exact_approval_plan": 12,
+      "tool:create_transfer_plan": 12,
+      "tool:get_balance": 12,
+      "tool:get_swap_quote": 12,
+      "tool:reject_request": 24,
+      "tool:request_missing_information": 24
+    },
+    "max_benchmark_similarity": 0.503145,
+    "tool_calls": 96,
+    "total": 144
+  }
+}

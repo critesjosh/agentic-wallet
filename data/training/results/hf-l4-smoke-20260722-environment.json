@@ -1,0 +1,8 @@
+{
+  "cuda_available": true,
+  "cuda_bf16_supported": true,
+  "cuda_device": "NVIDIA L4",
+  "max_steps": 20,
+  "python": "3.12.12 (main, Feb  3 2026, 05:51:02) [GCC 12.2.0]",
+  "torch": "2.13.0+cu130"
+}

@@ -1,0 +1,65 @@
+{
+  "adapter": {
+    "private_bucket_path": "hf://buckets/critesjosh/agentic-wallet-smoke/e2b-qlora-smoke-20260722T134205Z/adapter",
+    "weight_bytes": 10744440
+  },
+  "cost_estimate": {
+    "estimated_usd": 0.2989,
+    "gpu_running_seconds": 1348,
+    "listed_l4_usd_per_minute": 0.0133,
+    "note": "Estimate uses reported RUNNING durations for all six diagnostic, training, and evaluation jobs; queue time is excluded."
+  },
+  "jobs": [
+    {
+      "id": "critesjosh/6a60c57bd09dc1f57c6c2545",
+      "purpose": "initial PEFT compatibility diagnostic",
+      "running_seconds": 108,
+      "status": "ERROR before optimizer step"
+    },
+    {
+      "id": "critesjosh/6a60c66c13e6ef894d54bbaf",
+      "purpose": "full-regex PEFT target diagnostic",
+      "running_seconds": 105,
+      "status": "ERROR before optimizer step"
+    },
+    {
+      "id": "critesjosh/6a60c7a7d09dc1f57c6c25a8",
+      "purpose": "inner-projection PEFT target diagnostic",
+      "running_seconds": 111,
+      "status": "ERROR before optimizer step"
+    },
+    {
+      "id": "critesjosh/6a60c89513e6ef894d54bc05",
+      "purpose": "20-step train, save, reload, and evaluation",
+      "running_seconds": 437,
+      "status": "COMPLETED"
+    },
+    {
+      "id": "critesjosh/6a60caa5d09dc1f57c6c2664",
+      "purpose": "detailed adapter evaluation",
+      "running_seconds": 331,
+      "status": "COMPLETED"
+    },
+    {
+      "id": "critesjosh/6a60ccc3d09dc1f57c6c26c2",
+      "purpose": "controlled untuned-base evaluation",
+      "running_seconds": 256,
+      "status": "COMPLETED"
+    }
+  ],
+  "provenance": {
+    "base_git_commit": "9294875",
+    "dataset_sha256": "8c3a56e3abef4fb52b8e5ddf375c3c2cb0f5d3902b28cddd6a1969f7bb3ff53e",
+    "limitation": "The sanitized remote snapshot intentionally omitted .git, so the historical training_metadata source_commit is null. Dataset, benchmark, model revision, and configuration are pinned, but the exact historical source-tree digest was not recorded. Future jobs record source_tree_sha256 independently of Git.",
+    "model_revision": "3e22461f65e89153144f8adb70e3b8c2cc9845a7"
+  },
+  "schema_version": 1,
+  "training": {
+    "average_loss": 2.061,
+    "first_reported_loss": 5.347,
+    "last_reported_loss": 1.067,
+    "optimizer_steps": 20,
+    "runtime_seconds": 93.04,
+    "steps_per_second": 0.215
+  }
+}

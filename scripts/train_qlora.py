@@ -1,0 +1,228 @@
+"""Reproducible, completion-only QLoRA plumbing for Gemma 4 E2B.
+
+Without ``--execute`` this performs a CPU-safe dataset/configuration dry run.
+Actual training additionally requires an explicit P2 acknowledgement and a
+BF16-capable CUDA GPU. It never pushes an artifact to the Hub.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import subprocess
+from pathlib import Path
+from typing import Any
+
+from agentic_wallet.benchmark import load_cases
+from agentic_wallet.training import (
+    load_training_examples,
+    tokenize_completion_only,
+    validate_training_dataset,
+)
+from agentic_wallet.training.config import (
+    BASE_MODEL_ID,
+    BASE_MODEL_REVISION,
+    LORA_EXCLUDE_PATTERN,
+    LORA_TARGET_MODULES,
+    SUPPORTED_DATASET_VERSIONS,
+)
+
+ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_DATASET = ROOT / "data" / "training" / "sft-v1.jsonl"
+BENCHMARK_DIR = ROOT / "data" / "benchmark"
+
+
+def _sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _source_commit() -> str | None:
+    explicit = os.environ.get("AGENTIC_WALLET_SOURCE_REVISION")
+    if explicit:
+        return explicit
+    try:
+        return subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
+        ).strip()
+    except (OSError, subprocess.CalledProcessError):
+        return None
+
+
+def _validate_inputs(dataset: Path, manifest: Path) -> tuple[list, dict, Any]:
+    examples = load_training_examples(dataset)
+    benchmark_paths = [
+        BENCHMARK_DIR / "train_family.jsonl",
+        BENCHMARK_DIR / "eval_family.jsonl",
+    ]
+    frozen = [case for path in benchmark_paths for case in load_cases(path)]
+    report = validate_training_dataset(examples, frozen)
+    metadata = json.loads(manifest.read_text())
+    if metadata["dataset_version"] not in SUPPORTED_DATASET_VERSIONS:
+        raise ValueError("unexpected dataset version")
+    if metadata["dataset_sha256"] != _sha256(dataset):
+        raise ValueError("dataset digest does not match its manifest")
+    for path in benchmark_paths:
+        if metadata["frozen_benchmark"].get(path.name) != _sha256(path):
+            raise ValueError(f"frozen benchmark digest changed: {path.name}")
+    if metadata["base_model_id"] != BASE_MODEL_ID:
+        raise ValueError("manifest base model does not match training config")
+    if metadata["base_model_revision"] != BASE_MODEL_REVISION:
+        raise ValueError("manifest base revision does not match training config")
+    return examples, metadata, report
+
+
+def _collator(tokenizer: Any):
+    import torch
+    from torch.nn.utils.rnn import pad_sequence
+
+    pad_token_id = tokenizer.pad_token_id
+    if pad_token_id is None:
+        raise ValueError("processor tokenizer has no pad token id")
+
+    def collate(features: list[dict[str, list[int]]]) -> dict[str, Any]:
+        batch: dict[str, Any] = {}
+        keys = set.intersection(*(set(feature) for feature in features))
+        for key in keys:
+            padding = -100 if key == "labels" else (pad_token_id if key == "input_ids" else 0)
+            values = [torch.tensor(feature[key], dtype=torch.long) for feature in features]
+            batch[key] = pad_sequence(values, batch_first=True, padding_value=padding)
+        return batch
+
+    return collate
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dataset", type=Path, default=DEFAULT_DATASET)
+    parser.add_argument("--manifest", type=Path, default=None)
+    parser.add_argument("--output-dir", type=Path, default=ROOT / "artifacts" / "e2b-qlora-smoke")
+    parser.add_argument("--max-steps", type=int, default=50)
+    parser.add_argument("--max-length", type=int, default=1024)
+    parser.add_argument("--learning-rate", type=float, default=2e-4)
+    parser.add_argument("--rank", type=int, default=8)
+    parser.add_argument("--seed", type=int, default=17)
+    parser.add_argument("--execute", action="store_true")
+    parser.add_argument("--acknowledge-p2-gate", action="store_true")
+    args = parser.parse_args()
+    manifest = args.manifest or args.dataset.with_suffix(".manifest.json")
+    examples, dataset_metadata, report = _validate_inputs(args.dataset, manifest)
+
+    run_plan = {
+        "mode": "execute" if args.execute else "dry-run",
+        "base_model_id": BASE_MODEL_ID,
+        "base_model_revision": BASE_MODEL_REVISION,
+        "dataset_version": dataset_metadata["dataset_version"],
+        "dataset_sha256": dataset_metadata["dataset_sha256"],
+        "examples": report.total,
+        "max_steps": args.max_steps,
+        "max_length": args.max_length,
+        "rank": args.rank,
+        "target_modules": list(LORA_TARGET_MODULES),
+        "completion_only_loss": True,
+        "automatic_hub_push": False,
+        "p2_gate": "open-real-device-evidence-required",
+    }
+    print(json.dumps(run_plan, indent=2, sort_keys=True))
+    if not args.execute:
+        return
+    if not args.acknowledge_p2_gate:
+        raise SystemExit(
+            "Refusing training: --acknowledge-p2-gate is required for the mechanical "
+            "smoke run; it does not authorize dataset-scale training."
+        )
+
+    try:
+        import torch
+        from datasets import Dataset
+        from peft import LoraConfig, TaskType, get_peft_model, prepare_model_for_kbit_training
+        from transformers import (
+            AutoModelForMultimodalLM,
+            AutoProcessor,
+            BitsAndBytesConfig,
+            Trainer,
+            TrainingArguments,
+        )
+    except ImportError as exc:
+        raise SystemExit('Install the ML dependencies with pip install -e ".[ml]"') from exc
+    if not torch.cuda.is_available():
+        raise SystemExit("QLoRA execution requires CUDA; use a free GPU runtime for the smoke run")
+    if not torch.cuda.is_bf16_supported():
+        raise SystemExit("QLoRA execution requires a BF16-capable CUDA GPU")
+
+    quantization = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_compute_dtype=torch.bfloat16,
+        bnb_4bit_use_double_quant=True,
+    )
+    processor = AutoProcessor.from_pretrained(
+        BASE_MODEL_ID, revision=BASE_MODEL_REVISION
+    )
+    model = AutoModelForMultimodalLM.from_pretrained(
+        BASE_MODEL_ID,
+        revision=BASE_MODEL_REVISION,
+        device_map="auto",
+        quantization_config=quantization,
+        dtype=torch.bfloat16,
+    )
+    model = prepare_model_for_kbit_training(model)
+    model = get_peft_model(
+        model,
+        LoraConfig(
+            task_type=TaskType.CAUSAL_LM,
+            r=args.rank,
+            lora_alpha=args.rank * 2,
+            lora_dropout=0.05,
+            bias="none",
+            target_modules=list(LORA_TARGET_MODULES),
+            exclude_modules=LORA_EXCLUDE_PATTERN,
+        ),
+    )
+    model.config.use_cache = False
+    records = [
+        tokenize_completion_only(processor, example, max_length=args.max_length)
+        for example in examples
+    ]
+    train_dataset = Dataset.from_list(records)
+    training_args = TrainingArguments(
+        output_dir=str(args.output_dir),
+        max_steps=args.max_steps,
+        per_device_train_batch_size=1,
+        gradient_accumulation_steps=8,
+        learning_rate=args.learning_rate,
+        bf16=True,
+        gradient_checkpointing=True,
+        logging_steps=1,
+        save_strategy="steps",
+        save_steps=args.max_steps,
+        report_to="none",
+        remove_unused_columns=False,
+        seed=args.seed,
+        data_seed=args.seed,
+        optim="paged_adamw_8bit",
+    )
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        train_dataset=train_dataset,
+        data_collator=_collator(processor.tokenizer),
+    )
+    trainer.train()
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    model.save_pretrained(args.output_dir)
+    processor.save_pretrained(args.output_dir)
+    training_metadata = {
+        **run_plan,
+        "source_commit": _source_commit(),
+        "source_tree_sha256": os.environ.get("AGENTIC_WALLET_SOURCE_TREE_SHA256"),
+        "training_complete": True,
+    }
+    (args.output_dir / "training_metadata.json").write_text(
+        json.dumps(training_metadata, indent=2, sort_keys=True) + "\n"
+    )
+
+
+if __name__ == "__main__":
+    main()

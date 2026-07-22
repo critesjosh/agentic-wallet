@@ -1,0 +1,21 @@
+{
+  "automatic_hub_push": false,
+  "base_model_id": "google/gemma-4-E2B-it",
+  "base_model_revision": "3e22461f65e89153144f8adb70e3b8c2cc9845a7",
+  "completion_only_loss": true,
+  "dataset_sha256": "8c3a56e3abef4fb52b8e5ddf375c3c2cb0f5d3902b28cddd6a1969f7bb3ff53e",
+  "examples": 144,
+  "max_length": 1024,
+  "max_steps": 20,
+  "mode": "execute",
+  "p2_gate": "open-real-device-evidence-required",
+  "rank": 8,
+  "source_commit": null,
+  "target_modules": [
+    "q_proj",
+    "k_proj",
+    "v_proj",
+    "o_proj"
+  ],
+  "training_complete": true
+}

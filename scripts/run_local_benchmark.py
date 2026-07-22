@@ -30,7 +30,7 @@ def main() -> None:
         )
     else:
         provider = LocalTransformersProvider(
-            model_id=args.model_id or "google/gemma-4-E2B",
+            model_id=args.model_id or "google/gemma-4-E2B-it",
             max_new_tokens=args.max_new_tokens,
         )
         provider.load()

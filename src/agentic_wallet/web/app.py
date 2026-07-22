@@ -83,7 +83,7 @@ def _build_chat_agent() -> DemoChatAgent:
     if provider_name == "keyword":
         return DemoChatAgent(_harness)
     if provider_name == "local-transformers":
-        model_id = os.getenv("AGENTIC_WALLET_MODEL_ID", "google/gemma-4-E2B")
+        model_id = os.getenv("AGENTIC_WALLET_MODEL_ID", "google/gemma-4-E2B-it")
         return DemoChatAgent(
             _harness, provider=LocalTransformersProvider(model_id=model_id)
         )
