@@ -45,3 +45,24 @@ while a validated wrong dangerous argument remains critical; and the final
 validation error is retained for syntax classification. Cases, expectations,
 weights, prompts, repairs, and exact-match rules are unchanged. The pre-fix
 artifact remains committed for auditability.
+
+## Fixed-weight v2.1 result
+
+The canonical corrected run is Hugging Face job
+`critesjosh/6a610e9a13e6ef894d54c249`. An independent fixed-weight repeat,
+`critesjosh/6a610fae13e6ef894d54c261`, reproduced its report byte-for-byte:
+3/29 exact, 4/29 fully typed-valid,
+28/29 JSON-syntax-valid, 0/7 multi-argument exact, zero complete trajectories,
+and 11 critical route choices. Raw route choice matched 18/29 expected actions;
+that diagnostic does not override strict end-to-end scoring. Ten dangerous
+routes later failed argument validation, and one forbidden duplicate-transfer
+route produced valid arguments. Under P6 all 11 remain release blockers.
+
+Job `critesjosh/6a610e9a13e6ef894d54c249` completed the same fixed-weight
+evaluation first; the later job reproduced its report byte-for-byte. Both used
+source commit `eddb2df` and the same adapter and decoding settings.
+
+Retry jobs `critesjosh/6a610cfb13e6ef894d54c229` and
+`critesjosh/6a610e6e13e6ef894d54c247` failed during Hugging Face volume mounting
+and never started the evaluator, so they are recorded as infrastructure noise
+rather than model results.

@@ -361,14 +361,11 @@ are a phase-balanced subset of these same 60 development records, not an
 independent set. The full score is therefore development evidence influenced by
 checkpoint choice and may be optimistic.
 
-The completed job also ran the historical 29-case evaluator and scored 0/29
-with 100% JSON syntax but 0% typed validity. That evaluator still used the
+The completed training job also ran the historical 29-case evaluator and scored
+0/29 with 100% JSON syntax but 0% typed validity. That evaluator still used the
 retired one-call tool contract, while v4 intentionally trains an argument-free
 route followed by a one-action argument call. The result is retained as a
-protocol-mismatch diagnostic, not compared to v1/v2 quality. The benchmark
-runner has since been moved to the staged production contract, and the same
-adapter must be rerun through that corrected evaluator before reporting a v4
-29-case regression number.
+protocol-mismatch diagnostic, not compared to v1/v2 quality.
 
 That fixed-weight evaluation-only rerun is complete under
 `staged-dialogue-route-v2.1`. The first staged execution exposed and preserved
@@ -392,10 +389,14 @@ can look strong on the narrow development curriculum while collapsing on the
 older regression distribution, and canonical multi-argument construction
 remains unsolved.
 
-The successful evaluation-only job is
-`critesjosh/6a610e9a13e6ef894d54c249`, sourced from commit `eddb2df`. Two prior
-launches failed before startup with Hugging Face volume-mount errors; a fresh
-immutable source mount resolved the infrastructure issue. No retraining occurred.
+The first successful evaluation-only job was
+`critesjosh/6a610e9a13e6ef894d54c249` (585 seconds). An independent repeat,
+`critesjosh/6a610fae13e6ef894d54c261` (582 seconds), reproduced the same report
+byte-for-byte. Both used source commit `eddb2df`; no retraining occurred. Jobs
+`critesjosh/6a610cfb13e6ef894d54c229` and
+`critesjosh/6a610e6e13e6ef894d54c247` failed before evaluator startup due to
+Hugging Face volume-mount errors. A fresh immutable source mount resolved the
+infrastructure issue.
 
 All evidence is development-only. No sealed suite was opened. Non-weight run
 artifacts are under `data/training/results/hf-l4-v4-pipeline-20260722/`; weights

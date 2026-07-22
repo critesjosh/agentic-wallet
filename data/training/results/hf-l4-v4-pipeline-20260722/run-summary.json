@@ -36,6 +36,14 @@
     {
       "job": "critesjosh/6a60fec5d09dc1f57c6c2d92",
       "outcome": "cancelled during overlong full-set checkpoint generation; no model result"
+    },
+    {
+      "job": "critesjosh/6a610cfb13e6ef894d54c229",
+      "outcome": "Hugging Face volume mount failed before startup; no model result"
+    },
+    {
+      "job": "critesjosh/6a610e6e13e6ef894d54c247",
+      "outcome": "Hugging Face volume mount failed before startup; no model result"
     }
   ],
   "legacy_regression_29": {
@@ -51,9 +59,13 @@
     "evaluation_running_seconds": 585,
     "exact": "3/29",
     "multi_argument_exact": "0/7",
+    "raw_route_choice_match": "18/29",
     "release_ready": false,
+    "repeat_verification_job": "critesjosh/6a610fae13e6ef894d54c261",
+    "repeat_verification_running_seconds": 582,
     "structured_output_rate": 0.13793103448275862,
-    "syntax_valid_rate": 0.9655172413793104
+    "syntax_valid_rate": 0.9655172413793104,
+    "trajectory_accuracy": 0.0
   },
   "max_steps": 50,
   "checkpoint_selection_overlap": "The balanced 20-record selection subset is contained in the same 60-record development partition.",
