@@ -9,15 +9,18 @@ from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-from ..inference import InferenceError, InferenceProvider
+from ..inference import InferenceError, InferenceProvider, ProposalValidationError
 from ..schemas.tool_call import ToolCall
-from ..schemas.dialogue import ModelDialogueTurn
+from ..schemas.dialogue import DialogueRoute, ModelDialogueTurn
 from ..tool_contract import (
     dialogue_turn_json_schema,
     dialogue_turn_messages,
+    dialogue_route_json_schema,
+    dialogue_route_messages,
     tool_call_json_schema,
     tool_call_messages,
     validate_dialogue_turn,
+    validate_dialogue_route,
 )
 
 OpenRouterTransport = Callable[
@@ -146,9 +149,16 @@ class OpenRouterProvider(InferenceProvider):
         try:
             raw = json.loads(content)
         except json.JSONDecodeError as exc:
-            raise InferenceError("OpenRouter completion was not valid JSON") from exc
+            self.last_raw_output = {"unparsed_output": content[:2_000]}
+            raise ProposalValidationError(
+                "OpenRouter completion was not valid JSON"
+            ) from exc
         if not isinstance(raw, dict):
-            raise InferenceError("OpenRouter completion must be a JSON object")
+            self.last_raw_output = {"unparsed_output": raw}
+            raise ProposalValidationError(
+                "OpenRouter completion must be a JSON object"
+            )
+        self.last_raw_output = raw
         self.last_response_metadata = {
             "id": response.get("id"),
             "model": response.get("model", self.model),
@@ -156,6 +166,78 @@ class OpenRouterProvider(InferenceProvider):
             "usage": response.get("usage", {}),
         }
         return self._validate(raw, available_actions)
+
+    def propose_dialogue_route(
+        self,
+        context: dict,
+        available_actions: list[str],
+        suggested_action_ids: list[str],
+    ) -> DialogueRoute:
+        schema = dialogue_route_json_schema(
+            available_actions, suggested_action_ids
+        )
+        payload = {
+            "model": self.model,
+            "messages": dialogue_route_messages(
+                context, available_actions, suggested_action_ids
+            ),
+            "temperature": 0,
+            "seed": 0,
+            "max_tokens": self.max_tokens,
+            "stream": False,
+            "response_format": {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "wallet_dialogue_route",
+                    "strict": True,
+                    "schema": schema,
+                },
+            },
+            "provider": {
+                "require_parameters": True,
+                "data_collection": self.data_collection,
+                "zdr": self.zero_data_retention,
+            },
+        }
+        response = self._transport(
+            f"{self.base_url}/chat/completions",
+            payload,
+            {
+                "Authorization": f"Bearer {self._api_key}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://localhost/agentic-wallet",
+                "X-Title": "Agentic Wallet POC",
+            },
+            self.timeout,
+        )
+        try:
+            content = response["choices"][0]["message"]["content"]
+        except (KeyError, IndexError, TypeError) as exc:
+            raise InferenceError("OpenRouter response has no completion content") from exc
+        if not isinstance(content, str):
+            raise InferenceError("OpenRouter completion content must be a string")
+        try:
+            raw = json.loads(content)
+        except json.JSONDecodeError as exc:
+            self.last_raw_output = {"unparsed_output": content[:2_000]}
+            raise ProposalValidationError(
+                "OpenRouter completion was not valid JSON"
+            ) from exc
+        if not isinstance(raw, dict):
+            self.last_raw_output = {"unparsed_output": raw}
+            raise ProposalValidationError(
+                "OpenRouter completion must be a JSON object"
+            )
+        self.last_raw_output = raw
+        self.last_response_metadata = {
+            "id": response.get("id"),
+            "model": response.get("model", self.model),
+            "provider": response.get("provider"),
+            "usage": response.get("usage", {}),
+        }
+        return validate_dialogue_route(
+            raw, available_actions, suggested_action_ids
+        )
 
     def propose_dialogue_turn(
         self,
@@ -212,9 +294,16 @@ class OpenRouterProvider(InferenceProvider):
         try:
             raw = json.loads(content)
         except json.JSONDecodeError as exc:
-            raise InferenceError("OpenRouter completion was not valid JSON") from exc
+            self.last_raw_output = {"unparsed_output": content[:2_000]}
+            raise ProposalValidationError(
+                "OpenRouter completion was not valid JSON"
+            ) from exc
         if not isinstance(raw, dict):
-            raise InferenceError("OpenRouter completion must be a JSON object")
+            self.last_raw_output = {"unparsed_output": raw}
+            raise ProposalValidationError(
+                "OpenRouter completion must be a JSON object"
+            )
+        self.last_raw_output = raw
         self.last_response_metadata = {
             "id": response.get("id"),
             "model": response.get("model", self.model),

@@ -10,7 +10,8 @@ import json
 from pathlib import Path
 
 from agentic_wallet.schemas.approval import ApprovalEnvelope
-from agentic_wallet.schemas.dialogue import ModelDialogueTurn
+from agentic_wallet.schemas.conversation import ConversationLedger
+from agentic_wallet.schemas.dialogue import DialogueRoute, ModelDialogueTurn
 from agentic_wallet.schemas.intent import Intent
 from agentic_wallet.schemas.policy import PolicyResult
 from agentic_wallet.schemas.quote import SwapQuote
@@ -26,6 +27,8 @@ MODELS = {
     "intent": Intent,
     "tool-call": ToolCall,
     "model-dialogue-turn": ModelDialogueTurn,
+    "dialogue-route": DialogueRoute,
+    "conversation-ledger": ConversationLedger,
     "portfolio": Portfolio,
     "transaction-plan": TransactionPlan,
     "simulation-result": SimulationResult,

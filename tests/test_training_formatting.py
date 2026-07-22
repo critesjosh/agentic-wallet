@@ -3,10 +3,12 @@ from __future__ import annotations
 import re
 
 from agentic_wallet.training import (
+    load_pipeline_curriculum,
     generate_training_examples,
     render_training_pair,
     tokenize_completion_only,
 )
+from pathlib import Path
 from agentic_wallet.training.config import (
     LORA_EXCLUDE_PATTERN,
     LORA_TARGET_MODULES,
@@ -53,6 +55,22 @@ def test_completion_only_mask_hides_every_prompt_token():
     assert first_supervised == len(prompt)
     assert all(value == -100 for value in record["labels"][:first_supervised])
     assert any(value != -100 for value in record["labels"][first_supervised:])
+
+
+def test_pipeline_route_and_repair_render_exact_runtime_phases():
+    source = Path(__file__).resolve().parents[1] / "data" / "training" / "natural_v3_source.jsonl"
+    examples = load_pipeline_curriculum(source)
+    route = next(item for item in examples if item.kind == "dialogue_route")
+    repair = next(
+        item
+        for item in examples
+        if item.context.get("phase") == "repair_tool_arguments"
+    )
+    route_prompt, _ = render_training_pair(FakeProcessor(), route)
+    repair_prompt, _ = render_training_pair(FakeProcessor(), repair)
+    assert "route_dialogue" in route_prompt
+    assert "repair_tool_arguments" in repair_prompt
+    assert "previous_output" in repair_prompt
 
 
 def test_lora_targets_supported_inner_projections_and_excludes_towers():

@@ -11,13 +11,15 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from ..inference import InferenceError, InferenceProvider
+from ..inference import InferenceError, InferenceProvider, ProposalValidationError
 from ..schemas.tool_call import ToolCall
-from ..schemas.dialogue import ModelDialogueTurn
+from ..schemas.dialogue import DialogueRoute, ModelDialogueTurn
 from ..tool_contract import (
     dialogue_turn_prompt,
+    dialogue_route_prompt,
     tool_call_prompt,
     validate_dialogue_turn,
+    validate_dialogue_route,
 )
 
 
@@ -27,9 +29,11 @@ def _extract_json(text: str) -> dict[str, Any]:
     try:
         value = json.loads(text.strip())
     except json.JSONDecodeError as exc:
-        raise InferenceError("model output was not exactly one JSON object") from exc
+        raise ProposalValidationError(
+            "model output was not exactly one JSON object"
+        ) from exc
     if not isinstance(value, dict):
-        raise InferenceError("model output must be a JSON object")
+        raise ProposalValidationError("model output must be a JSON object")
     return value
 
 
@@ -156,7 +160,28 @@ class LocalTransformersProvider(InferenceProvider):
     ) -> ToolCall:
         prompt = self._build_prompt(context, available_actions)
         raw = _extract_json(self._generate(prompt))
+        self.last_raw_output = raw
         return self._validate(raw, available_actions)
+
+    def propose_dialogue_route(
+        self,
+        context: dict,
+        available_actions: list[str],
+        suggested_action_ids: list[str],
+    ) -> DialogueRoute:
+        raw = _extract_json(
+            self._generate(
+                self._render_prompt(
+                    dialogue_route_prompt(
+                        context, available_actions, suggested_action_ids
+                    )
+                )
+            )
+        )
+        self.last_raw_output = raw
+        return validate_dialogue_route(
+            raw, available_actions, suggested_action_ids
+        )
 
     def propose_dialogue_turn(
         self,
@@ -168,6 +193,7 @@ class LocalTransformersProvider(InferenceProvider):
             context, available_actions, suggested_action_ids
         )
         raw = _extract_json(self._generate(prompt))
+        self.last_raw_output = raw
         return validate_dialogue_turn(
             raw, available_actions, suggested_action_ids
         )

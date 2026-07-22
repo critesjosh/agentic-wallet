@@ -190,6 +190,27 @@ transcripts here.
   construction, empty boilerplate reason fields, stateful trajectories, and a
   separately authored sealed suite.
 
+## 2026-07-22 - E2B ignored the argument-free route schema
+
+- Model/runtime: local Ollama 0.30.10 with `gemma4:e2b` (3.3 GB), temperature
+  zero, seed zero, and the native JSON-schema `format` request.
+- Input class: a direct read-only request, "What is my USDC balance?", through
+  the two-stage dialogue pipeline.
+- Expected: one complete argument-free `DialogueRoute`, selecting
+  `get_balance`; arguments would be requested separately only after validation.
+- Observed: both the initial call and the single bounded repair returned a
+  Markdown-fenced partial object containing only
+  `{"proposed_action":"get_balance"}`. Required message, intent, reason, and
+  suggestions fields were absent.
+- Safety outcome: the response failed whole-object parsing and validation; no
+  read tool or wallet action ran. The user received safe fallback suggestions.
+- Deterministic mitigation: classify malformed completions separately from
+  transport failures, permit exactly one non-executing repair, then fail closed.
+  Keep native constraints as a useful request hint rather than a safety claim.
+- Fine-tuning target: complete argument-free route envelopes, no Markdown
+  fences, and repair turns that remove fields belonging to later pipeline
+  stages while restoring every required route field.
+
 ## Entry template
 
 ### YYYY-MM-DD - Short failure name

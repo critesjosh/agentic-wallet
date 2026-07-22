@@ -8,14 +8,17 @@ from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-from ..inference import InferenceError, InferenceProvider
+from ..inference import InferenceError, InferenceProvider, ProposalValidationError
 from ..schemas.tool_call import ToolCall
-from ..schemas.dialogue import ModelDialogueTurn
+from ..schemas.dialogue import DialogueRoute, ModelDialogueTurn
 from ..tool_contract import (
     dialogue_turn_json_schema,
     dialogue_turn_messages,
     tool_call_json_schema,
     tool_call_messages,
+    dialogue_route_json_schema,
+    dialogue_route_messages,
+    validate_dialogue_route,
     validate_dialogue_turn,
 )
 
@@ -102,9 +105,16 @@ class OllamaProvider(InferenceProvider):
         try:
             raw = json.loads(content)
         except json.JSONDecodeError as exc:
-            raise InferenceError("Ollama completion was not valid JSON") from exc
+            self.last_raw_output = {"unparsed_output": content[:2_000]}
+            raise ProposalValidationError(
+                "Ollama completion was not valid JSON"
+            ) from exc
         if not isinstance(raw, dict):
-            raise InferenceError("Ollama completion must be a JSON object")
+            self.last_raw_output = {"unparsed_output": raw}
+            raise ProposalValidationError(
+                "Ollama completion must be a JSON object"
+            )
+        self.last_raw_output = raw
         self.last_response_metadata = {
             key: response.get(key)
             for key in (
@@ -117,6 +127,22 @@ class OllamaProvider(InferenceProvider):
             )
         }
         return raw
+
+    def propose_dialogue_route(
+        self,
+        context: dict,
+        available_actions: list[str],
+        suggested_action_ids: list[str],
+    ) -> DialogueRoute:
+        raw = self._complete(
+            dialogue_route_json_schema(available_actions, suggested_action_ids),
+            dialogue_route_messages(
+                context, available_actions, suggested_action_ids
+            ),
+        )
+        return validate_dialogue_route(
+            raw, available_actions, suggested_action_ids
+        )
 
     def propose_tool_call(
         self, context: dict, available_actions: list[str]

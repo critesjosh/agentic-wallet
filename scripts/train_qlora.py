@@ -29,6 +29,7 @@ from agentic_wallet.training.config import (
     LORA_EXCLUDE_PATTERN,
     LORA_TARGET_MODULES,
     SUPPORTED_DATASET_VERSIONS,
+    PIPELINE_DATASET_VERSION,
     WORKFLOW_DATASET_VERSION,
 )
 
@@ -111,7 +112,7 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=17)
     parser.add_argument("--eval-steps", type=int, default=25)
     parser.add_argument("--save-steps", type=int, default=25)
-    parser.add_argument("--semantic-eval-limit", type=int, default=32)
+    parser.add_argument("--semantic-eval-limit", type=int, default=64)
     parser.add_argument(
         "--sealed-commitment", type=Path, default=DEFAULT_SEALED_COMMITMENT
     )
@@ -124,9 +125,14 @@ def main() -> None:
     validation_examples = [
         example for example in examples if example.split == "validation"
     ]
-    if dataset_metadata["dataset_version"] == WORKFLOW_DATASET_VERSION:
+    if dataset_metadata["dataset_version"] in {
+        WORKFLOW_DATASET_VERSION,
+        PIPELINE_DATASET_VERSION,
+    }:
         if not train_examples or not validation_examples:
-            raise ValueError("workflow-v3 requires explicit train and validation splits")
+            raise ValueError(
+                "workflow datasets require explicit train and validation splits"
+            )
     if args.eval_steps <= 0 or args.save_steps <= 0:
         raise ValueError("eval and save steps must be positive")
     if args.eval_steps != args.save_steps:

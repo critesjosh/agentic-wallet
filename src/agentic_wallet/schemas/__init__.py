@@ -4,7 +4,15 @@ truth; ``scripts/export_schemas.py`` emits JSON Schema into ``/schemas``.
 
 from .approval import ApprovalEnvelope
 from .common import Amount, AssetId, EvmAddress, HexData, SpenderId, StrictModel, UntrustedData, UsdValue
-from .dialogue import ModelDialogueTurn, SuggestedAction
+from .conversation import (
+    ConversationLedger,
+    ConversationMessage,
+    PriorProposal,
+    ResolvedIntent,
+    UserCorrection,
+    VerifiedFact,
+)
+from .dialogue import DialogueRoute, ModelDialogueTurn, SuggestedAction
 from .intent import Intent, IntentConstraints
 from .policy import PolicyResult
 from .quote import SwapQuote
@@ -46,5 +54,12 @@ __all__ = [
     "SwapQuote",
     "ApprovalEnvelope",
     "ModelDialogueTurn",
+    "DialogueRoute",
     "SuggestedAction",
+    "ConversationLedger",
+    "ConversationMessage",
+    "PriorProposal",
+    "ResolvedIntent",
+    "UserCorrection",
+    "VerifiedFact",
 ]

@@ -17,6 +17,10 @@ from .natural_curriculum import (
     NATURAL_CURRICULUM_VERSION,
     load_natural_curriculum,
 )
+from .pipeline_curriculum import (
+    PIPELINE_CURRICULUM_VERSION,
+    load_pipeline_curriculum,
+)
 from .sealed import load_verified_sealed_cases, validate_sealed_commitment
 from .formatting import (
     completion_json,
@@ -38,6 +42,7 @@ __all__ = [
     "ERROR_DRIVEN_GENERATOR_VERSION",
     "GENERATOR_VERSION",
     "NATURAL_CURRICULUM_VERSION",
+    "PIPELINE_CURRICULUM_VERSION",
     "TrainingExample",
     "completion_json",
     "generate_error_driven_training_examples",
@@ -46,6 +51,7 @@ __all__ = [
     "instruction_prompt",
     "load_training_examples",
     "load_natural_curriculum",
+    "load_pipeline_curriculum",
     "load_verified_sealed_cases",
     "render_training_pair",
     "tokenize_completion_only",

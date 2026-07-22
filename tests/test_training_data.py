@@ -11,6 +11,7 @@ from agentic_wallet.training import (
     generate_error_driven_training_examples,
     generate_training_examples,
     load_natural_curriculum,
+    load_pipeline_curriculum,
     validate_training_dataset,
 )
 
@@ -101,6 +102,58 @@ def test_natural_workflow_dataset_has_split_trajectories_and_grounding():
         example.target.get("reason") == ""
         for example in examples
         if example.kind == "tool_call"
+    )
+
+
+def test_pipeline_curriculum_matches_runtime_phases():
+    examples = load_pipeline_curriculum(
+        DATA / "training" / "natural_v3_source.jsonl"
+    )
+    report = validate_training_dataset(examples, _benchmark())
+    routes = [item for item in examples if item.kind == "dialogue_route"]
+    argument_repairs = [
+        item
+        for item in examples
+        if item.context.get("phase") == "repair_tool_arguments"
+    ]
+    route_repairs = [
+        item
+        for item in examples
+        if item.context.get("phase") == "repair_dialogue_route"
+    ]
+    arguments = [
+        item
+        for item in examples
+        if item.context.get("phase") == "fill_tool_arguments"
+    ]
+
+    assert report.total == 240
+    assert report.tool_calls == 112
+    assert report.dialogue_routes == 128
+    assert report.dialogue_turns == 0
+    assert report.split_counts == {"train": 180, "validation": 60}
+    assert len(argument_repairs) == 56
+    assert len(route_repairs) == 64
+    assert len(arguments) == 56
+    assert all("arguments" not in item.target for item in routes)
+    assert all(
+        len(item.available_actions) == 1 for item in argument_repairs + arguments
+    )
+    assert all("arguments" in item.context["previous_output"] for item in route_repairs)
+    assert all("conversation_ledger" in item.context for item in examples)
+    train_requests = {
+        item.context["user_request"] for item in examples if item.split == "train"
+    }
+    validation_requests = {
+        item.context["user_request"]
+        for item in examples
+        if item.split == "validation"
+    }
+    assert train_requests.isdisjoint(validation_requests)
+    assert all(
+        item.target["action"]
+        not in {"proceed_to_signing", "create_unlimited_approval_plan"}
+        for item in argument_repairs
     )
     forbidden_markers = {
         "drill",

@@ -274,3 +274,32 @@ reference. See `data/training/results/constrained-runtime-comparison-20260722.js
 
 No L4 job was launched for v3 because the independent-human sealed-suite gate
 was not satisfied. Authorized paid cost for this attempted experiment: **$0**.
+
+## V4 runtime-pipeline curriculum
+
+The implemented conversation pipeline changed the training contract rather
+than merely adding more paraphrases. `sft-v4-pipeline.jsonl` expands the same 64
+fixed natural source records into 240 stage-specific examples with a fixed
+180/60 development split:
+
+- 64 argument-free route calls and 64 route-repair calls;
+- 56 selected-action argument calls and 56 argument-repair calls;
+- a typed bounded `conversation_ledger` in every context;
+- grounded narration inputs containing the actual typed result and a
+  deterministic fallback summary.
+
+The route never carries arguments. Once deterministic validation accepts its
+action ID, the argument stage exposes exactly that one action and its canonical
+schema. Each validation stage permits at most one non-executing correction; a
+signing-boundary action is never eligible for repair. The dataset mirrors these
+runtime phases (`route_dialogue`, `repair_dialogue_route`,
+`fill_tool_arguments`, `repair_tool_arguments`, and
+`explain_verified_tool_result`) instead of teaching a combined wallet-shaped
+JSON response that production no longer requests.
+
+Dataset SHA-256:
+`94231ff7183c6f190ac5bbef63628747b9590dd35bd9e1142958943560164c26`.
+The 29-case benchmark remains development regression data. The new remote run
+may select checkpoints using only the committed 60-record v4 validation split
+and may report the 29-case regression suite, but it cannot make an independent
+generalization or release-safety claim without the still-sealed suite.

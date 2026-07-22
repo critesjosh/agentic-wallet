@@ -84,6 +84,14 @@ def _build_chat_agent() -> DemoChatAgent:
         return DemoChatAgent(_harness)
     if provider_name == "local-transformers":
         model_id = os.getenv("AGENTIC_WALLET_MODEL_ID", "google/gemma-4-E2B-it")
+        if os.getenv(
+            "AGENTIC_WALLET_ALLOW_UNCONSTRAINED_INFERENCE", "false"
+        ).lower() not in {"1", "true", "yes"}:
+            raise RuntimeError(
+                "local-transformers lacks native constrained decoding and is "
+                "development-only; set AGENTIC_WALLET_ALLOW_UNCONSTRAINED_INFERENCE=true "
+                "only for explicit evaluation"
+            )
         return DemoChatAgent(
             _harness, provider=LocalTransformersProvider(model_id=model_id)
         )
@@ -219,6 +227,10 @@ async def capabilities() -> dict:
         "native_constrained_decoding": bool(
             _chat.provider and _chat.provider.native_constrained_decoding
         ),
+        "two_stage_tool_proposals": bool(_chat.provider),
+        "bounded_repair_attempts": 1 if _chat.provider else 0,
+        "typed_conversation_ledger": True,
+        "grounded_result_narration": True,
     }
 
 

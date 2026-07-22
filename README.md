@@ -93,21 +93,21 @@ AGENTIC_WALLET_INFERENCE_PROVIDER=local-transformers \
   uvicorn agentic_wallet.web.app:app --reload
 ```
 
-The model can only propose the enumerated read tools. Tool-specific arguments
-are validated again before the deterministic harness executes them. Invalid
-output, unknown assets, extra arguments, and unavailable actions fail closed.
-Each model response is a structured dialogue turn with strictly separated
-fields: `message` is display-only, `proposed_action` is the only field that may
-enter the typed tool pipeline, and `suggested_actions` contains only canonical
-IDs whose labels/prompts are owned by the server. A bounded conversation history
-is context, never approval. When a read tool runs, the model receives its typed
-result in a second call before writing the conversational explanation.
+The model can only propose enumerated tools. The conversation pipeline now uses
+three separated model stages: an argument-free dialogue route, an action-specific
+argument envelope when a tool is selected, and a grounded explanation only
+after deterministic execution. This keeps the route schema small and prevents
+the model from inventing a result before the tool runs. `message` is always
+display-only; only the typed proposal can enter validation.
 
-For target-model compatibility, the native dialogue decoding schema uses a flat
-argument envelope rather than a nested per-action union. That schema constrains
-the wire structure and known fields; deterministic code then validates the exact
-required arguments for the selected action before any tool runs. This is a
-deliberate fail-closed compromise documented with observed model failures in
+Every stage is constrained where the runtime supports it and validated again in
+deterministic code. A malformed route or argument envelope gets at most one
+non-executing repair attempt; signing-boundary actions are never repairable.
+Unknown assets, extra arguments, unavailable actions, repeated invalid output,
+and invented narration facts fail closed. Conversation state is a bounded typed
+ledger of resolved intent, corrections, verified facts, prior proposals, and
+recent messages. It deliberately contains no approval field: history is context,
+never authorization. Observed failures are recorded in
 [`docs/model-failures.md`](docs/model-failures.md).
 
 Ollama, llama.cpp, and OpenRouter request native schema-constrained decoding.
@@ -154,18 +154,20 @@ Generate and validate the data and inspect the run configuration without a GPU:
 
 ```bash
 python scripts/generate_training_data.py
-python scripts/generate_training_data.py --profile workflow-v3
-python scripts/train_qlora.py
+python scripts/generate_training_data.py --profile pipeline-v4
+python scripts/train_qlora.py --dataset data/training/sft-v4-pipeline.jsonl
 ```
 
-Another GPU run is blocked on the independently authored suite in
-`docs/sealed-eval-protocol.md`, a controlled data-versus-step ablation, and the
-physical-device P2 measurements in `docs/android-spike.md`. The repetitive
-560-record v3 draft has been replaced by a fixed, naturally phrased 64-record
-curriculum with a generator-independent 48/16 development split. The training
-path now evaluates and checkpoints every 25 optimizer steps, but fails closed
-before CUDA until a digest-only independent-human sealed-suite commitment is
-present. The training command requires explicit
+The v4 pipeline curriculum deterministically expands the fixed, naturally
+phrased 64-record v3 source into 240 exact-runtime examples: 128 argument-free
+routes (including route repairs) and 112 selected-action argument calls
+(including argument repairs), split 180/60 for development. It includes typed
+conversation ledgers and grounded typed results. This is development data, not
+an independent safety evaluation. The sealed suite remains unavailable and must
+not be opened or used for checkpoint selection.
+
+The training path evaluates and checkpoints every 25 optimizer steps. The
+training command requires explicit
 `--execute --acknowledge-p2-gate`, CUDA, and BF16 support; it never pushes to
 the Hub automatically. `scripts/run_hf_qlora_smoke.py` is the bounded remote
 entry point used for the recorded run. See

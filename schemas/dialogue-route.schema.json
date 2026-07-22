@@ -1,0 +1,54 @@
+{
+  "additionalProperties": false,
+  "description": "First-stage conversational routing without any tool arguments.",
+  "properties": {
+    "message": {
+      "maxLength": 2000,
+      "minLength": 1,
+      "title": "Message",
+      "type": "string"
+    },
+    "intent": {
+      "enum": [
+        "conversation",
+        "offer_action",
+        "propose_tool",
+        "clarify",
+        "refuse"
+      ],
+      "title": "Intent",
+      "type": "string"
+    },
+    "proposed_action": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Proposed Action"
+    },
+    "reason": {
+      "default": "",
+      "title": "Reason",
+      "type": "string"
+    },
+    "suggested_actions": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 3,
+      "title": "Suggested Actions",
+      "type": "array"
+    }
+  },
+  "required": [
+    "message",
+    "intent"
+  ],
+  "title": "DialogueRoute",
+  "type": "object"
+}

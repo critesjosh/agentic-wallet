@@ -10,16 +10,26 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 
 from .schemas.tool_call import ToolCall
-from .schemas.dialogue import ModelDialogueTurn
+from .schemas.dialogue import DialogueRoute, ModelDialogueTurn
+
+_NON_REPAIRABLE_ACTIONS = frozenset(
+    {"proceed_to_signing", "create_unlimited_approval_plan"}
+)
 
 
 class InferenceError(RuntimeError):
     """Raised when a provider returns unusable or disallowed output."""
 
 
+class ProposalValidationError(InferenceError):
+    """A structured completion was returned but failed the wallet contract."""
+
+
 class InferenceProvider(ABC):
     name: str = "abstract"
     native_constrained_decoding: bool = False
+    last_raw_output: dict | None = None
+    last_attempt_count: int = 0
 
     @abstractmethod
     def propose_tool_call(self, context: dict, available_actions: list[str]) -> ToolCall:
@@ -31,13 +41,102 @@ class InferenceProvider(ABC):
         try:
             tc = ToolCall.model_validate(raw)
         except Exception as exc:  # fail-closed on any schema violation
-            raise InferenceError(f"invalid tool-call schema: {exc}") from exc
+            raise ProposalValidationError(f"invalid tool-call schema: {exc}") from exc
         if tc.action not in available_actions:
-            raise InferenceError(
+            raise ProposalValidationError(
                 f"action {tc.action!r} not available in this state"
             )
-        validate_tool_arguments(tc.action, tc.arguments)
+        try:
+            validate_tool_arguments(tc.action, tc.arguments)
+        except InferenceError as exc:
+            raise ProposalValidationError(str(exc)) from exc
         return tc
+
+    def propose_tool_call_with_repair(
+        self, context: dict, selected_action: str
+    ) -> ToolCall:
+        """Try once, then make at most one non-executing schema repair call."""
+
+        self.last_attempt_count = 1
+        try:
+            return self.propose_tool_call(context, [selected_action])
+        except ProposalValidationError as first_error:
+            if selected_action in _NON_REPAIRABLE_ACTIONS:
+                raise
+            repair_context = {
+                **context,
+                "phase": "repair_tool_arguments",
+                "selected_action": selected_action,
+                "previous_output": self.last_raw_output,
+                "validation_error": str(first_error)[:2_000],
+                "repair_attempt": 1,
+            }
+            self.last_attempt_count = 2
+            try:
+                return self.propose_tool_call(repair_context, [selected_action])
+            except InferenceError as second_error:
+                raise InferenceError(
+                    "tool proposal failed after one bounded repair attempt"
+                ) from second_error
+
+    def propose_dialogue_route(
+        self,
+        context: dict,
+        available_actions: list[str],
+        suggested_action_ids: list[str],
+    ) -> DialogueRoute:
+        """Compatibility route for providers that still emit a combined turn."""
+
+        turn = self.propose_dialogue_turn(
+            context, available_actions, suggested_action_ids
+        )
+        return DialogueRoute(
+            message=turn.message,
+            intent=turn.intent,
+            proposed_action=(
+                turn.proposed_action.action if turn.proposed_action else None
+            ),
+            reason=(turn.proposed_action.reason if turn.proposed_action else ""),
+            suggested_actions=turn.suggested_actions,
+        )
+
+    def propose_dialogue_route_with_repair(
+        self,
+        context: dict,
+        available_actions: list[str],
+        suggested_action_ids: list[str],
+    ) -> DialogueRoute:
+        """Try routing once, then make one schema-only repair when safe."""
+
+        self.last_attempt_count = 1
+        try:
+            return self.propose_dialogue_route(
+                context, available_actions, suggested_action_ids
+            )
+        except ProposalValidationError as first_error:
+            raw_action = (
+                self.last_raw_output.get("proposed_action")
+                if isinstance(self.last_raw_output, dict)
+                else None
+            )
+            if raw_action in _NON_REPAIRABLE_ACTIONS:
+                raise
+            repair_context = {
+                **context,
+                "phase": "repair_dialogue_route",
+                "previous_output": self.last_raw_output,
+                "validation_error": str(first_error)[:2_000],
+                "repair_attempt": 1,
+            }
+            self.last_attempt_count = 2
+            try:
+                return self.propose_dialogue_route(
+                    repair_context, available_actions, suggested_action_ids
+                )
+            except InferenceError as second_error:
+                raise InferenceError(
+                    "dialogue route failed after one bounded repair attempt"
+                ) from second_error
 
     def propose_dialogue_turn(
         self,

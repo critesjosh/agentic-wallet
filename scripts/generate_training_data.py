@@ -12,9 +12,11 @@ from agentic_wallet.training import (
     ERROR_DRIVEN_GENERATOR_VERSION,
     GENERATOR_VERSION,
     NATURAL_CURRICULUM_VERSION,
+    PIPELINE_CURRICULUM_VERSION,
     generate_error_driven_training_examples,
     generate_training_examples,
     load_natural_curriculum,
+    load_pipeline_curriculum,
     validate_training_dataset,
 )
 from agentic_wallet.training.config import (
@@ -23,6 +25,7 @@ from agentic_wallet.training.config import (
     DATASET_VERSION,
     ERROR_DRIVEN_DATASET_VERSION,
     WORKFLOW_DATASET_VERSION,
+    PIPELINE_DATASET_VERSION,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -55,6 +58,18 @@ PROFILES = {
         "dataset_version": WORKFLOW_DATASET_VERSION,
         "generator_version": NATURAL_CURRICULUM_VERSION,
         "generate": None,
+        "load": load_natural_curriculum,
+    },
+    "pipeline-v4": {
+        "output": ROOT / "data" / "training" / "sft-v4-pipeline.jsonl",
+        "source": ROOT / "data" / "training" / "natural_v3_source.jsonl",
+        "tool_count": None,
+        "dialogue_count": None,
+        "seed": None,
+        "dataset_version": PIPELINE_DATASET_VERSION,
+        "generator_version": PIPELINE_CURRICULUM_VERSION,
+        "generate": None,
+        "load": load_pipeline_curriculum,
     },
 }
 
@@ -86,7 +101,7 @@ def main() -> None:
     if source is not None:
         if any(value is not None for value in (args.tool_count, args.dialogue_count, args.seed)):
             raise ValueError("static natural curriculum does not accept count or seed overrides")
-        examples = load_natural_curriculum(source)
+        examples = profile["load"](source)
     else:
         examples = profile["generate"](
             tool_count=tool_count,
@@ -122,6 +137,7 @@ def main() -> None:
             "total": report.total,
             "tool_calls": report.tool_calls,
             "dialogue_turns": report.dialogue_turns,
+            "dialogue_routes": report.dialogue_routes,
             "label_counts": report.label_counts,
             "max_benchmark_similarity": round(report.max_benchmark_similarity, 6),
             "coverage_counts": report.coverage_counts,

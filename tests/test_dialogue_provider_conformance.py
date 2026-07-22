@@ -11,7 +11,10 @@ from agentic_wallet.providers import (
     OllamaProvider,
     OpenRouterProvider,
 )
-from agentic_wallet.tool_contract import dialogue_turn_json_schema
+from agentic_wallet.tool_contract import (
+    dialogue_route_json_schema,
+    dialogue_turn_json_schema,
+)
 
 CONTEXT = {"user_request": "hello", "canonical_asset_ids": ["base:usdc"]}
 ACTIONS = ["get_balance", "show_help"]
@@ -24,6 +27,13 @@ CONVERSATION = {
     "reason": "",
     "suggested_actions": ["get_balance"],
 }
+ROUTE = {
+    "message": "I will check the typed balance.",
+    "intent": "propose_tool",
+    "proposed_action": "get_balance",
+    "reason": "explicit request",
+    "suggested_actions": [],
+}
 
 
 class GeneratedDialogueProvider(LocalTransformersProvider):
@@ -33,6 +43,9 @@ class GeneratedDialogueProvider(LocalTransformersProvider):
 
     def _build_dialogue_prompt(self, context, available_actions, suggested_action_ids):
         return "dialogue prompt"
+
+    def _render_prompt(self, request_text):
+        return request_text
 
     def _generate(self, prompt):
         return self.output
@@ -63,6 +76,44 @@ def test_all_providers_accept_display_only_conversation(provider):
     assert turn.message == CONVERSATION["message"]
     assert turn.proposed_action is None
     assert turn.suggested_actions == ["get_balance"]
+
+
+@pytest.mark.parametrize("provider", _providers(ROUTE), ids=lambda item: item.name)
+def test_all_providers_accept_argument_free_route(provider):
+    route = provider.propose_dialogue_route(CONTEXT, ACTIONS, SUGGESTIONS)
+    assert route.proposed_action == "get_balance"
+    assert "arguments" not in route.model_dump()
+
+
+def test_native_providers_constrain_the_route_schema():
+    expected = dialogue_route_json_schema(ACTIONS, SUGGESTIONS)
+    captured = {}
+    content = json.dumps(ROUTE)
+
+    def ollama_transport(_url, payload, _timeout):
+        captured["ollama"] = payload["format"]
+        return {"message": {"content": content}}
+
+    def llama_transport(_url, payload, _timeout):
+        captured["llama"] = payload["json_schema"]
+        return {"content": content}
+
+    def openrouter_transport(_url, payload, _headers, _timeout):
+        captured["openrouter"] = payload["response_format"]["json_schema"]["schema"]
+        return {"choices": [{"message": {"content": content}}]}
+
+    OllamaProvider(model="gemma4:e2b", transport=ollama_transport).propose_dialogue_route(
+        CONTEXT, ACTIONS, SUGGESTIONS
+    )
+    LlamaCppHTTPProvider(transport=llama_transport).propose_dialogue_route(
+        CONTEXT, ACTIONS, SUGGESTIONS
+    )
+    OpenRouterProvider(
+        api_key="test",
+        model="google/gemma-4-E2B-test",
+        transport=openrouter_transport,
+    ).propose_dialogue_route(CONTEXT, ACTIONS, SUGGESTIONS)
+    assert captured == {"ollama": expected, "llama": expected, "openrouter": expected}
 
 
 @pytest.mark.parametrize(

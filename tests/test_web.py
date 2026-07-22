@@ -197,6 +197,17 @@ def test_local_ollama_provider_can_be_selected(monkeypatch):
     assert agent.provider.base_url == "http://localhost:11434"
 
 
+def test_unconstrained_transformers_is_blocked_from_normal_chat(monkeypatch):
+    monkeypatch.setenv("AGENTIC_WALLET_INFERENCE_PROVIDER", "local-transformers")
+    monkeypatch.delenv("AGENTIC_WALLET_ALLOW_UNCONSTRAINED_INFERENCE", raising=False)
+    with pytest.raises(RuntimeError, match="development-only"):
+        web_app._build_chat_agent()
+
+    monkeypatch.setenv("AGENTIC_WALLET_ALLOW_UNCONSTRAINED_INFERENCE", "true")
+    agent = web_app._build_chat_agent()
+    assert agent.provider.name == "local-transformers"
+
+
 def test_openrouter_provider_can_be_selected_without_exposing_key(monkeypatch):
     monkeypatch.setenv("AGENTIC_WALLET_INFERENCE_PROVIDER", "openrouter")
     monkeypatch.setenv("AGENTIC_WALLET_MODEL_ID", "google/gemma-4-E2B-test")

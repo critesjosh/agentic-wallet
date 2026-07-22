@@ -1,0 +1,277 @@
+{
+  "$defs": {
+    "ConversationMessage": {
+      "additionalProperties": false,
+      "properties": {
+        "role": {
+          "enum": [
+            "user",
+            "assistant"
+          ],
+          "title": "Role",
+          "type": "string"
+        },
+        "content": {
+          "maxLength": 4000,
+          "minLength": 1,
+          "title": "Content",
+          "type": "string"
+        }
+      },
+      "required": [
+        "role",
+        "content"
+      ],
+      "title": "ConversationMessage",
+      "type": "object"
+    },
+    "PriorProposal": {
+      "additionalProperties": false,
+      "description": "Historical typed proposal; still never authorization.",
+      "properties": {
+        "action": {
+          "title": "Action",
+          "type": "string"
+        },
+        "arguments": {
+          "additionalProperties": true,
+          "title": "Arguments",
+          "type": "object"
+        },
+        "status": {
+          "enum": [
+            "proposed",
+            "validated",
+            "rejected"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "action",
+        "arguments",
+        "status"
+      ],
+      "title": "PriorProposal",
+      "type": "object"
+    },
+    "ResolvedIntent": {
+      "additionalProperties": false,
+      "description": "Validated fields remembered for conversational continuity only.",
+      "properties": {
+        "chain_id": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Chain Id"
+        },
+        "asset_id": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z0-9]+:[a-z0-9\\-]+$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Asset Id"
+        },
+        "amount": {
+          "anyOf": [
+            {
+              "pattern": "^\\d+(\\.\\d+)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Amount"
+        },
+        "amount_base_units": {
+          "anyOf": [
+            {
+              "pattern": "^(0|[1-9]\\d*)$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Amount Base Units"
+        },
+        "recipient": {
+          "anyOf": [
+            {
+              "pattern": "^0x[0-9a-fA-F]{40}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Recipient"
+        }
+      },
+      "title": "ResolvedIntent",
+      "type": "object"
+    },
+    "UserCorrection": {
+      "additionalProperties": false,
+      "properties": {
+        "field": {
+          "enum": [
+            "chain_id",
+            "asset_id",
+            "amount",
+            "amount_base_units",
+            "recipient"
+          ],
+          "title": "Field",
+          "type": "string"
+        },
+        "previous": {
+          "title": "Previous",
+          "type": "string"
+        },
+        "current": {
+          "title": "Current",
+          "type": "string"
+        }
+      },
+      "required": [
+        "field",
+        "previous",
+        "current"
+      ],
+      "title": "UserCorrection",
+      "type": "object"
+    },
+    "VerifiedFact": {
+      "additionalProperties": false,
+      "description": "Trusted tool output retained as data, never as an instruction.",
+      "properties": {
+        "fact_type": {
+          "enum": [
+            "portfolio",
+            "balance",
+            "allowances",
+            "registry"
+          ],
+          "title": "Fact Type",
+          "type": "string"
+        },
+        "data": {
+          "additionalProperties": true,
+          "title": "Data",
+          "type": "object"
+        }
+      },
+      "required": [
+        "fact_type",
+        "data"
+      ],
+      "title": "VerifiedFact",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Bounded session ledger. It deliberately has no approval field.",
+  "properties": {
+    "workflow_state": {
+      "title": "Workflow State",
+      "type": "string"
+    },
+    "chain_id": {
+      "exclusiveMinimum": 0,
+      "title": "Chain Id",
+      "type": "integer"
+    },
+    "resolved_intent": {
+      "$ref": "#/$defs/ResolvedIntent"
+    },
+    "missing_fields": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 8,
+      "title": "Missing Fields",
+      "type": "array"
+    },
+    "active_plan_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Active Plan Id"
+    },
+    "active_quote_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Active Quote Id"
+    },
+    "corrections": {
+      "items": {
+        "$ref": "#/$defs/UserCorrection"
+      },
+      "maxItems": 4,
+      "title": "Corrections",
+      "type": "array"
+    },
+    "verified_facts": {
+      "items": {
+        "$ref": "#/$defs/VerifiedFact"
+      },
+      "maxItems": 4,
+      "title": "Verified Facts",
+      "type": "array"
+    },
+    "prior_proposals": {
+      "items": {
+        "$ref": "#/$defs/PriorProposal"
+      },
+      "maxItems": 4,
+      "title": "Prior Proposals",
+      "type": "array"
+    },
+    "recent_messages": {
+      "items": {
+        "$ref": "#/$defs/ConversationMessage"
+      },
+      "maxItems": 8,
+      "title": "Recent Messages",
+      "type": "array"
+    }
+  },
+  "required": [
+    "workflow_state",
+    "chain_id"
+  ],
+  "title": "ConversationLedger",
+  "type": "object"
+}

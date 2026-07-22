@@ -49,6 +49,7 @@ def _source_tree_sha256() -> str:
     paths = [
         WORKSPACE / "pyproject.toml",
         WORKSPACE / "scripts" / "evaluate_adapter.py",
+        WORKSPACE / "scripts" / "evaluate_development.py",
         WORKSPACE / "scripts" / "train_qlora.py",
         *sorted((WORKSPACE / "src").rglob("*.py")),
         *sorted((WORKSPACE / "data" / "benchmark").glob("*.jsonl")),
@@ -111,7 +112,12 @@ def main() -> None:
     )
     print(json.dumps(environment, indent=2, sort_keys=True), flush=True)
 
-    status = {"output_dir": str(output_dir), "training": False, "evaluation": False}
+    status = {
+        "output_dir": str(output_dir),
+        "training": False,
+        "evaluation": False,
+        "development_evaluation": False,
+    }
     try:
         adapter_path: Path | None
         if EVALUATE_BASE:
@@ -172,6 +178,33 @@ def main() -> None:
             evaluation.stdout + evaluation.stderr
         )
         status["evaluation"] = True
+
+        development_command = [
+            sys.executable,
+            str(WORKSPACE / "scripts" / "evaluate_development.py"),
+            "--provider",
+            "transformers",
+            "--dataset",
+            str(DATASET_PATH),
+            "--json-output",
+            str(output_dir / "development_evaluation.json"),
+        ]
+        if adapter_path is not None:
+            development_command.extend(
+                ["--adapter-path", str(adapter_path)]
+            )
+        development = subprocess.run(
+            development_command,
+            check=True,
+            text=True,
+            capture_output=True,
+            env=env,
+        )
+        _emit(development)
+        (output_dir / "development_evaluation.log").write_text(
+            development.stdout + development.stderr
+        )
+        status["development_evaluation"] = True
     except subprocess.CalledProcessError as exc:
         if exc.stdout:
             print(exc.stdout, end="", flush=True)

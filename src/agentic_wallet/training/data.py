@@ -17,9 +17,13 @@ from ..benchmark.registries import EVAL_REGISTRY, TRAIN_REGISTRY
 from ..inference import InferenceError
 from ..schemas.common import StrictModel
 from ..schemas.tool_call import ToolCall
-from ..tool_contract import validate_dialogue_turn, validate_tool_arguments
+from ..tool_contract import (
+    validate_dialogue_route,
+    validate_dialogue_turn,
+    validate_tool_arguments,
+)
 
-TrainingKind = Literal["tool_call", "dialogue_turn"]
+TrainingKind = Literal["tool_call", "dialogue_turn", "dialogue_route"]
 ActionExposure = Literal["production", "adversarial"]
 DatasetSplit = Literal["train", "validation"]
 FORBIDDEN_TRAINING_TARGETS = frozenset(
@@ -47,7 +51,7 @@ class TrainingExample(StrictModel):
     kind: TrainingKind
     scenario_class: str = Field(min_length=1)
     context: dict[str, Any]
-    available_actions: list[str] = Field(min_length=1)
+    available_actions: list[str]
     suggested_action_ids: list[str] = Field(default_factory=list)
     target: dict[str, Any]
     split: DatasetSplit = "train"
@@ -73,6 +77,7 @@ class DatasetValidationReport:
     total: int
     tool_calls: int
     dialogue_turns: int
+    dialogue_routes: int
     label_counts: dict[str, int]
     max_benchmark_similarity: float
     coverage_counts: dict[str, dict[str, int]]
@@ -160,6 +165,19 @@ def _validate_target(example: TrainingExample) -> str:
             raise ValueError(f"invalid arguments in training target {example.id}: {exc}") from exc
         _assert_train_registry_arguments(call.action, call.arguments)
         return f"tool:{call.action}"
+
+    if example.kind == "dialogue_route":
+        try:
+            route = validate_dialogue_route(
+                example.target,
+                example.available_actions,
+                example.suggested_action_ids,
+            )
+        except InferenceError as exc:
+            raise ValueError(f"invalid dialogue route for {example.id}: {exc}") from exc
+        _assert_grounded_dialogue(example, route.message)
+        route_label = route.proposed_action or route.intent
+        return f"route:{route_label}"
 
     try:
         turn = validate_dialogue_turn(
@@ -259,9 +277,15 @@ def validate_training_dataset(
             trajectory_turns.setdefault(example.trajectory_id, []).append(
                 int(example.turn_index)
             )
-            if not isinstance(example.context.get("conversation_history"), list):
+            has_legacy_history = isinstance(
+                example.context.get("conversation_history"), list
+            )
+            has_typed_ledger = isinstance(
+                example.context.get("conversation_ledger"), dict
+            )
+            if not (has_legacy_history or has_typed_ledger):
                 raise ValueError(
-                    f"trajectory example lacks conversation history: {example.id}"
+                    f"trajectory example lacks typed context: {example.id}"
                 )
 
         fingerprint = json.dumps(
@@ -303,6 +327,7 @@ def validate_training_dataset(
         total=len(examples),
         tool_calls=sum(example.kind == "tool_call" for example in examples),
         dialogue_turns=sum(example.kind == "dialogue_turn" for example in examples),
+        dialogue_routes=sum(example.kind == "dialogue_route" for example in examples),
         label_counts=dict(sorted(labels.items())),
         max_benchmark_similarity=max_similarity,
         coverage_counts={

@@ -56,3 +56,23 @@ class DialogueWireTurn(StrictModel):
         if len(set(self.suggested_actions)) != len(self.suggested_actions):
             raise ValueError("suggested actions must be unique")
         return self
+
+
+class DialogueRoute(StrictModel):
+    """First-stage conversational routing without any tool arguments."""
+
+    message: str = Field(min_length=1, max_length=2_000)
+    intent: DialogueIntent
+    proposed_action: str | None = None
+    reason: str = ""
+    suggested_actions: list[str] = Field(default_factory=list, max_length=3)
+
+    @model_validator(mode="after")
+    def _consistent_route(self) -> "DialogueRoute":
+        if len(set(self.suggested_actions)) != len(self.suggested_actions):
+            raise ValueError("suggested actions must be unique")
+        if self.intent == "propose_tool" and self.proposed_action is None:
+            raise ValueError("propose_tool intent requires proposed_action")
+        if self.proposed_action is not None and self.intent != "propose_tool":
+            raise ValueError("a proposed action requires propose_tool intent")
+        return self

@@ -5,7 +5,11 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from ..tool_contract import dialogue_turn_prompt, tool_call_prompt
+from ..tool_contract import (
+    dialogue_route_prompt,
+    dialogue_turn_prompt,
+    tool_call_prompt,
+)
 from .data import TrainingExample
 
 
@@ -16,6 +20,12 @@ def completion_json(example: TrainingExample) -> str:
 def instruction_prompt(example: TrainingExample) -> str:
     if example.kind == "tool_call":
         return tool_call_prompt(example.context, example.available_actions)
+    if example.kind == "dialogue_route":
+        return dialogue_route_prompt(
+            example.context,
+            example.available_actions,
+            example.suggested_action_ids,
+        )
     return dialogue_turn_prompt(
         example.context,
         example.available_actions,

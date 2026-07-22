@@ -15,15 +15,18 @@ from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-from ..inference import InferenceError, InferenceProvider
+from ..inference import InferenceError, InferenceProvider, ProposalValidationError
 from ..schemas.tool_call import ToolCall
-from ..schemas.dialogue import ModelDialogueTurn
+from ..schemas.dialogue import DialogueRoute, ModelDialogueTurn
 from ..tool_contract import (
     dialogue_turn_json_schema,
     dialogue_turn_prompt,
+    dialogue_route_json_schema,
+    dialogue_route_prompt,
     tool_call_json_schema,
     tool_call_prompt,
     validate_dialogue_turn,
+    validate_dialogue_route,
 )
 
 JSONTransport = Callable[[str, dict[str, Any], float], dict[str, Any]]
@@ -104,9 +107,16 @@ class LlamaCppHTTPProvider(InferenceProvider):
         try:
             raw = json.loads(content)
         except json.JSONDecodeError as exc:
-            raise InferenceError("llama.cpp completion was not valid JSON") from exc
+            self.last_raw_output = {"unparsed_output": content[:2_000]}
+            raise ProposalValidationError(
+                "llama.cpp completion was not valid JSON"
+            ) from exc
         if not isinstance(raw, dict):
-            raise InferenceError("llama.cpp completion must be a JSON object")
+            self.last_raw_output = {"unparsed_output": raw}
+            raise ProposalValidationError(
+                "llama.cpp completion must be a JSON object"
+            )
+        self.last_raw_output = raw
         self.last_response_metadata = {
             "timings": response.get("timings", {}),
             "tokens_evaluated": response.get("tokens_evaluated"),
@@ -114,6 +124,48 @@ class LlamaCppHTTPProvider(InferenceProvider):
             "stop_type": response.get("stop_type"),
         }
         return self._validate(raw, available_actions)
+
+    def propose_dialogue_route(
+        self,
+        context: dict,
+        available_actions: list[str],
+        suggested_action_ids: list[str],
+    ) -> DialogueRoute:
+        payload = {
+            "prompt": dialogue_route_prompt(
+                context, available_actions, suggested_action_ids
+            ),
+            "json_schema": dialogue_route_json_schema(
+                available_actions, suggested_action_ids
+            ),
+            "n_predict": self.max_new_tokens,
+            "temperature": 0.0,
+            "seed": 0,
+            "stream": False,
+            "cache_prompt": True,
+        }
+        response = self._transport(
+            f"{self.base_url}/completion", payload, self.timeout
+        )
+        content = response.get("content")
+        if not isinstance(content, str):
+            raise InferenceError("llama.cpp response has no string content")
+        try:
+            raw = json.loads(content)
+        except json.JSONDecodeError as exc:
+            self.last_raw_output = {"unparsed_output": content[:2_000]}
+            raise ProposalValidationError(
+                "llama.cpp completion was not valid JSON"
+            ) from exc
+        if not isinstance(raw, dict):
+            self.last_raw_output = {"unparsed_output": raw}
+            raise ProposalValidationError(
+                "llama.cpp completion must be a JSON object"
+            )
+        self.last_raw_output = raw
+        return validate_dialogue_route(
+            raw, available_actions, suggested_action_ids
+        )
 
     def propose_dialogue_turn(
         self,
@@ -147,9 +199,16 @@ class LlamaCppHTTPProvider(InferenceProvider):
         try:
             raw = json.loads(content)
         except json.JSONDecodeError as exc:
-            raise InferenceError("llama.cpp completion was not valid JSON") from exc
+            self.last_raw_output = {"unparsed_output": content[:2_000]}
+            raise ProposalValidationError(
+                "llama.cpp completion was not valid JSON"
+            ) from exc
         if not isinstance(raw, dict):
-            raise InferenceError("llama.cpp completion must be a JSON object")
+            self.last_raw_output = {"unparsed_output": raw}
+            raise ProposalValidationError(
+                "llama.cpp completion must be a JSON object"
+            )
+        self.last_raw_output = raw
         self.last_response_metadata = {
             "timings": response.get("timings", {}),
             "tokens_evaluated": response.get("tokens_evaluated"),

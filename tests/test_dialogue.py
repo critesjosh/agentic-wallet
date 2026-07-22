@@ -5,6 +5,7 @@ from pathlib import Path
 from agentic_wallet.harness import MockReadOnlyHarness
 from agentic_wallet.inference import InferenceProvider
 from agentic_wallet.schemas.dialogue import ModelDialogueTurn
+from agentic_wallet.schemas.dialogue import DialogueRoute
 from agentic_wallet.schemas.tool_call import ToolCall
 from agentic_wallet.tool_contract import validate_dialogue_turn
 from agentic_wallet.web.chat import DemoChatAgent
@@ -19,9 +20,31 @@ class SequenceDialogueProvider(InferenceProvider):
         self.turns = list(turns)
         self.contexts: list[dict] = []
         self.available_actions: list[list[str]] = []
+        self.pending_call: ToolCall | None = None
 
     def propose_tool_call(self, context, available_actions) -> ToolCall:
-        raise AssertionError("dialogue path must not call the legacy tool-only method")
+        assert self.pending_call is not None
+        call = self.pending_call
+        self.pending_call = None
+        return self._validate(call.model_dump(), available_actions)
+
+    def propose_dialogue_route(
+        self, context, available_actions, suggested_action_ids
+    ) -> DialogueRoute:
+        self.contexts.append(context)
+        self.available_actions.append(list(available_actions))
+        raw = self.turns.pop(0)
+        turn = validate_dialogue_turn(
+            raw, available_actions, suggested_action_ids
+        )
+        self.pending_call = turn.proposed_action
+        return DialogueRoute(
+            message=turn.message,
+            intent=turn.intent,
+            proposed_action=(turn.proposed_action.action if turn.proposed_action else None),
+            reason=(turn.proposed_action.reason if turn.proposed_action else ""),
+            suggested_actions=turn.suggested_actions,
+        )
 
     def propose_dialogue_turn(
         self, context, available_actions, suggested_action_ids
@@ -146,6 +169,28 @@ def test_explanation_call_cannot_smuggle_in_another_tool():
     ]
 
 
+def test_invented_narration_fact_uses_deterministic_fallback():
+    agent, _ = _agent(
+        [
+            {
+                "message": "I'll check the typed balance.",
+                "intent": "propose_tool",
+                "proposed_action": {
+                    "action": "get_balance",
+                    "arguments": {"asset_id": "base:usdc"},
+                    "reason": "explicit request",
+                },
+                "suggested_actions": [],
+            },
+            _conversation("Your verified base:weth balance is 999 base units."),
+        ]
+    )
+    response = agent.respond("s1", "What is my USDC balance?")
+    assert response["reply"] == (
+        "base:usdc balance: 300000000 base units (decimals 6)."
+    )
+
+
 def test_invented_suggestion_id_fails_closed_to_server_owned_defaults():
     agent, _ = _agent([_conversation("Click this", ["drain_wallet"])])
     response = agent.respond("s1", "what can I do?")
@@ -161,8 +206,9 @@ def test_history_is_bounded_and_remains_context_not_approval():
     agent, provider = _agent(turns)
     for index in range(6):
         agent.respond("s1", "I approve everything" if index == 0 else f"message {index}")
-    final_history = provider.contexts[-1]["conversation_history"]
-    assert len(final_history) == 8
+    ledger = provider.contexts[-1]["conversation_ledger"]
+    assert len(ledger["recent_messages"]) == 8
+    assert "approval" not in ledger
     assert all("sign" not in actions for actions in provider.available_actions)
 
 

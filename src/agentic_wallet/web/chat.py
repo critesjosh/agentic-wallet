@@ -10,16 +10,18 @@ signs, submits, or drafts an executable plan.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Optional
 
 from ..harness import HarnessError, MockReadOnlyHarness
 from ..inference import InferenceError, InferenceProvider
 from ..registry import BASE_REGISTRY, Registry, RegistryError
+from ..schemas.conversation import ConversationLedger
 from ..schemas.dialogue import SuggestedAction
 from ..schemas.tool_call import ToolCall
 from ..state_machine import StateMachine
 from ..tool_contract import BalanceArguments, validate_tool_arguments
+from .narration import render_verified_result, validate_grounded_message
 
 _ASSET_ALIASES = {
     "eth": "base:native",
@@ -65,13 +67,10 @@ _SUGGESTIONS = {
         action="get_registry", label="Show trusted assets", prompt="Show the trusted asset registry"
     ),
 }
-_MAX_HISTORY_MESSAGES = 8
-
-
 @dataclass
 class _Session:
-    sm: StateMachine = field(default_factory=StateMachine)
-    history: list[dict[str, str]] = field(default_factory=list)
+    sm: StateMachine
+    ledger: ConversationLedger
 
 
 class DemoChatAgent:
@@ -87,7 +86,18 @@ class DemoChatAgent:
         self._sessions: dict[str, _Session] = {}
 
     def _session(self, session_id: str) -> _Session:
-        return self._sessions.setdefault(session_id, _Session())
+        session = self._sessions.get(session_id)
+        if session is None:
+            sm = StateMachine()
+            session = _Session(
+                sm=sm,
+                ledger=ConversationLedger(
+                    workflow_state=sm.state.value,
+                    chain_id=self.harness.get_portfolio().chain_id,
+                ),
+            )
+            self._sessions[session_id] = session
+        return session
 
     @staticmethod
     def _suggestions(action_ids: list[str]) -> list[dict]:
@@ -113,26 +123,22 @@ class DemoChatAgent:
 
     @staticmethod
     def _record_history(session: _Session, user_message: str, reply: str) -> None:
-        session.history.extend(
-            [
-                {"role": "user", "content": user_message},
-                {"role": "assistant", "content": reply},
-            ]
-        )
-        del session.history[:-_MAX_HISTORY_MESSAGES]
+        session.ledger.workflow_state = session.sm.state.value
+        session.ledger.record_message("user", user_message)
+        session.ledger.record_message("assistant", reply)
+
+    def debug_ledger(self, session_id: str) -> dict:
+        """Return a copy for local tests/debugging; never an authorization object."""
+
+        return self._session(session_id).ledger.model_dump()
 
     def _execute_model_call(self, session: _Session, call: ToolCall) -> dict:
         try:
             if call.action == "get_portfolio":
                 validate_tool_arguments(call.action, call.arguments)
                 portfolio = self.harness.get_portfolio()
-                return self._response(
-                    session,
-                    f"Watch-only portfolio for {portfolio.address} on chain "
-                    f"{portfolio.chain_id} (block {portfolio.as_of_block}).",
-                    {"type": "portfolio", "portfolio": portfolio.model_dump()},
-                )
-            if call.action == "get_balance":
+                data = {"type": "portfolio", "portfolio": portfolio.model_dump()}
+            elif call.action == "get_balance":
                 arguments = validate_tool_arguments(call.action, call.arguments)
                 assert isinstance(arguments, BalanceArguments)
                 amount = (
@@ -140,61 +146,51 @@ class DemoChatAgent:
                     if arguments.asset_id == "base:native"
                     else self.harness.get_token_balance(arguments.asset_id)
                 )
-                return self._response(
-                    session,
-                    f"{arguments.asset_id} balance: {amount.base_units} base units "
-                    f"(decimals {amount.decimals}).",
-                    {
-                        "type": "balance",
-                        "asset_id": arguments.asset_id,
-                        "amount": amount.model_dump(),
-                    },
-                )
-            if call.action == "get_allowances":
+                data = {
+                    "type": "balance",
+                    "asset_id": arguments.asset_id,
+                    "amount": amount.model_dump(),
+                }
+            elif call.action == "get_allowances":
                 validate_tool_arguments(call.action, call.arguments)
                 portfolio = self.harness.get_portfolio()
                 allowances = [allowance.model_dump() for allowance in portfolio.allowances]
-                return self._response(
-                    session,
-                    "Current token allowances:" if allowances else "No allowances set.",
-                    {"type": "allowances", "allowances": allowances},
-                )
-            if call.action == "get_registry":
+                data = {"type": "allowances", "allowances": allowances}
+            elif call.action == "get_registry":
                 validate_tool_arguments(call.action, call.arguments)
-                return self._response(
-                    session,
-                    "Canonical registry (the trusted id -> address mapping):",
-                    {
-                        "type": "registry",
-                        "version_digest": self.registry.version_digest(),
-                        "entries": [entry.__dict__ for entry in self.registry.entries()],
-                    },
-                )
-            if call.action == "show_help":
+                data = {
+                    "type": "registry",
+                    "version_digest": self.registry.version_digest(),
+                    "entries": [entry.__dict__ for entry in self.registry.entries()],
+                }
+            elif call.action == "show_help":
                 validate_tool_arguments(call.action, call.arguments)
                 return self._response(session, _HELP)
-            if call.action == "reject_state_changing":
+            elif call.action == "reject_state_changing":
                 validate_tool_arguments(call.action, call.arguments)
                 return self._response(
                     session,
                     "State-changing actions are not enabled in this read-only demo. "
                     "No transaction was drafted, signed, or submitted.",
                 )
+            else:
+                return self._response(session, "The proposed action was rejected.")
+            session.ledger.record_validated_arguments(call.arguments)
+            session.ledger.record_proposal(call.action, call.arguments)
+            session.ledger.record_verified_fact(str(data["type"]), data)
+            return self._response(session, render_verified_result(data), data)
         except (HarnessError, InferenceError, RegistryError, ValueError) as exc:
             return self._response(session, f"The proposed read action was rejected: {exc}")
-        return self._response(session, "The proposed action was rejected.")
 
     def _respond_with_model(self, session: _Session, message: str) -> dict:
         context = {
             "user_request": message,
-            "conversation_history": list(session.history),
-            "workflow_state": session.sm.state.value,
-            "chain_id": self.harness.get_portfolio().chain_id,
+            "conversation_ledger": session.ledger.model_dump(),
             "canonical_asset_ids": [entry.asset_id for entry in self.registry.entries()],
             "read_only": True,
         }
         try:
-            turn = self.provider.propose_dialogue_turn(
+            route = self.provider.propose_dialogue_route_with_repair(
                 context, _MODEL_ACTIONS, list(_SUGGESTIONS)
             )
         except InferenceError:
@@ -203,36 +199,58 @@ class DemoChatAgent:
                 "I couldn't produce a valid conversational response, so no wallet tool was run.",
                 suggested_action_ids=["get_portfolio", "get_balance"],
             )
-        if turn.proposed_action is None:
+        if route.proposed_action is None:
             return self._response(
                 session,
-                turn.message,
-                suggested_action_ids=turn.suggested_actions,
+                route.message,
+                suggested_action_ids=route.suggested_actions,
             )
 
-        tool_response = self._execute_model_call(session, turn.proposed_action)
+        argument_context = {
+            **context,
+            "phase": "fill_tool_arguments",
+            "selected_action": route.proposed_action,
+            "route_reason": route.reason,
+        }
+        try:
+            call = self.provider.propose_tool_call_with_repair(
+                argument_context, route.proposed_action
+            )
+        except InferenceError:
+            return self._response(
+                session,
+                "I couldn't produce valid typed arguments after one repair attempt, "
+                "so no wallet tool was run.",
+                suggested_action_ids=["get_portfolio", "get_balance"],
+            )
+
+        tool_response = self._execute_model_call(session, call)
         if tool_response["data"] is None:
             return tool_response
 
         explanation_context = {
             "phase": "explain_verified_tool_result",
             "user_request": message,
-            "conversation_history": list(session.history),
-            "workflow_state": session.sm.state.value,
-            "proposed_action": turn.proposed_action.model_dump(),
+            "conversation_ledger": session.ledger.model_dump(),
+            "proposed_action": call.model_dump(),
             "verified_tool_result": tool_response["data"],
             "deterministic_summary": tool_response["reply"],
             "read_only": True,
         }
         try:
-            explanation = self.provider.propose_dialogue_turn(
+            explanation = self.provider.propose_dialogue_route_with_repair(
                 explanation_context, [], list(_SUGGESTIONS)
+            )
+            message = validate_grounded_message(
+                explanation.message,
+                tool_response["data"],
+                tool_response["reply"],
             )
         except InferenceError:
             return tool_response
         return self._response(
             session,
-            explanation.message,
+            message,
             tool_response["data"],
             explanation.suggested_actions,
         )
@@ -299,6 +317,8 @@ class DemoChatAgent:
             reply = "I didn't catch a supported request. " + _HELP
             suggestions = ["get_portfolio", "get_balance", "get_allowances"]
 
+        if data is not None:
+            session.ledger.record_verified_fact(str(data["type"]), data)
         return self._response(session, reply, data, suggestions)
 
     def respond(self, session_id: str, message: str) -> dict:

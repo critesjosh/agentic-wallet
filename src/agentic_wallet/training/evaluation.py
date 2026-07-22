@@ -154,6 +154,15 @@ def evaluate_development_examples(
                 )
                 chosen_action = call.action
                 chosen_arguments = call.arguments
+            elif example.kind == "dialogue_route":
+                route = provider.propose_dialogue_route(
+                    example.context,
+                    example.available_actions,
+                    example.suggested_action_ids,
+                )
+                chosen_intent = route.intent
+                chosen_action = route.proposed_action
+                chosen_arguments = {}
             else:
                 turn = provider.propose_dialogue_turn(
                     example.context,

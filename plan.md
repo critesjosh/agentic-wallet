@@ -44,6 +44,17 @@ Foundational, in order:
 
 Fine-tuning (dataset generation, training, and swapping the resulting checkpoint into the demo) follows in a later phase, after the benchmark and the P2 gate.
 
+### Conversation-pipeline implementation revision (2026-07-22)
+
+The first five non-training improvements are implemented as one fail-closed
+pipeline: native schema constraints on selectable runtimes; an argument-free
+dialogue route followed by a selected-action argument call; one bounded
+validation repair per stage; a bounded typed conversation ledger with no
+approval field; and post-tool narration checked against typed verified facts.
+The model's prose remains display-only throughout. The v4 curriculum trains the
+same stage contracts and repair contexts; development evaluation remains
+separate from the unopened sealed suite.
+
 ## 1. Project summary
 
 This project explores a private, low-cost crypto wallet agent that runs primarily on local mobile hardware.
