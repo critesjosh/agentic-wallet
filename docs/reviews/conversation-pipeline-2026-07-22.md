@@ -44,3 +44,19 @@ negative narration claims, and retaining the wallet as the sole signer.
 
 No reviewer finding justified weakening validation, increasing retry count, or
 moving approval/signing authority into model-controlled state.
+
+## Post-training methods review
+
+Claude and GLM 5.2 reviewed a second sanitized packet containing only aggregate
+v4 results and the proposed staged benchmark correction. Both agreed that
+rerunning fixed adapter weights through a corrected production-matching
+evaluator is legitimate protocol-sensitivity testing, provided both protocols
+remain visible and the rerun is not described as model improvement.
+
+Both emphasized that 1/14 multi-argument accuracy and the missing-recipient
+hard-zero failure are core capability and safety gaps. They also requested
+explicit small-sample uncertainty, an explanation of zero trajectory accuracy,
+and disclosure that checkpoint selection uses part of the same 60-record
+development partition. These limitations are now recorded in the fine-tuning
+report and the frozen `staged-dialogue-route-v2` protocol. No release,
+generalization, execution-safety, or model-selection claim is made.

@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from ..inference import InferenceError, InferenceProvider
+from ..schemas.conversation import ConversationLedger
 from .cases import BenchmarkCase
 from .registries import BENCHMARK_REGISTRIES
 
@@ -20,6 +21,7 @@ SAFE_FAIL_CLOSED_ACTIONS = frozenset(
     {"reject_request", "request_missing_information", "cancel_request"}
 )
 MIN_STRUCTURED_OUTPUT_RATE = 1.0
+BENCHMARK_CONTRACT_VERSION = "staged-dialogue-route-v2"
 
 
 @dataclass
@@ -195,15 +197,36 @@ def run_benchmark(
             context["canonical_asset_ids"] = [
                 entry.asset_id for entry in BENCHMARK_REGISTRIES[case.family].entries()
             ]
+        chain_id = context.get("chain_id", 8453)
+        context["conversation_ledger"] = ConversationLedger(
+            workflow_state=case.workflow_state,
+            chain_id=chain_id if isinstance(chain_id, int) else 8453,
+        ).model_dump()
         schema_valid = True
         syntax_valid = True
         chosen: Optional[str] = None
         chosen_arguments: Optional[dict] = None
         inference_error: Optional[str] = None
         try:
-            call = provider.propose_tool_call(context, case.available_actions)
-            chosen = call.action
-            chosen_arguments = call.arguments
+            route = provider.propose_dialogue_route_with_repair(
+                {**context, "phase": "route_dialogue"},
+                case.available_actions,
+                [],
+            )
+            chosen = route.proposed_action
+            if chosen is None:
+                chosen_arguments = {}
+            else:
+                call = provider.propose_tool_call_with_repair(
+                    {
+                        **context,
+                        "phase": "fill_tool_arguments",
+                        "selected_action": chosen,
+                        "route_reason": route.reason,
+                    },
+                    chosen,
+                )
+                chosen_arguments = call.arguments
         except InferenceError as exc:
             schema_valid = False  # fail-closed: no action taken
             inference_error = str(exc)
@@ -213,6 +236,8 @@ def run_benchmark(
                     "invalid tool-call schema",
                     "invalid arguments for",
                     "not available in this state",
+                    "invalid dialogue route",
+                    "dialogue route action is not available",
                 )
             )
 

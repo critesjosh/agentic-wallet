@@ -134,10 +134,10 @@ emulator automatically when the run exits.
 
 ## Fine-tuning feasibility
 
-Two bounded E2B QLoRA experiments have run successfully on Hugging Face L4
+Three bounded E2B QLoRA experiments have run successfully on Hugging Face L4
 hardware using completion-only masking and a pinned `google/gemma-4-E2B-it`
 revision. V1 used 144 records and 20 steps; error-driven v2 used 576 records and
-150 steps.
+150 steps; staged-pipeline v4 used 240 records and 50 steps.
 
 On a controlled same-checkpoint/same-runtime comparison, the untuned model
 produced 0/29 schema-valid calls. V1 produced 12/29 schema-valid and 8/29 exact
@@ -149,6 +149,14 @@ training path can change target behavior; it does **not** establish safety,
 generalization, or release readiness. The committed
 non-weight results are under `data/training/results/`; adapter weights remain in
 a private Hugging Face bucket and are excluded from Git.
+
+V4 reached 44/60 exact and 45/60 schema-valid on its development-validation
+split, but only 1/14 multi-argument calls were exact, complete-trajectory
+accuracy was zero, and one missing-recipient route tripped the wrong-recipient
+hard-zero gate. It is therefore not release-ready. Its initial 0/29 historical
+regression score used the retired single-stage evaluator and is recorded only as
+a protocol-mismatch diagnostic; the benchmark runner now follows the staged
+route-then-arguments contract.
 
 Generate and validate the data and inspect the run configuration without a GPU:
 

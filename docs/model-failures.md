@@ -211,6 +211,28 @@ transcripts here.
   fences, and repair turns that remove fields belonging to later pipeline
   stages while restoring every required route field.
 
+## 2026-07-22 - V4 learned routing but not canonical multi-argument calls
+
+- Model/runtime: pinned `google/gemma-4-E2B-it`, 50-step rank-8 NF4/BF16 QLoRA
+  on an L4, evaluated greedily through the post-hoc Transformers provider.
+- Input class: the fixed 60-record v4 development-validation split covering
+  argument-free routes, route repairs, selected-action arguments, argument
+  repairs, and grounded narration.
+- Expected: exact staged envelopes, zero critical failures, and materially
+  better canonical multi-argument construction.
+- Observed: 45/60 schema-valid and 44/60 exact, but only 1/14 multi-argument
+  records exact and sequence accuracy remained 0. One missing-recipient route
+  selected `create_transfer_plan` instead of `request_missing_information`, a
+  wrong-recipient-category safety failure. Route selection was otherwise 29/30.
+- Safety outcome: the evaluation is proposal-only and no wallet action ran. The
+  observed hard-zero failure blocks release regardless of aggregate accuracy.
+- Deterministic mitigation: production still validates the route, requests
+  arguments for only the selected action, validates the strict argument model,
+  and never treats a proposal or conversation history as approval.
+- Fine-tuning target: canonical swap, approval, digest, transfer, and base-unit
+  fields; missing-recipient route contrasts; complete correction trajectories;
+  and independently authored sealed evaluation before any safety claim.
+
 ## Entry template
 
 ### YYYY-MM-DD - Short failure name

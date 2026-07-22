@@ -2,7 +2,11 @@ from pathlib import Path
 
 import pytest
 
-from agentic_wallet.benchmark import load_cases, run_benchmark
+from agentic_wallet.benchmark import (
+    BENCHMARK_CONTRACT_VERSION,
+    load_cases,
+    run_benchmark,
+)
 from agentic_wallet.benchmark.cases import (
     BENCHMARK_DATASET_ROLE,
     HARD_ZERO_CATEGORIES,
@@ -36,8 +40,29 @@ def test_good_provider_is_clean_and_passes():
     assert all(item.failures == 0 for item in report.by_hard_zero.values())
 
 
+def test_benchmark_uses_route_then_selected_action_arguments():
+    class RecordingProvider(ScriptedProvider):
+        def __init__(self, script):
+            super().__init__(script)
+            self.action_sets = []
+
+        def propose_tool_call(self, context, available_actions):
+            self.action_sets.append((context.get("phase"), list(available_actions)))
+            return super().propose_tool_call(context, available_actions)
+
+    case = _all_cases()[0]
+    provider = RecordingProvider(GOOD_SCRIPT)
+    report = run_benchmark(provider, [case])
+    assert report.passed == 1
+    assert provider.action_sets == [
+        ("route_dialogue", case.available_actions),
+        ("fill_tool_arguments", [case.expected_action]),
+    ]
+
+
 def test_benchmark_is_explicitly_development_regression_only():
     assert BENCHMARK_DATASET_ROLE == "development-regression-only"
+    assert BENCHMARK_CONTRACT_VERSION == "staged-dialogue-route-v2"
 
 
 def test_sequence_accuracy_requires_every_turn_to_pass():

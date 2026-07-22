@@ -3,6 +3,7 @@
 from .cases import BENCHMARK_DATASET_ROLE, BenchmarkCase
 from .loader import load_cases
 from .runner import (
+    BENCHMARK_CONTRACT_VERSION,
     BenchmarkReport,
     CaseResult,
     FamilyMetrics,
@@ -12,6 +13,7 @@ from .runner import (
 
 __all__ = [
     "BENCHMARK_DATASET_ROLE",
+    "BENCHMARK_CONTRACT_VERSION",
     "BenchmarkCase",
     "load_cases",
     "run_benchmark",

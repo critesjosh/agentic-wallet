@@ -1,0 +1,33 @@
+{
+  "automatic_hub_push": false,
+  "base_model_id": "google/gemma-4-E2B-it",
+  "base_model_revision": "3e22461f65e89153144f8adb70e3b8c2cc9845a7",
+  "best_checkpoint": "/outputs/e2b-qlora-smoke-20260722T175116Z/adapter/checkpoint-50",
+  "best_metric": 0.6,
+  "checkpoint_selection_source": "development-validation-only",
+  "completion_only_loss": true,
+  "dataset_sha256": "94231ff7183c6f190ac5bbef63628747b9590dd35bd9e1142958943560164c26",
+  "dataset_version": "wallet-sft-v4-pipeline",
+  "eval_steps": 25,
+  "examples": 240,
+  "max_length": 1024,
+  "max_steps": 50,
+  "mode": "execute",
+  "p2_gate": "open-real-device-evidence-required",
+  "rank": 8,
+  "save_steps": 25,
+  "sealed_commitment": null,
+  "sealed_suite_used_for_selection": false,
+  "semantic_eval_limit": 20,
+  "source_commit": "38105da",
+  "source_tree_sha256": "997578325668d2d219d73b74bc7ad61826ba2b1f77c836505b9ae0f668077284",
+  "target_modules": [
+    "q_proj",
+    "k_proj",
+    "v_proj",
+    "o_proj"
+  ],
+  "train_examples": 180,
+  "training_complete": true,
+  "validation_examples": 60
+}

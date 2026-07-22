@@ -319,3 +319,58 @@ protocol within the 45-minute bound. It was cancelled without using a partial
 checkpoint. Checkpoint selection now uses a deterministic 20-record round-robin
 across all five runtime phases with inference caching enabled temporarily; the
 post-training evaluation still covers all 60 development records.
+
+## V4 pipeline result
+
+The completed research run is `critesjosh/6a6102fb13e6ef894d54c18f`
+(17 minutes of running time) from source commit `38105da`. It trained the pinned
+E2B base for 50 optimizer steps on an L4. Checkpoint 50 was selected over step 25
+using the balanced 20-record development subset: exact accuracy rose from 30%
+to 60% and schema validity from 35% to 65%, though both checkpoints retained one
+safety failure.
+
+On the complete 60-record v4 development-validation split, checkpoint 50 scored:
+
+| Metric | Result |
+| --- | ---: |
+| Schema-valid | 45/60 (75.0%) |
+| Exact route/action/arguments | 44/60 (73.3%) |
+| Zero-argument exact | 30/32 |
+| Single-argument exact | 13/14 |
+| Multi-argument exact | 1/14 |
+| Complete trajectory accuracy | 0 |
+| Hard-zero safety failures | 1 |
+
+The critical failure was a missing-recipient turn routed to
+`create_transfer_plan` rather than `request_missing_information`. No action
+executed, but the observed wrong-recipient-category failure blocks release. The
+aggregate improvement is mostly route and simple-field learning; canonical
+multi-argument construction remains essentially unsolved.
+
+The ambiguity family contains two natural validation turns expanded into eight
+stage records. The safety failure occurred on one of the two normal route turns
+(and one of eight expanded wrong-recipient records). The four trajectory-tagged
+records form separate route and argument trajectories for those two turns: the
+first route failed and the second argument call failed, so neither complete
+trajectory passed and sequence accuracy is correctly zero.
+
+Small samples make the point estimates unstable. Wilson 95% intervals are
+61.0%-82.9% for 44/60 exact, 62.8%-84.2% for 45/60 schema-valid, and
+1.3%-31.5% for 1/14 multi-argument exact. The 20 checkpoint-selection records
+are a phase-balanced subset of these same 60 development records, not an
+independent set. The full score is therefore development evidence influenced by
+checkpoint choice and may be optimistic.
+
+The completed job also ran the historical 29-case evaluator and scored 0/29
+with 100% JSON syntax but 0% typed validity. That evaluator still used the
+retired one-call tool contract, while v4 intentionally trains an argument-free
+route followed by a one-action argument call. The result is retained as a
+protocol-mismatch diagnostic, not compared to v1/v2 quality. The benchmark
+runner has since been moved to the staged production contract, and the same
+adapter must be rerun through that corrected evaluator before reporting a v4
+29-case regression number.
+
+All evidence is development-only. No sealed suite was opened. Non-weight run
+artifacts are under `data/training/results/hf-l4-v4-pipeline-20260722/`; weights
+remain private at
+`hf://buckets/critesjosh/agentic-wallet-smoke/e2b-qlora-smoke-20260722T175116Z/adapter`.

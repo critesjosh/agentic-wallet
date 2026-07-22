@@ -41,6 +41,9 @@ DATASET_PATH = Path(
 )
 EXISTING_ADAPTER = os.environ.get("AGENTIC_WALLET_EXISTING_ADAPTER")
 EVALUATE_BASE = os.environ.get("AGENTIC_WALLET_EVALUATE_BASE") == "1"
+SKIP_DEVELOPMENT_EVALUATION = (
+    os.environ.get("AGENTIC_WALLET_SKIP_DEVELOPMENT_EVALUATION") == "1"
+)
 
 
 def _source_tree_sha256() -> str:
@@ -180,32 +183,35 @@ def main() -> None:
         )
         status["evaluation"] = True
 
-        development_command = [
-            sys.executable,
-            str(WORKSPACE / "scripts" / "evaluate_development.py"),
-            "--provider",
-            "transformers",
-            "--dataset",
-            str(DATASET_PATH),
-            "--json-output",
-            str(output_dir / "development_evaluation.json"),
-        ]
-        if adapter_path is not None:
-            development_command.extend(
-                ["--adapter-path", str(adapter_path)]
+        if SKIP_DEVELOPMENT_EVALUATION:
+            status["development_evaluation"] = "skipped"
+        else:
+            development_command = [
+                sys.executable,
+                str(WORKSPACE / "scripts" / "evaluate_development.py"),
+                "--provider",
+                "transformers",
+                "--dataset",
+                str(DATASET_PATH),
+                "--json-output",
+                str(output_dir / "development_evaluation.json"),
+            ]
+            if adapter_path is not None:
+                development_command.extend(
+                    ["--adapter-path", str(adapter_path)]
+                )
+            development = subprocess.run(
+                development_command,
+                check=True,
+                text=True,
+                capture_output=True,
+                env=env,
             )
-        development = subprocess.run(
-            development_command,
-            check=True,
-            text=True,
-            capture_output=True,
-            env=env,
-        )
-        _emit(development)
-        (output_dir / "development_evaluation.log").write_text(
-            development.stdout + development.stderr
-        )
-        status["development_evaluation"] = True
+            _emit(development)
+            (output_dir / "development_evaluation.log").write_text(
+                development.stdout + development.stderr
+            )
+            status["development_evaluation"] = True
     except subprocess.CalledProcessError as exc:
         if exc.stdout:
             print(exc.stdout, end="", flush=True)

@@ -1,0 +1,54 @@
+{
+  "adapter_bucket": "hf://buckets/critesjosh/agentic-wallet-smoke/e2b-qlora-smoke-20260722T175116Z/adapter",
+  "base_model_id": "google/gemma-4-E2B-it",
+  "base_model_revision": "3e22461f65e89153144f8adb70e3b8c2cc9845a7",
+  "benchmark_role": "development-only",
+  "checkpoint_25": {
+    "exact_accuracy_on_balanced_20": 0.3,
+    "safety_failures": 1,
+    "schema_valid_rate": 0.35
+  },
+  "checkpoint_50": {
+    "exact_accuracy_on_balanced_20": 0.6,
+    "safety_failures": 1,
+    "schema_valid_rate": 0.65
+  },
+  "completed_job": "critesjosh/6a6102fb13e6ef894d54c18f",
+  "dataset_sha256": "94231ff7183c6f190ac5bbef63628747b9590dd35bd9e1142958943560164c26",
+  "dataset_version": "wallet-sft-v4-pipeline",
+  "development_validation_60": {
+    "action_accuracy": 0.7333333333333333,
+    "argument_accuracy": 0.7333333333333333,
+    "exact_accuracy": 0.7333333333333333,
+    "multi_argument_exact": "1/14",
+    "safety_failures": 1,
+    "schema_valid_rate": 0.75,
+    "sequence_accuracy": 0.0,
+    "wilson_95_exact": [0.6099, 0.8287],
+    "wilson_95_multi_argument_exact": [0.0127, 0.3147],
+    "wilson_95_schema_valid": [0.6277, 0.8422]
+  },
+  "failed_or_cancelled_attempts": [
+    {
+      "job": "critesjosh/6a60fcf413e6ef894d54c152",
+      "outcome": "OOM during default-batch loss evaluation at step 25; no model result"
+    },
+    {
+      "job": "critesjosh/6a60fec5d09dc1f57c6c2d92",
+      "outcome": "cancelled during overlong full-set checkpoint generation; no model result"
+    }
+  ],
+  "legacy_regression_29": {
+    "passed": 0,
+    "protocol_mismatch": "This run used the retired single-stage tool-call evaluator and is retained only as evidence motivating the staged evaluator correction.",
+    "structured_output_rate": 0.0,
+    "syntax_valid_rate": 1.0
+  },
+  "max_steps": 50,
+  "checkpoint_selection_overlap": "The balanced 20-record selection subset is contained in the same 60-record development partition.",
+  "release_ready": false,
+  "sealed_suite_used": false,
+  "source_commit": "38105da",
+  "source_tree_sha256": "997578325668d2d219d73b74bc7ad61826ba2b1f77c836505b9ae0f668077284",
+  "successful_running_seconds": 1020
+}

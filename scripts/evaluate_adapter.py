@@ -1,4 +1,4 @@
-"""Evaluate a PEFT adapter through the unchanged benchmark provider contract."""
+"""Evaluate a PEFT adapter through the staged production inference contract."""
 
 from __future__ import annotations
 
@@ -7,7 +7,11 @@ import json
 from dataclasses import asdict
 from pathlib import Path
 
-from agentic_wallet.benchmark import load_cases, run_benchmark
+from agentic_wallet.benchmark import (
+    BENCHMARK_CONTRACT_VERSION,
+    load_cases,
+    run_benchmark,
+)
 from agentic_wallet.providers import LocalTransformersProvider
 from agentic_wallet.training.config import BASE_MODEL_ID, BASE_MODEL_REVISION
 
@@ -74,6 +78,7 @@ def main() -> None:
     if args.json_output is not None:
         payload = {
             "adapter_path": str(args.adapter_path) if args.adapter_path else None,
+            "evaluation_contract": BENCHMARK_CONTRACT_VERSION,
             "passed": report.passed,
             "total": report.total,
             "structured_output_rate": report.structured_output_rate,
