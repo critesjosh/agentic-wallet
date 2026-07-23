@@ -38,18 +38,18 @@ from agentic_wallet.benchmark.blinded_scenarios import (
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = (
-    ROOT / "data" / "benchmark" / "claude-blinded-suite-v9.commitment.json"
+    ROOT / "data" / "benchmark" / "terra-blinded-suite-v10.commitment.json"
 )
 AUTHOR_PROMPTS = (
-    "docs/claude-blinded-author-shared-v2.md",
-    "docs/claude-blinded-author-shard-1a-v2.md",
-    "docs/claude-blinded-author-shard-1b-v2.md",
-    "docs/claude-blinded-author-shard-2a-v2.md",
-    "docs/claude-blinded-author-shard-2b-v2.md",
-    "docs/claude-blinded-author-shard-3a-v2.md",
-    "docs/claude-blinded-author-shard-3b-v2.md",
-    "docs/claude-blinded-author-shard-4a-v2.md",
-    "docs/claude-blinded-author-shard-4b-v2.md",
+    "docs/terra-blinded-author-shared-v1.md",
+    "docs/terra-blinded-author-shard-1a-v1.md",
+    "docs/terra-blinded-author-shard-1b-v1.md",
+    "docs/terra-blinded-author-shard-2a-v1.md",
+    "docs/terra-blinded-author-shard-2b-v1.md",
+    "docs/terra-blinded-author-shard-3a-v1.md",
+    "docs/terra-blinded-author-shard-3b-v1.md",
+    "docs/terra-blinded-author-shard-4a-v1.md",
+    "docs/terra-blinded-author-shard-4b-v1.md",
 )
 PROTECTED_TRACKED_PATHS = (
     *BLINDED_HASHED_HARNESS_FILES,
@@ -57,7 +57,7 @@ PROTECTED_TRACKED_PATHS = (
     "scripts/commit_blinded_suite.py",
     "scripts/evaluate_blinded.py",
     "scripts/materialize_blinded_suite.py",
-    "scripts/request_claude_blinded_shard.py",
+    "docs/terra-blinded-author-procedure-v1.md",
 )
 
 
@@ -166,8 +166,8 @@ def main() -> None:
         "author_generation_config": BLINDED_AUTHOR_GENERATION_CONFIG,
         "author_model": BLINDED_AUTHOR_MODEL,
         "author_prompt_sha256": _prompt_digest(),
-        "author_request_script_sha256": sha256_named_files(
-            ROOT, ("scripts/request_claude_blinded_shard.py",)
+        "author_procedure_sha256": sha256_named_files(
+            ROOT, ("docs/terra-blinded-author-procedure-v1.md",)
         ),
         "author_role": BLINDED_AUTHOR_ROLE,
         "author_shard_sha256": receipt["source_sha256"],

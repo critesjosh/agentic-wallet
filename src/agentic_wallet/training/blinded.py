@@ -19,24 +19,25 @@ from ..benchmark.blinded_scenarios import BLINDED_SCENARIO_CATALOG_VERSION
 
 BLINDED_CASE_COUNT = 64
 BLINDED_COMMITMENT_STATUS = "committed-before-evaluation"
-BLINDED_RUBRIC_VERSION = "model-authored-blinded-wallet-eval-v9"
+BLINDED_RUBRIC_VERSION = "model-authored-blinded-wallet-eval-v10"
 BLINDED_SEQUENCE_MODE = "teacher-forced-typed-context"
 BLINDED_POST_COMMIT_FAILURE_POLICY = (
     "abort-and-retire-suite-without-rerun-or-case-level-inspection"
 )
 BLINDED_AUTHOR_GENERATION_CONFIG = {
     "batch_count": 8,
-    "interface": "claude-code-cli-json-schema",
-    "model_alias": "sonnet",
-    "no_session_persistence": True,
-    "safe_mode": True,
-    "tools": "disabled",
+    "filesystem_output": "external-only",
+    "requested_fork_turns": "none",
+    "interface": "codex-isolated-terra-subagent",
+    "model_alias": "gpt-5.6-terra",
+    "requested_repository_access": "none-instruction-only",
     "whole_suite_regeneration_only": True,
 }
-BLINDED_AUTHOR_MODEL = "claude-code/sonnet"
+BLINDED_AUTHOR_MODEL = "codex/gpt-5.6-terra"
 BLINDED_AUTHOR_ROLE = "model-authored blinded evaluator"
 BLINDED_BLINDING_SCOPE = (
-    "Claude was not given repository training or development plaintext; "
+    "Terra subagents were invoked without forked conversation and instructed "
+    "not to access repository training or development plaintext; "
     "the evaluator receives no case-level output. The developer operates "
     "the workflow, so this is not independent-human evidence."
 )
@@ -356,7 +357,7 @@ def validate_blinded_commitment(path: str | Path) -> dict[str, Any]:
         "author_generation_config",
         "author_model",
         "author_prompt_sha256",
-        "author_request_script_sha256",
+        "author_procedure_sha256",
         "author_shard_sha256",
         "author_role",
         "authoring_attempt_count",
@@ -426,7 +427,7 @@ def validate_blinded_commitment(path: str | Path) -> dict[str, Any]:
         "sha256",
         "candidate_artifact_sha256",
         "author_prompt_sha256",
-        "author_request_script_sha256",
+        "author_procedure_sha256",
         "commit_script_sha256",
         "evaluation_script_sha256",
         "harness_sha256",

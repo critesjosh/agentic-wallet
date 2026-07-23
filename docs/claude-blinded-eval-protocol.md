@@ -88,10 +88,11 @@ establish the provenance of the already-bound canonical suite. The GPU job is
 launched without SSH or an exposed port, and the suite mount is used only by
 the evaluator process.
 
-If Claude Code reaches its limit before a complete attempt is produced, that
-whole attempt is discarded. A Terra-authored replacement must first be frozen
-as a new protocol revision with explicit author provenance and fresh prefixes;
-Claude and Terra shards are never silently mixed under the v9 identity.
+Claude Code reached its monthly spend limit during v9 attempt 1. The incomplete
+whole attempt was discarded, and v9 was retired without commitment or candidate
+evaluation. The separately frozen Terra-authored v10 uses explicit provenance
+and fresh prefixes; Claude and Terra shards are never mixed under one identity.
+See [`terra-blinded-eval-protocol.md`](terra-blinded-eval-protocol.md).
 
 Trajectories use teacher-forced typed context, not autonomous rollout. Transfer
 candidate fields bound by deterministic code are reported separately from

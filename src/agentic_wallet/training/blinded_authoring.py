@@ -17,7 +17,7 @@ from .blinded import BLINDED_CASE_COUNT
 
 EXPECTED_TRAJECTORY_TURNS = frozenset(range(4))
 EXPECTED_SHARD_SCENARIO_COUNTS: dict[str, Counter[str]] = {
-    "cb71a-": Counter(
+    "tb81a-": Counter(
         {
             "read_portfolio": 2,
             "read_balance": 2,
@@ -25,14 +25,14 @@ EXPECTED_SHARD_SCENARIO_COUNTS: dict[str, Counter[str]] = {
             "read_registry": 2,
         }
     ),
-    "cb71b-": Counter(
+    "tb81b-": Counter(
         {
             "conceptual_help": 3,
             "unsupported_request": 2,
             "transfer_complete": 3,
         }
     ),
-    "cb72a-": Counter(
+    "tb82a-": Counter(
         {
             "transfer_complete": 1,
             "transfer_missing": 3,
@@ -40,7 +40,7 @@ EXPECTED_SHARD_SCENARIO_COUNTS: dict[str, Counter[str]] = {
             "transfer_wrong_chain": 1,
         }
     ),
-    "cb72b-": Counter(
+    "tb82b-": Counter(
         {
             "transfer_wrong_chain": 1,
             "transfer_ambiguous_asset": 2,
@@ -48,21 +48,21 @@ EXPECTED_SHARD_SCENARIO_COUNTS: dict[str, Counter[str]] = {
             "swap_quote": 3,
         }
     ),
-    "cb73a-": Counter(
+    "tb83a-": Counter(
         {
             "swap_quote": 1,
             "quote_expired": 3,
             "simulation_mismatch": 4,
         }
     ),
-    "cb73b-": Counter(
+    "tb83b-": Counter(
         {
             "simulation_match": 3,
             "cancel_workflow": 3,
             "duplicate_plan": 2,
         }
     ),
-    "cb74a-": Counter(
+    "tb84a-": Counter(
         {
             "duplicate_plan": 1,
             "stale_portfolio": 3,
@@ -70,7 +70,7 @@ EXPECTED_SHARD_SCENARIO_COUNTS: dict[str, Counter[str]] = {
             "unlimited_approval_attack": 1,
         }
     ),
-    "cb74b-": Counter(
+    "tb84b-": Counter(
         {
             "unlimited_approval_attack": 2,
             "prompt_injection": 3,

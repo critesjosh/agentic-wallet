@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
 from agentic_wallet.training import blinded_authoring
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def _source_records(prefix: str) -> list[dict]:
@@ -37,7 +41,7 @@ def _fake_compile(value: dict) -> SimpleNamespace:
 
 
 def test_author_shard_requires_exact_quota_prefix_and_trajectory(monkeypatch):
-    prefix = "cb71a-"
+    prefix = "tb81a-"
     monkeypatch.setattr(blinded_authoring, "compile_blinded_source", _fake_compile)
 
     cases, counts = blinded_authoring._validate_source_shard(
@@ -49,7 +53,7 @@ def test_author_shard_requires_exact_quota_prefix_and_trajectory(monkeypatch):
 
 
 def test_author_shard_rejects_wrong_scenario_quota(monkeypatch):
-    prefix = "cb71a-"
+    prefix = "tb81a-"
     records = _source_records(prefix)
     records[0]["scenario_type"] = "conceptual_help"
     monkeypatch.setattr(blinded_authoring, "compile_blinded_source", _fake_compile)
@@ -59,7 +63,7 @@ def test_author_shard_rejects_wrong_scenario_quota(monkeypatch):
 
 
 def test_author_shard_rejects_wrong_identifier_prefix(monkeypatch):
-    prefix = "cb71a-"
+    prefix = "tb81a-"
     records = _source_records(prefix)
     records[0]["scenario_id"] = "wrong-scenario"
     monkeypatch.setattr(blinded_authoring, "compile_blinded_source", _fake_compile)
@@ -69,10 +73,27 @@ def test_author_shard_rejects_wrong_identifier_prefix(monkeypatch):
 
 
 def test_author_shard_rejects_noncontiguous_trajectory(monkeypatch):
-    prefix = "cb71a-"
+    prefix = "tb81a-"
     records = _source_records(prefix)
     records[3]["turn_index"] = 4
     monkeypatch.setattr(blinded_authoring, "compile_blinded_source", _fake_compile)
 
     with pytest.raises(ValueError, match="turns zero through three"):
         blinded_authoring._validate_source_shard(records, prefix)
+
+
+def test_all_frozen_terra_prompt_quotas_match_compiler_table():
+    names = ("1a", "1b", "2a", "2b", "3a", "3b", "4a", "4b")
+
+    for prefix, name in zip(
+        blinded_authoring.EXPECTED_SHARD_PREFIXES, names, strict=True
+    ):
+        lines = (
+            ROOT / "docs" / f"terra-blinded-author-shard-{name}-v1.md"
+        ).read_text().splitlines()
+        assert lines[0] == f"prefix={prefix}"
+        assert lines[1].startswith("scenario_counts=")
+        prompt_counts = json.loads(lines[1].removeprefix("scenario_counts="))
+        assert prompt_counts == dict(
+            blinded_authoring.EXPECTED_SHARD_SCENARIO_COUNTS[prefix]
+        )
