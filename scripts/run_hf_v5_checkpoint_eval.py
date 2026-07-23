@@ -53,7 +53,7 @@ def _evaluate(
         ]
         completed = subprocess.run(
             command,
-            check=True,
+            check=False,
             text=True,
             capture_output=True,
             env=os.environ.copy(),
@@ -62,6 +62,8 @@ def _evaluate(
             completed.stdout + completed.stderr
         )
         print(completed.stdout, end="", flush=True)
+        print(completed.stderr, end="", file=sys.stderr, flush=True)
+        completed.check_returncode()
 
 
 def main() -> None:

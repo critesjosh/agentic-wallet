@@ -10,6 +10,11 @@ def test_v5_checkpoint_eval_driver_is_evaluation_only(monkeypatch, tmp_path):
     class _Completed:
         stdout = "{}\n"
         stderr = ""
+        returncode = 0
+
+        @staticmethod
+        def check_returncode():
+            return None
 
     monkeypatch.setenv("AGENTIC_WALLET_OUTPUT_DIR", str(tmp_path))
     monkeypatch.setattr(
