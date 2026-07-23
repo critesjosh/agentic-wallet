@@ -1,4 +1,4 @@
-# Claude-authored blinded evaluation v7
+# Claude-authored blinded evaluation v8
 
 This is a single-use experimental evaluation, not the independently
 human-authored sealed release gate in
@@ -33,9 +33,15 @@ when OpenRouter is required to preserve every supplied parameter.
 Protocol v6 was retired after its first whole-suite attempt when a fixture-heavy
 16-case response was truncated by the provider. No partial shard is reused.
 
-Each v7 whole-suite attempt uses eight independently generated eight-case batches
-with fixed quotas, one trajectory per batch, and OpenRouter's strict JSON
-Schema response format. The constrained outer response is an array of eight
+Protocol v7 was retired before authoring when the user prohibited calling
+Claude through OpenRouter. Direct Claude Code Fable 5 was unavailable because
+the account had reached its monthly Fable spend limit.
+
+Each v8 whole-suite attempt uses Claude Sonnet through the directly
+authenticated Claude Code CLI: eight independently generated eight-case batches
+with fixed quotas, one trajectory per batch, and the CLI's strict JSON Schema
+response format. Tools are disabled, safe mode is enabled, and session
+persistence is off. The constrained outer response is an array of eight
 strings. Each string encodes one complete source record; deterministic code
 requires strict JSON, exact top-level fields, a known scenario type, and an
 object context before subjecting it to the unchanged scenario compiler.
@@ -46,9 +52,8 @@ in full; Claude receives no case-level feedback.
 
 The author prompts contain only public project contracts and fictional
 synthetic fixtures—never user, wallet, key, account, or private repository
-data. The compatible structured-output route is not constrained to
-zero-data-retention providers; this exception applies only to synthetic suite
-authoring and does not change the product's inference privacy boundary.
+data. Claude runs in an isolated external directory and cannot read the
+training checkout.
 After a suite passes schema and post-hoc disjointness checks, its digest, all
 author prompts, candidate artifact, harness, evaluator, inference
 configuration, sequence mode, and attempt count are committed before the model

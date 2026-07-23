@@ -26,7 +26,7 @@ from agentic_wallet.benchmark.blinded_scenarios import (
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = (
-    ROOT / "data" / "benchmark" / "claude-blinded-suite-v7.commitment.json"
+    ROOT / "data" / "benchmark" / "claude-blinded-suite-v8.commitment.json"
 )
 
 
@@ -50,7 +50,7 @@ def main() -> None:
     )
     parser.add_argument("--authoring-attempt-count", type=int, required=True)
     parser.add_argument(
-        "--author-model", default="openrouter/anthropic/claude-fable-5"
+        "--author-model", default="claude-code/sonnet"
     )
     parser.add_argument(
         "--author-role", default="model-authored blinded evaluator"
@@ -85,10 +85,11 @@ def main() -> None:
     commitment = {
         "author_generation_config": {
             "batch_count": 8,
-            "interface": "openrouter-chat-completions-json-schema",
-            "provider_data_collection": "not-restricted-synthetic-prompts-only",
-            "provider_require_parameters": True,
-            "temperature": "provider-default-unsupported-with-structured-output",
+            "interface": "claude-code-cli-json-schema",
+            "model_alias": "sonnet",
+            "no_session_persistence": True,
+            "safe_mode": True,
+            "tools": "disabled",
             "whole_suite_regeneration_only": True,
         },
         "author_model": args.author_model,
