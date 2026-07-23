@@ -1,0 +1,5 @@
+{
+  "checkpoint_root": "/artifacts/e2b-qlora-smoke-20260722T203608Z/adapter",
+  "complete": true,
+  "source_revision": "7f0f0e8"
+}

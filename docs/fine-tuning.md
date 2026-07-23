@@ -430,30 +430,61 @@ remain private in the job bucket; non-weight evidence is under
 
 The matching Transformers comparisons are development-only:
 
-| Suite | Untuned base | Step-75 adapter | Safety failures |
-| --- | ---: | ---: | ---: |
-| V5 route-eligible validation | 24/54 exact | 50/54 exact | 0 → 1 |
-| Independent route v1 | 23/40 exact | 29/40 exact | 3 → 2 |
-
-The independent paired result contains nine adapter-only wins, three base-only
-wins, and a two-sided exact McNemar p-value of 0.146. It is useful directional
-evidence, not a strong statistical or release claim. Both base and adapter were
-40/40 schema-valid on the independent suite, so the one-field route contract,
-not tuning, deserves credit for formatting reliability.
+| Checkpoint | V5 eligible exact | V5 safety | Independent exact | Independent safety |
+| --- | ---: | ---: | ---: | ---: |
+| Untuned base | 24/54 | 0 | 23/40 | 3 |
+| Step 25 | 37/54 | 0 | 33/40 | 0 |
+| Step 50 | 46/54 | 0 | 31/40 | 1 |
+| Step 75 | 50/54 | 1 | 29/40 | 2 |
 
 Step 75 was originally selected by exact accuracy alone. That is now rejected:
-it introduced an unlimited-approval hard-zero failure that step 50 did not show
-on the checkpoint-development subset. Future checkpoint selection is
-safety-lexicographic: fewer hard-zero failures strictly dominate exact
-accuracy. Step 50 remains provisional until the same independent evaluation is
-run against it.
+it introduced an unlimited-approval development failure, while later training
+also monotonically degraded the independent result and refusal safety.
+Checkpoint selection is now safety-lexicographic. Step 25 is the only checkpoint
+with zero hard-zero failures on both development suites and is therefore the v5
+candidate.
+
+Against the base, checkpoint 25 has 14 adapter-only wins, four base-only wins,
+19 cases both passed, and three neither passed. The paired two-sided exact
+McNemar p-value is 0.031. This is useful evidence that tuning changed routing,
+but it is not confirmatory: the independently authored suite is development-only
+and was used to select checkpoint 25. Both base and every adapter checkpoint
+were 40/40 schema-valid on that suite, so the one-field route contract, not
+tuning, deserves credit for formatting reliability.
+
+The v5 validation split is also consumed development evidence. The
+grounded-display exclusion was introduced after inspecting the first result,
+based on an architectural task-contract mismatch, and is therefore
+outcome-informed rather than pre-registered. Original 58-record reports remain
+committed. Future evaluators must freeze task eligibility before any model run.
+
+Hard-zero failures are raw model-route errors in predeclared critical
+categories. An incomplete candidate-transfer route is still an exact miss, but
+not a hard-zero: the one-field route cannot encode transaction fields or reach
+planning until deterministic required-fact binding succeeds. The same boundary
+is used for every checkpoint and the base.
 
 Four of the 58 v5 validation records retain the legacy factual display
 envelope. They are training material for grounded narration, not eligible
 minimal-route cases, and are now reported separately rather than counted as
 route failures. A dedicated narration-grounding evaluator is still required.
-The step-75 sweep and final re-evaluation also differed by one exact case, so a
-repeat evaluation is required before settling on a checkpoint.
+Two fixed-weight step-75 repeats reproduced byte-for-byte: 50/54 exact with one
+development safety failure and 29/40 exact with two independent safety failures.
+The earlier 49/54 training-time sweep result is retained as an unexplained
+single-case variance, but it does not affect selection because step 75 fails the
+safety gate.
+
+The evaluation-only job was `critesjosh/6a61f6d413e6ef894d54da0e` from source
+commit `e9c087b`; it performed no training. Its non-weight reports are under the
+v5 result directory. Failed predecessor jobs stopped during wrapper dependency
+setup before loading a model and produced no model result.
+
+The selected checkpoint was then repeated in a separate job,
+`critesjosh/6a61fcf7d09dc1f57c6c503c`, from source commit `7f0f0e8`.
+The complete checkpoint-25 development JSON reproduced at SHA-256
+`2a5c3c71463c78873704d0303c205faef0dd468ba2077c7a8341967a2762bbcc`;
+the independent-development JSON reproduced at
+`27442b042173f71490822fd278dd6cc33dc61466058b5d8a3c11788e00bd18ae`.
 
 The untuned local Ollama E2B development pilot of the matching minimal route
 contract scored 7/12 raw routes and 12/12 guarded end-to-end results, with all

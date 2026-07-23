@@ -47,6 +47,26 @@ social-engineered unlimited-approval requests. Deterministic validation and
 policy still prevent those proposals from executing, but they remain
 release-blocking model-quality failures.
 
-Checkpoint 50 had no hard-zero failure on the v5 checkpoint-development
-subset. It must be evaluated on this same suite before the project selects a
-candidate. See `docs/reviews/v5-training-2026-07-23.md`.
+## Checkpoint selection
+
+The corrected evaluation compared every preserved v5 checkpoint:
+
+| Checkpoint | Exact | Hard-zero failures |
+| --- | ---: | ---: |
+| Step 25 | 33/40 | 0 |
+| Step 50 | 31/40 | 1 |
+| Step 75 | 29/40 | 2 |
+
+Step 25 is the only checkpoint with zero failures on both this suite and the v5
+route-development split, so it is the safety-selected candidate. Against the
+base it has 14 unique wins and four regressions; the two-sided exact McNemar
+p-value is 0.031.
+
+A separate-job checkpoint-25 repeat reproduced this report byte-for-byte at
+SHA-256
+`27442b042173f71490822fd278dd6cc33dc61466058b5d8a3c11788e00bd18ae`.
+
+This comparison also converts the suite into checkpoint-selection evidence. It
+remains independently authored, but it is no longer eligible to serve as a
+future confirmatory or release suite. See
+`docs/reviews/v5-training-2026-07-23.md`.

@@ -202,20 +202,23 @@ and repair records are absent because deterministic code now owns those fields.
 The production route target is now only the allowlisted `proposed_action`; code
 owns the display envelope.
 
-On the same Transformers runtime, v5 improved the independently authored
-40-case development suite from 23/40 to 29/40 exact. Both base and adapter were
-40/40 schema-valid, so the one-field contract—not tuning—gets credit for
-formatting. Hard-zero failures fell from three to two, but the two remaining
-failures both followed malicious unlimited-approval requests. The paired
-McNemar p-value is 0.146, so this is directional evidence rather than a
-generalization or release claim.
+On the same Transformers runtime, the safety-selected checkpoint 25 improved
+the independently authored 40-case development suite from 23/40 to 33/40 exact
+with zero hard-zero failures, down from three for the base. Both were 40/40
+schema-valid, so the one-field contract—not tuning—gets credit for formatting.
+The paired exact McNemar p-value is 0.031, but this remains exploratory evidence:
+the suite was used to choose among checkpoints and is not a sealed confirmatory
+evaluation.
 
-Step 75 also introduced one development safety failure that step 50 did not
-show. Checkpoint selection now prioritizes fewer hard-zero failures before
-ordinary exact accuracy; step 50 remains provisional until its independent
-evaluation completes. On the matching untuned local E2B pilot, raw routing was
-7/12 while deterministic required-fact checks produced 12/12 correct guarded
-outcomes and contained all six hazardous cases.
+Later checkpoints overfit the narrow development curriculum. Checkpoint 50
+reached 31/40 with one independent hard-zero failure; checkpoint 75 reached
+29/40 with two and also introduced a development safety failure. Checkpoint
+selection now prioritizes zero hard-zero failures before ordinary accuracy, so
+checkpoint 25 is the v5 candidate for a future sealed evaluation. Separate-job
+checkpoint-25 repeats reproduced both development reports byte-for-byte. On
+the matching untuned local E2B pilot, raw routing was 7/12 while deterministic
+required-fact checks produced 12/12 correct guarded outcomes and contained all
+six hazardous cases.
 
 The training path evaluates and checkpoints every 25 optimizer steps and uses a
 safety-lexicographic development score. The

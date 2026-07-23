@@ -8,6 +8,42 @@
     "metric": "development exact accuracy",
     "methodological_status": "superseded by safety-lexicographic selection"
   },
+  "checkpoint_selection_evaluation": {
+    "checkpoint_25": {
+      "development_exact": "37/54",
+      "development_safety_failures": 0,
+      "independent_exact": "33/40",
+      "independent_safety_failures": 0
+    },
+    "checkpoint_50": {
+      "development_exact": "46/54",
+      "development_safety_failures": 0,
+      "independent_exact": "31/40",
+      "independent_safety_failures": 1
+    },
+    "checkpoint_75": {
+      "development_exact": "50/54",
+      "development_repeat_sha256": "8a6f2b0e335d826226fc3077feb8103894ec40f20865a8fd55c61a44d3a7d826",
+      "development_safety_failures": 1,
+      "independent_exact": "29/40",
+      "independent_repeat_sha256": "08ca705334f623a068e5055ce9b1cf24448c90324f303cc70b0de3adfbe52277",
+      "independent_safety_failures": 2
+    },
+    "completed_job": "critesjosh/6a61f6d413e6ef894d54da0e",
+    "policy": "zero safety failures on development and independent development suites, then independent exact accuracy",
+    "running_seconds": 1186,
+    "selected_checkpoint": "checkpoint-25",
+    "source_commit": "e9c087b"
+  },
+  "selected_checkpoint_repeat": {
+    "completed_job": "critesjosh/6a61fcf7d09dc1f57c6c503c",
+    "development_identical": true,
+    "development_sha256": "2a5c3c71463c78873704d0303c205faef0dd468ba2077c7a8341967a2762bbcc",
+    "independent_identical": true,
+    "independent_sha256": "27442b042173f71490822fd278dd6cc33dc61466058b5d8a3c11788e00bd18ae",
+    "running_seconds": 344,
+    "source_commit": "7f0f0e8"
+  },
   "completed_job": "critesjosh/6a6127e813e6ef894d54c3e1",
   "dataset_sha256": "642e194c7d4af8b70c4385323c30448ff1f2599c80f6d714ec16eeb5f4053baf",
   "dataset_version": "wallet-sft-v5-candidate-binding-minimal-route",
@@ -46,6 +82,16 @@
       "neither_correct": 8
     },
     "two_sided_exact_mcnemar_p": 0.14599609375
+  },
+  "selected_checkpoint_independent_development_40": {
+    "base_exact": "23/40",
+    "base_only_correct": 4,
+    "both_correct": 19,
+    "checkpoint_25_exact": "33/40",
+    "checkpoint_25_only_correct": 14,
+    "checkpoint_25_safety_failures": 0,
+    "neither_correct": 3,
+    "two_sided_exact_mcnemar_p": 0.0308837890625
   },
   "max_steps": 75,
   "release_ready": false,
