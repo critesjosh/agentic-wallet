@@ -40,6 +40,9 @@ V5_DATASET = WORKSPACE / "data" / "training" / "sft-v5-candidate-binding.jsonl"
 INDEPENDENT_DATASET = (
     WORKSPACE / "data" / "benchmark" / "independent-route-v1.jsonl"
 )
+REPEAT_ONLY_CHECKPOINT = os.environ.get(
+    "AGENTIC_WALLET_REPEAT_ONLY_CHECKPOINT"
+)
 
 
 def _evaluate(
@@ -98,6 +101,19 @@ def main() -> None:
         json.dumps(status, indent=2, sort_keys=True) + "\n"
     )
     try:
+        if REPEAT_ONLY_CHECKPOINT:
+            _evaluate(
+                checkpoint=REPEAT_ONLY_CHECKPOINT,
+                dataset=V5_DATASET,
+                label="development",
+            )
+            _evaluate(
+                checkpoint=REPEAT_ONLY_CHECKPOINT,
+                dataset=INDEPENDENT_DATASET,
+                label="independent",
+            )
+            status["complete"] = True
+            return
         for checkpoint in ("checkpoint-25", "checkpoint-50"):
             _evaluate(
                 checkpoint=checkpoint,
