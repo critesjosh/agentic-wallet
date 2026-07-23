@@ -1,3 +1,16 @@
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#   "accelerate>=1.10",
+#   "bitsandbytes>=0.49",
+#   "eth-utils>=5,<7",
+#   "peft>=0.19",
+#   "pydantic>=2.6",
+#   "torch>=2.7",
+#   "torchvision>=0.22",
+#   "transformers>=5.10.1",
+# ]
+# ///
 """Evaluate preserved v5 checkpoints without retraining.
 
 The source tree and adapter bucket are mounted read-only. Only JSON reports and
