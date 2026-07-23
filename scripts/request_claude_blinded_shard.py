@@ -19,7 +19,7 @@ TOP_LEVEL_FIELDS = (
     "scenario_type",
     "user_request",
     "workflow_state",
-    "context_json",
+    "context",
     "trajectory_id",
     "turn_index",
 )
@@ -56,31 +56,7 @@ def _schema() -> dict[str, Any]:
         "properties": {
             "cases": {
                 "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "id": {"type": "string"},
-                        "scenario_id": {"type": "string"},
-                        "scenario_type": {
-                            "type": "string",
-                            "enum": list(SCENARIO_TYPES),
-                        },
-                        "user_request": {"type": "string"},
-                        "workflow_state": {"type": "string"},
-                        "context_json": {"type": "string"},
-                        "trajectory_id": {
-                            "anyOf": [{"type": "string"}, {"type": "null"}]
-                        },
-                        "turn_index": {
-                            "anyOf": [
-                                {"type": "integer"},
-                                {"type": "null"},
-                            ]
-                        },
-                    },
-                    "required": list(TOP_LEVEL_FIELDS),
-                    "additionalProperties": False,
-                },
+                "items": {"type": "string"},
             }
         },
         "required": ["cases"],
@@ -140,15 +116,19 @@ def main() -> None:
     cases = value.get("cases")
     if not isinstance(cases, list) or len(cases) != SHARD_SIZE:
         raise SystemExit("Claude response did not contain exactly 16 cases")
-    normalized = []
-    for case in cases:
+    normalized: list[dict[str, Any]] = []
+    for encoded_case in cases:
         try:
-            context = json.loads(case.pop("context_json"))
-        except (KeyError, TypeError, json.JSONDecodeError) as exc:
-            raise SystemExit("Claude returned invalid context_json") from exc
-        if not isinstance(context, dict):
-            raise SystemExit("Claude context_json must decode to an object")
-        normalized.append({**case, "context": context})
+            case = json.loads(encoded_case)
+        except (TypeError, json.JSONDecodeError) as exc:
+            raise SystemExit("Claude returned an invalid encoded case") from exc
+        if not isinstance(case, dict) or set(case) != set(TOP_LEVEL_FIELDS):
+            raise SystemExit("Claude encoded case has invalid top-level fields")
+        if case["scenario_type"] not in SCENARIO_TYPES:
+            raise SystemExit("Claude encoded case has an invalid scenario type")
+        if not isinstance(case["context"], dict):
+            raise SystemExit("Claude encoded context must be an object")
+        normalized.append(case)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
         "".join(json.dumps(case, sort_keys=True) + "\n" for case in normalized)

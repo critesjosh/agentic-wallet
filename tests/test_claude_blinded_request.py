@@ -21,9 +21,7 @@ def test_claude_request_schema_requires_exact_strict_shard():
     module = _module()
     schema = module._schema()
     cases = schema["properties"]["cases"]
-    item = cases["items"]
 
-    assert item["additionalProperties"] is False
-    assert set(item["required"]) == set(module.TOP_LEVEL_FIELDS)
-    assert "expected_action" not in item["properties"]
-    assert item["properties"]["context_json"] == {"type": "string"}
+    assert cases["items"] == {"type": "string"}
+    assert "expected_action" not in module.TOP_LEVEL_FIELDS
+    assert "context" in module.TOP_LEVEL_FIELDS

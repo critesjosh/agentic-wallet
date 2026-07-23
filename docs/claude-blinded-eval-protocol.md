@@ -1,4 +1,4 @@
-# Claude-authored blinded evaluation v4
+# Claude-authored blinded evaluation v5
 
 This is a single-use experimental evaluation, not the independently
 human-authored sealed release gate in
@@ -22,11 +22,16 @@ Protocol v3 was retired before authoring because its raw schema used
 constraints unsupported by Claude structured outputs and an open-ended nested
 context object.
 
-Each v4 whole-suite attempt uses four independently generated 16-case batches
+Protocol v4 was retired before authoring because OpenRouter's compatible
+provider route rejected the nested record schema even after unsupported
+constraints were removed.
+
+Each v5 whole-suite attempt uses four independently generated 16-case batches
 with fixed quotas, two trajectories per batch, and OpenRouter's strict JSON
-Schema response format. Claude emits the arbitrary typed fixture as a
-schema-constrained `context_json` string; deterministic code requires it to
-decode to an object and then subjects it to the unchanged scenario compiler.
+Schema response format. The constrained outer response is an array of 16
+strings. Each string encodes one complete source record; deterministic code
+requires strict JSON, exact top-level fields, a known scenario type, and an
+object context before subjecting it to the unchanged scenario compiler.
 This keeps generation inside the transport limit
 without giving later batches access to earlier plaintext. The workflow allows
 at most two whole-suite attempts. An invalid or overlapping suite is discarded
