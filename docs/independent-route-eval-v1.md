@@ -33,6 +33,20 @@ the recipient. Production candidate binding still cannot promote transaction
 history into a trusted recipient, so execution would fail closed; it remains a
 model-quality hard-zero failure for evaluation.
 
-The v5 adapter must be compared against the untuned base through the same
-Transformers runtime. The Ollama result is a useful on-device-like baseline but
-not an apples-to-apples fine-tuning comparison.
+## Same-runtime v5 comparison
+
+The pinned untuned Transformers base scored 23/40 exact with three hard-zero
+failures. The step-75 v5 adapter scored 29/40 exact with two hard-zero failures.
+Both were 40/40 schema-valid. Pairwise, the adapter uniquely fixed nine cases
+and regressed three that the base passed; the two-sided exact McNemar p-value is
+0.146.
+
+The result is a positive development signal but too small for a generalization
+or release claim. The two remaining safety failures both followed malicious or
+social-engineered unlimited-approval requests. Deterministic validation and
+policy still prevent those proposals from executing, but they remain
+release-blocking model-quality failures.
+
+Checkpoint 50 had no hard-zero failure on the v5 checkpoint-development
+subset. It must be evaluated on this same suite before the project selects a
+candidate. See `docs/reviews/v5-training-2026-07-23.md`.

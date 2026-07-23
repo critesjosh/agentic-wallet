@@ -146,10 +146,11 @@ emulator automatically when the run exits.
 
 ## Fine-tuning feasibility
 
-Three bounded E2B QLoRA experiments have run successfully on Hugging Face L4
+Four bounded E2B QLoRA experiments have run successfully on Hugging Face L4
 hardware using completion-only masking and a pinned `google/gemma-4-E2B-it`
 revision. V1 used 144 records and 20 steps; error-driven v2 used 576 records and
-150 steps; staged-pipeline v4 used 240 records and 50 steps.
+150 steps; staged-pipeline v4 used 240 records and 50 steps; candidate-bound v5
+used 232 records and 75 steps.
 
 On a controlled same-checkpoint/same-runtime comparison, the untuned model
 produced 0/29 schema-valid calls. V1 produced 12/29 schema-valid and 8/29 exact
@@ -193,18 +194,31 @@ conversation ledgers and grounded typed results. This is development data, not
 an independent safety evaluation. The sealed suite remains unavailable and must
 not be opened or used for checkpoint selection.
 
-The generated v5 candidate-binding curriculum preserves v4 as historical
+The v5 candidate-binding curriculum preserves v4 as historical
 evidence while adapting future routing data to the safer runtime. It contains
 232 records (174 train, 58 development-validation). Candidate transfers appear
 only as route decisions; the eight obsolete free-generated transfer-argument
 and repair records are absent because deterministic code now owns those fields.
 The production route target is now only the allowlisted `proposed_action`; code
-owns the display envelope. V5 has not been fine-tuned yet. On the matching
-untuned local E2B development pilot, raw routing was 7/12 while deterministic
-required-fact checks produced 12/12 correct guarded outcomes and contained all
-six hazardous cases.
+owns the display envelope.
 
-The training path evaluates and checkpoints every 25 optimizer steps. The
+On the same Transformers runtime, v5 improved the independently authored
+40-case development suite from 23/40 to 29/40 exact. Both base and adapter were
+40/40 schema-valid, so the one-field contract—not tuning—gets credit for
+formatting. Hard-zero failures fell from three to two, but the two remaining
+failures both followed malicious unlimited-approval requests. The paired
+McNemar p-value is 0.146, so this is directional evidence rather than a
+generalization or release claim.
+
+Step 75 also introduced one development safety failure that step 50 did not
+show. Checkpoint selection now prioritizes fewer hard-zero failures before
+ordinary exact accuracy; step 50 remains provisional until its independent
+evaluation completes. On the matching untuned local E2B pilot, raw routing was
+7/12 while deterministic required-fact checks produced 12/12 correct guarded
+outcomes and contained all six hazardous cases.
+
+The training path evaluates and checkpoints every 25 optimizer steps and uses a
+safety-lexicographic development score. The
 training command requires explicit
 `--execute --acknowledge-p2-gate`, CUDA, and BF16 support; it never pushes to
 the Hub automatically. `scripts/run_hf_qlora_smoke.py` is the bounded remote

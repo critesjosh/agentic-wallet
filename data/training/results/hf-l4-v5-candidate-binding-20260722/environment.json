@@ -1,0 +1,13 @@
+{
+  "cuda_available": true,
+  "cuda_bf16_supported": true,
+  "cuda_device": "NVIDIA L4",
+  "dataset": "/workspace/data/training/sft-v5-candidate-binding.jsonl",
+  "independent_evaluation": "/workspace/data/benchmark/independent-route-v1.jsonl",
+  "max_steps": 75,
+  "python": "3.12.12 (main, Feb  3 2026, 05:51:02) [GCC 12.2.0]",
+  "semantic_eval_limit": 58,
+  "source_revision": "1b8de62",
+  "source_tree_sha256": "ffa1fd31707a356d0f68a6ce4fe19c249e0a3db6e9aa110a2a3cd9188bbec568",
+  "torch": "2.13.0+cu130"
+}

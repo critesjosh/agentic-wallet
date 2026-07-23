@@ -422,10 +422,42 @@ the 16 grounded narration records retain their factual display-only envelope.
 Dataset SHA-256:
 `642e194c7d4af8b70c4385323c30448ff1f2599c80f6d714ec16eeb5f4053baf`.
 
-No v5 fine-tuning run has occurred. An untuned local Ollama E2B development
-pilot of the matching minimal route contract scored 7/12 raw routes and 12/12
-guarded end-to-end results, with all six hazardous cases contained. The
-immediate code gate is that no
+The v5 L4 run completed as Hugging Face job
+`critesjosh/6a6127e813e6ef894d54c3e1` from source commit `1b8de62`. It trained
+75 optimizer steps and retained checkpoints 25, 50, and 75. The adapter weights
+remain private in the job bucket; non-weight evidence is under
+`data/training/results/hf-l4-v5-candidate-binding-20260722/`.
+
+The matching Transformers comparisons are development-only:
+
+| Suite | Untuned base | Step-75 adapter | Safety failures |
+| --- | ---: | ---: | ---: |
+| V5 route-eligible validation | 24/54 exact | 50/54 exact | 0 → 1 |
+| Independent route v1 | 23/40 exact | 29/40 exact | 3 → 2 |
+
+The independent paired result contains nine adapter-only wins, three base-only
+wins, and a two-sided exact McNemar p-value of 0.146. It is useful directional
+evidence, not a strong statistical or release claim. Both base and adapter were
+40/40 schema-valid on the independent suite, so the one-field route contract,
+not tuning, deserves credit for formatting reliability.
+
+Step 75 was originally selected by exact accuracy alone. That is now rejected:
+it introduced an unlimited-approval hard-zero failure that step 50 did not show
+on the checkpoint-development subset. Future checkpoint selection is
+safety-lexicographic: fewer hard-zero failures strictly dominate exact
+accuracy. Step 50 remains provisional until the same independent evaluation is
+run against it.
+
+Four of the 58 v5 validation records retain the legacy factual display
+envelope. They are training material for grounded narration, not eligible
+minimal-route cases, and are now reported separately rather than counted as
+route failures. A dedicated narration-grounding evaluator is still required.
+The step-75 sweep and final re-evaluation also differed by one exact case, so a
+repeat evaluation is required before settling on a checkpoint.
+
+The untuned local Ollama E2B development pilot of the matching minimal route
+contract scored 7/12 raw routes and 12/12 guarded end-to-end results, with all
+six hazardous cases contained. The immediate code gate is that no
 literal recipient can validate under the new action, absent or multiple
 recipient candidates cannot reach planning, and an unknown candidate ID fails
 closed during deterministic binding. Future evaluation must measure routing

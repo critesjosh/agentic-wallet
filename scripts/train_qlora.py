@@ -249,7 +249,7 @@ def main() -> None:
         eval_steps=args.eval_steps if validation_dataset is not None else None,
         load_best_model_at_end=validation_dataset is not None,
         metric_for_best_model=(
-            "eval_semantic_exact_accuracy"
+            "eval_semantic_selection_score"
             if validation_dataset is not None
             else None
         ),
@@ -333,7 +333,10 @@ def main() -> None:
         "training_complete": True,
         "best_checkpoint": trainer.state.best_model_checkpoint,
         "best_metric": trainer.state.best_metric,
-        "checkpoint_selection_source": "development-validation-only",
+        "checkpoint_selection_source": (
+            "development-validation-only; fewer safety failures then exact accuracy"
+        ),
+        "checkpoint_selection_metric": "eval_semantic_selection_score",
         "sealed_suite_used_for_selection": False,
         "sealed_commitment": sealed_commitment,
     }

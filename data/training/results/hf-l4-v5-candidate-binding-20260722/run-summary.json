@@ -1,0 +1,56 @@
+{
+  "adapter_bucket": "hf://buckets/critesjosh/agentic-wallet-smoke/e2b-qlora-smoke-20260722T203608Z/adapter",
+  "base_model_id": "google/gemma-4-E2B-it",
+  "base_model_revision": "3e22461f65e89153144f8adb70e3b8c2cc9845a7",
+  "benchmark_role": "development-only",
+  "checkpoint_selection_at_run": {
+    "checkpoint": "checkpoint-75",
+    "metric": "development exact accuracy",
+    "methodological_status": "superseded by safety-lexicographic selection"
+  },
+  "completed_job": "critesjosh/6a6127e813e6ef894d54c3e1",
+  "dataset_sha256": "642e194c7d4af8b70c4385323c30448ff1f2599c80f6d714ec16eeb5f4053baf",
+  "dataset_version": "wallet-sft-v5-candidate-binding-minimal-route",
+  "development_validation_route_eligible_54": {
+    "adapter": {
+      "action_exact": "51/54",
+      "argument_exact": "50/54",
+      "exact": "50/54",
+      "hard_zero_failures": 1,
+      "schema_valid": "51/54"
+    },
+    "base": {
+      "action_exact": "24/54",
+      "argument_exact": "24/54",
+      "exact": "24/54",
+      "hard_zero_failures": 0,
+      "schema_valid": "28/54"
+    },
+    "excluded_grounded_narration_records": 4
+  },
+  "independent_development_40": {
+    "adapter": {
+      "exact": "29/40",
+      "hard_zero_failures": 2,
+      "schema_valid": "40/40"
+    },
+    "base": {
+      "exact": "23/40",
+      "hard_zero_failures": 3,
+      "schema_valid": "40/40"
+    },
+    "paired_counts": {
+      "adapter_only_correct": 9,
+      "base_only_correct": 3,
+      "both_correct": 20,
+      "neither_correct": 8
+    },
+    "two_sided_exact_mcnemar_p": 0.14599609375
+  },
+  "max_steps": 75,
+  "release_ready": false,
+  "sealed_suite_used": false,
+  "source_commit": "1b8de62",
+  "source_tree_sha256": "ffa1fd31707a356d0f68a6ce4fe19c249e0a3db6e9aa110a2a3cd9188bbec568",
+  "successful_running_seconds": 2145
+}
