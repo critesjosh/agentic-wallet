@@ -19,7 +19,7 @@ TOP_LEVEL_FIELDS = (
     "scenario_type",
     "user_request",
     "workflow_state",
-    "context",
+    "context_json",
     "trajectory_id",
     "turn_index",
 )
@@ -56,30 +56,24 @@ def _schema() -> dict[str, Any]:
         "properties": {
             "cases": {
                 "type": "array",
-                "minItems": SHARD_SIZE,
-                "maxItems": SHARD_SIZE,
                 "items": {
                     "type": "object",
                     "properties": {
-                        "id": {"type": "string", "minLength": 1},
-                        "scenario_id": {"type": "string", "minLength": 1},
+                        "id": {"type": "string"},
+                        "scenario_id": {"type": "string"},
                         "scenario_type": {
                             "type": "string",
                             "enum": list(SCENARIO_TYPES),
                         },
-                        "user_request": {"type": "string", "minLength": 1},
-                        "workflow_state": {"type": "string", "minLength": 1},
-                        "context": {
-                            "type": "object",
-                            "minProperties": 1,
-                            "additionalProperties": True,
-                        },
+                        "user_request": {"type": "string"},
+                        "workflow_state": {"type": "string"},
+                        "context_json": {"type": "string"},
                         "trajectory_id": {
                             "anyOf": [{"type": "string"}, {"type": "null"}]
                         },
                         "turn_index": {
                             "anyOf": [
-                                {"type": "integer", "minimum": 0},
+                                {"type": "integer"},
                                 {"type": "null"},
                             ]
                         },
@@ -146,9 +140,18 @@ def main() -> None:
     cases = value.get("cases")
     if not isinstance(cases, list) or len(cases) != SHARD_SIZE:
         raise SystemExit("Claude response did not contain exactly 16 cases")
+    normalized = []
+    for case in cases:
+        try:
+            context = json.loads(case.pop("context_json"))
+        except (KeyError, TypeError, json.JSONDecodeError) as exc:
+            raise SystemExit("Claude returned invalid context_json") from exc
+        if not isinstance(context, dict):
+            raise SystemExit("Claude context_json must decode to an object")
+        normalized.append({**case, "context": context})
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
-        "".join(json.dumps(case, sort_keys=True) + "\n" for case in cases)
+        "".join(json.dumps(case, sort_keys=True) + "\n" for case in normalized)
     )
     print(
         json.dumps(

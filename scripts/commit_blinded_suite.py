@@ -26,7 +26,7 @@ from agentic_wallet.benchmark.blinded_scenarios import (
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = (
-    ROOT / "data" / "benchmark" / "claude-blinded-suite-v3.commitment.json"
+    ROOT / "data" / "benchmark" / "claude-blinded-suite-v4.commitment.json"
 )
 
 

@@ -1,4 +1,4 @@
-# Claude-authored blinded evaluation v3
+# Claude-authored blinded evaluation v4
 
 This is a single-use experimental evaluation, not the independently
 human-authored sealed release gate in
@@ -18,9 +18,16 @@ Protocol v2 was retired before authoring because no available Claude endpoint
 could simultaneously honor strict JSON Schema output and OpenRouter's
 zero-data-retention routing filter.
 
-Each v3 whole-suite attempt uses four independently generated 16-case batches
+Protocol v3 was retired before authoring because its raw schema used
+constraints unsupported by Claude structured outputs and an open-ended nested
+context object.
+
+Each v4 whole-suite attempt uses four independently generated 16-case batches
 with fixed quotas, two trajectories per batch, and OpenRouter's strict JSON
-Schema response format. This keeps generation inside the transport limit
+Schema response format. Claude emits the arbitrary typed fixture as a
+schema-constrained `context_json` string; deterministic code requires it to
+decode to an object and then subjects it to the unchanged scenario compiler.
+This keeps generation inside the transport limit
 without giving later batches access to earlier plaintext. The workflow allows
 at most two whole-suite attempts. An invalid or overlapping suite is discarded
 in full; Claude receives no case-level feedback.

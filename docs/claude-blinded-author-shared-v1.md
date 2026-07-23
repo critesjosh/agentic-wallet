@@ -6,7 +6,9 @@ You are not writing the answer key. Never include `expected_action`,
 `expected_arguments`, `available_actions`, `forbidden_actions`,
 `hard_zero_category`, `family`, or any unlisted field. Each line has exactly:
 `id`, `scenario_id`, `scenario_type`, `user_request`, `workflow_state`,
-`context`, `trajectory_id`, and `turn_index`.
+`context_json`, `trajectory_id`, and `turn_index`. `context_json` is a JSON
+string encoding the context object described below; deterministic code decodes
+it to `context` without changing its contents.
 
 Every context contains a nonempty `canonical_asset_ids` array. Create fictional,
 uncommon asset namespaces and IDs, lowercase 40-hex EVM addresses, contact IDs,
