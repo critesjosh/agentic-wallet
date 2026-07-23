@@ -24,3 +24,8 @@ This remains model-authored, operator-mediated experimental evidence.
 `human_independence_attested` and `release_claim_eligible` are both false. The
 statistical, compiler-oracle, pretraining-contamination, and custodian-access
 limitations documented for v9 still apply.
+
+Version 10 attempt 1 was retired before commitment or candidate evaluation
+after deterministic compilation failed and local diagnostics exposed
+field-level fixture values. No record is reused. The corrected successor is
+[`terra-blinded-eval-v11.md`](terra-blinded-eval-v11.md).

@@ -19,7 +19,7 @@ from ..benchmark.blinded_scenarios import BLINDED_SCENARIO_CATALOG_VERSION
 
 BLINDED_CASE_COUNT = 64
 BLINDED_COMMITMENT_STATUS = "committed-before-evaluation"
-BLINDED_RUBRIC_VERSION = "model-authored-blinded-wallet-eval-v10"
+BLINDED_RUBRIC_VERSION = "model-authored-blinded-wallet-eval-v11"
 BLINDED_SEQUENCE_MODE = "teacher-forced-typed-context"
 BLINDED_POST_COMMIT_FAILURE_POLICY = (
     "abort-and-retire-suite-without-rerun-or-case-level-inspection"

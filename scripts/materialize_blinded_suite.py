@@ -50,8 +50,8 @@ def main() -> None:
 
     try:
         cases, receipt = materialize_author_shards(args.source)
-    except (OSError, ValueError, json.JSONDecodeError) as exc:
-        raise SystemExit(str(exc)) from exc
+    except Exception:
+        raise SystemExit("blinded source failed deterministic validation") from None
     _write_new(args.output, canonical_suite_bytes(cases))
     print(
         json.dumps(

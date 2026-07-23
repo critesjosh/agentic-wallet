@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from collections import Counter
 from pathlib import Path
 from typing import Any
@@ -17,7 +18,7 @@ from .blinded import BLINDED_CASE_COUNT
 
 EXPECTED_TRAJECTORY_TURNS = frozenset(range(4))
 EXPECTED_SHARD_SCENARIO_COUNTS: dict[str, Counter[str]] = {
-    "tb81a-": Counter(
+    "tb91a-": Counter(
         {
             "read_portfolio": 2,
             "read_balance": 2,
@@ -25,14 +26,14 @@ EXPECTED_SHARD_SCENARIO_COUNTS: dict[str, Counter[str]] = {
             "read_registry": 2,
         }
     ),
-    "tb81b-": Counter(
+    "tb91b-": Counter(
         {
             "conceptual_help": 3,
             "unsupported_request": 2,
             "transfer_complete": 3,
         }
     ),
-    "tb82a-": Counter(
+    "tb92a-": Counter(
         {
             "transfer_complete": 1,
             "transfer_missing": 3,
@@ -40,7 +41,7 @@ EXPECTED_SHARD_SCENARIO_COUNTS: dict[str, Counter[str]] = {
             "transfer_wrong_chain": 1,
         }
     ),
-    "tb82b-": Counter(
+    "tb92b-": Counter(
         {
             "transfer_wrong_chain": 1,
             "transfer_ambiguous_asset": 2,
@@ -48,21 +49,21 @@ EXPECTED_SHARD_SCENARIO_COUNTS: dict[str, Counter[str]] = {
             "swap_quote": 3,
         }
     ),
-    "tb83a-": Counter(
+    "tb93a-": Counter(
         {
             "swap_quote": 1,
             "quote_expired": 3,
             "simulation_mismatch": 4,
         }
     ),
-    "tb83b-": Counter(
+    "tb93b-": Counter(
         {
             "simulation_match": 3,
             "cancel_workflow": 3,
             "duplicate_plan": 2,
         }
     ),
-    "tb84a-": Counter(
+    "tb94a-": Counter(
         {
             "duplicate_plan": 1,
             "stale_portfolio": 3,
@@ -70,7 +71,7 @@ EXPECTED_SHARD_SCENARIO_COUNTS: dict[str, Counter[str]] = {
             "unlimited_approval_attack": 1,
         }
     ),
-    "tb84b-": Counter(
+    "tb94b-": Counter(
         {
             "unlimited_approval_attack": 2,
             "prompt_injection": 3,
@@ -82,6 +83,29 @@ EXPECTED_SHARD_PREFIXES = tuple(EXPECTED_SHARD_SCENARIO_COUNTS)
 EXPECTED_SCENARIO_COUNTS = sum(
     EXPECTED_SHARD_SCENARIO_COUNTS.values(), Counter()
 )
+_CANONICAL_ADDRESS_RE = re.compile(r"0x[0-9a-f]{40}")
+_ADDRESS_TOKEN_RE = re.compile(r"(?<![A-Za-z0-9])0x[A-Za-z0-9]+")
+_ADDRESS_KEY_RE = re.compile(r"(?:^|_)(?:address|addresses)(?:_|$)")
+
+
+def _validate_address_forms(value: Any, key: str = "") -> None:
+    """Require canonical lowercase address forms everywhere an author can place one."""
+
+    if isinstance(value, dict):
+        for child_key, child in value.items():
+            _validate_address_forms(child, str(child_key).casefold())
+        return
+    if isinstance(value, list):
+        for child in value:
+            _validate_address_forms(child, key)
+        return
+    if not isinstance(value, str):
+        return
+    if _ADDRESS_KEY_RE.search(key) and _CANONICAL_ADDRESS_RE.fullmatch(value) is None:
+        raise ValueError("address-valued source field is not canonical")
+    for token in _ADDRESS_TOKEN_RE.findall(value):
+        if _CANONICAL_ADDRESS_RE.fullmatch(token) is None:
+            raise ValueError("address token is not canonical")
 
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -112,13 +136,23 @@ def _validate_source_shard(
 
     cases: list[BenchmarkCase] = []
     for value in values:
+        _validate_address_forms(value)
         for field in ("id", "scenario_id"):
             identifier = value.get(field)
             if not isinstance(identifier, str) or not identifier.startswith(prefix):
                 raise ValueError(
                     f"author shard {prefix} has an invalid {field} prefix"
                 )
-        cases.append(compile_blinded_source(value))
+        compiled: BenchmarkCase | None
+        try:
+            compiled = compile_blinded_source(value)
+        except Exception:
+            compiled = None
+        if compiled is None:
+            raise ValueError(
+                f"author shard {prefix} failed deterministic compilation"
+            )
+        cases.append(compiled)
 
     trajectories: dict[str, list[BenchmarkCase]] = {}
     for case in cases:
