@@ -41,6 +41,7 @@ def _records() -> list[dict]:
 def _commitment(payload: bytes) -> dict:
     return {
         "author_generation_config": {
+            "batch_count": 4,
             "interface": "opencode-cli-via-openrouter",
             "temperature": "provider-default",
             "whole_suite_regeneration_only": True,

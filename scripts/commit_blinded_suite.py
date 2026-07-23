@@ -45,7 +45,9 @@ def main() -> None:
     parser.add_argument("--candidate-checkpoint", required=True)
     parser.add_argument("--candidate-selection-commit", required=True)
     parser.add_argument("--harness-commit", required=True)
-    parser.add_argument("--author-prompt", type=Path, required=True)
+    parser.add_argument(
+        "--author-prompt", type=Path, action="append", required=True
+    )
     parser.add_argument("--authoring-attempt-count", type=int, required=True)
     parser.add_argument(
         "--author-model", default="openrouter/anthropic/claude-fable-5"
@@ -72,16 +74,23 @@ def main() -> None:
     disjointness = audit_blinded_disjointness(cases, root=ROOT)
     if args.authoring_attempt_count not in {1, 2}:
         raise SystemExit("authoring attempts are capped at two whole-suite attempts")
+    prompt_digest = hashlib.sha256()
+    for prompt in args.author_prompt:
+        payload = prompt.read_bytes()
+        prompt_digest.update(prompt.name.encode())
+        prompt_digest.update(b"\0")
+        prompt_digest.update(str(len(payload)).encode())
+        prompt_digest.update(b"\0")
+        prompt_digest.update(payload)
     commitment = {
         "author_generation_config": {
+            "batch_count": 4,
             "interface": "opencode-cli-via-openrouter",
             "temperature": "provider-default",
             "whole_suite_regeneration_only": True,
         },
         "author_model": args.author_model,
-        "author_prompt_sha256": hashlib.sha256(
-            args.author_prompt.read_bytes()
-        ).hexdigest(),
+        "author_prompt_sha256": prompt_digest.hexdigest(),
         "author_role": args.author_role,
         "authoring_attempt_count": args.authoring_attempt_count,
         "blinding_scope": (

@@ -10,10 +10,13 @@ plaintext. It does not author gold labels. A versioned deterministic scenario
 compiler derives actions and arguments and rejects unknown or answer-key
 fields.
 
-The workflow allows at most two whole-suite authoring attempts. An invalid or
-overlapping first suite is discarded in full; Claude receives no case-level
-feedback. After a suite passes schema and post-hoc disjointness checks, its
-digest, author prompt, candidate artifact, harness, evaluator, inference
+Each whole-suite attempt uses four independently generated 16-case batches with
+fixed quotas and two trajectories per batch. This keeps generation inside the
+OpenCode transport limit without giving later batches access to earlier
+plaintext. The workflow allows at most two whole-suite attempts. An invalid or
+overlapping suite is discarded in full; Claude receives no case-level feedback.
+After a suite passes schema and post-hoc disjointness checks, its digest, all
+author prompts, candidate artifact, harness, evaluator, inference
 configuration, sequence mode, and attempt count are committed before the model
 runs.
 
