@@ -115,7 +115,6 @@ def main() -> None:
         "max_completion_tokens": 24_000,
         "temperature": 0.7,
         "provider": {
-            "data_collection": "deny",
             "require_parameters": True,
         },
         "response_format": {

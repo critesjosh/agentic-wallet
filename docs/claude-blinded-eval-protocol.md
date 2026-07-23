@@ -1,4 +1,4 @@
-# Claude-authored blinded evaluation v2
+# Claude-authored blinded evaluation v3
 
 This is a single-use experimental evaluation, not the independently
 human-authored sealed release gate in
@@ -14,12 +14,22 @@ Protocol v1 was retired without evaluation after both permitted authoring
 attempts failed the JSONL/compiler boundary. No v1 record was repaired or shown
 to the candidate.
 
-Each v2 whole-suite attempt uses four independently generated 16-case batches
+Protocol v2 was retired before authoring because no available Claude endpoint
+could simultaneously honor strict JSON Schema output and OpenRouter's
+zero-data-retention routing filter.
+
+Each v3 whole-suite attempt uses four independently generated 16-case batches
 with fixed quotas, two trajectories per batch, and OpenRouter's strict JSON
 Schema response format. This keeps generation inside the transport limit
 without giving later batches access to earlier plaintext. The workflow allows
 at most two whole-suite attempts. An invalid or overlapping suite is discarded
 in full; Claude receives no case-level feedback.
+
+The author prompts contain only public project contracts and fictional
+synthetic fixtures—never user, wallet, key, account, or private repository
+data. The compatible structured-output route is not constrained to
+zero-data-retention providers; this exception applies only to synthetic suite
+authoring and does not change the product's inference privacy boundary.
 After a suite passes schema and post-hoc disjointness checks, its digest, all
 author prompts, candidate artifact, harness, evaluator, inference
 configuration, sequence mode, and attempt count are committed before the model

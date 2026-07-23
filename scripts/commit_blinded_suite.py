@@ -26,7 +26,7 @@ from agentic_wallet.benchmark.blinded_scenarios import (
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = (
-    ROOT / "data" / "benchmark" / "claude-blinded-suite-v2.commitment.json"
+    ROOT / "data" / "benchmark" / "claude-blinded-suite-v3.commitment.json"
 )
 
 
@@ -86,7 +86,7 @@ def main() -> None:
         "author_generation_config": {
             "batch_count": 4,
             "interface": "openrouter-chat-completions-json-schema",
-            "provider_data_collection": "deny",
+            "provider_data_collection": "not-restricted-synthetic-prompts-only",
             "provider_require_parameters": True,
             "temperature": 0.7,
             "whole_suite_regeneration_only": True,

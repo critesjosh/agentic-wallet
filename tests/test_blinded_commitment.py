@@ -43,7 +43,7 @@ def _commitment(payload: bytes) -> dict:
         "author_generation_config": {
             "batch_count": 4,
             "interface": "openrouter-chat-completions-json-schema",
-            "provider_data_collection": "deny",
+            "provider_data_collection": "not-restricted-synthetic-prompts-only",
             "provider_require_parameters": True,
             "temperature": 0.7,
             "whole_suite_regeneration_only": True,
