@@ -42,12 +42,15 @@ def _commitment(payload: bytes) -> dict:
     return {
         "author_generation_config": {
             "batch_count": 4,
-            "interface": "opencode-cli-via-openrouter",
-            "temperature": "provider-default",
+            "interface": "openrouter-chat-completions-json-schema",
+            "provider_data_collection": "deny",
+            "provider_require_parameters": True,
+            "temperature": 0.7,
             "whole_suite_regeneration_only": True,
         },
         "author_model": "openrouter/anthropic/claude-fable-5",
         "author_prompt_sha256": "a" * 64,
+        "author_request_script_sha256": "e" * 64,
         "author_role": "model-authored blinded evaluator",
         "authoring_attempt_count": 1,
         "blinding_scope": "Model-authored and aggregate-only, not human independent.",

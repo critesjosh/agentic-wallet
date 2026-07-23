@@ -19,7 +19,7 @@ from ..benchmark.blinded_scenarios import BLINDED_SCENARIO_CATALOG_VERSION
 
 MIN_BLINDED_CASES = 60
 BLINDED_COMMITMENT_STATUS = "committed-before-evaluation"
-BLINDED_RUBRIC_VERSION = "model-authored-blinded-wallet-eval-v1"
+BLINDED_RUBRIC_VERSION = "model-authored-blinded-wallet-eval-v2"
 BLINDED_SEQUENCE_MODE = "teacher-forced-typed-context"
 BLINDED_POST_COMMIT_FAILURE_POLICY = (
     "abort-and-retire-suite-without-rerun-or-case-level-inspection"
@@ -239,6 +239,7 @@ def validate_blinded_commitment(path: str | Path) -> dict[str, Any]:
         "author_generation_config",
         "author_model",
         "author_prompt_sha256",
+        "author_request_script_sha256",
         "author_role",
         "authoring_attempt_count",
         "blinding_scope",
@@ -288,6 +289,7 @@ def validate_blinded_commitment(path: str | Path) -> dict[str, Any]:
         "sha256",
         "candidate_artifact_sha256",
         "author_prompt_sha256",
+        "author_request_script_sha256",
         "evaluation_script_sha256",
         "harness_sha256",
     ):

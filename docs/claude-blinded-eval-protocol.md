@@ -1,4 +1,4 @@
-# Claude-authored blinded evaluation
+# Claude-authored blinded evaluation v2
 
 This is a single-use experimental evaluation, not the independently
 human-authored sealed release gate in
@@ -10,11 +10,16 @@ plaintext. It does not author gold labels. A versioned deterministic scenario
 compiler derives actions and arguments and rejects unknown or answer-key
 fields.
 
-Each whole-suite attempt uses four independently generated 16-case batches with
-fixed quotas and two trajectories per batch. This keeps generation inside the
-OpenCode transport limit without giving later batches access to earlier
-plaintext. The workflow allows at most two whole-suite attempts. An invalid or
-overlapping suite is discarded in full; Claude receives no case-level feedback.
+Protocol v1 was retired without evaluation after both permitted authoring
+attempts failed the JSONL/compiler boundary. No v1 record was repaired or shown
+to the candidate.
+
+Each v2 whole-suite attempt uses four independently generated 16-case batches
+with fixed quotas, two trajectories per batch, and OpenRouter's strict JSON
+Schema response format. This keeps generation inside the transport limit
+without giving later batches access to earlier plaintext. The workflow allows
+at most two whole-suite attempts. An invalid or overlapping suite is discarded
+in full; Claude receives no case-level feedback.
 After a suite passes schema and post-hoc disjointness checks, its digest, all
 author prompts, candidate artifact, harness, evaluator, inference
 configuration, sequence mode, and attempt count are committed before the model

@@ -26,7 +26,7 @@ from agentic_wallet.benchmark.blinded_scenarios import (
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = (
-    ROOT / "data" / "benchmark" / "claude-blinded-suite-v1.commitment.json"
+    ROOT / "data" / "benchmark" / "claude-blinded-suite-v2.commitment.json"
 )
 
 
@@ -85,12 +85,17 @@ def main() -> None:
     commitment = {
         "author_generation_config": {
             "batch_count": 4,
-            "interface": "opencode-cli-via-openrouter",
-            "temperature": "provider-default",
+            "interface": "openrouter-chat-completions-json-schema",
+            "provider_data_collection": "deny",
+            "provider_require_parameters": True,
+            "temperature": 0.7,
             "whole_suite_regeneration_only": True,
         },
         "author_model": args.author_model,
         "author_prompt_sha256": prompt_digest.hexdigest(),
+        "author_request_script_sha256": sha256_named_files(
+            ROOT, ("scripts/request_claude_blinded_shard.py",)
+        ),
         "author_role": args.author_role,
         "authoring_attempt_count": args.authoring_attempt_count,
         "blinding_scope": (
