@@ -17,35 +17,80 @@ from typing import Any, Iterable
 from ..benchmark import BenchmarkCase, load_cases
 from ..benchmark.blinded_scenarios import BLINDED_SCENARIO_CATALOG_VERSION
 
-MIN_BLINDED_CASES = 60
+BLINDED_CASE_COUNT = 64
 BLINDED_COMMITMENT_STATUS = "committed-before-evaluation"
-BLINDED_RUBRIC_VERSION = "model-authored-blinded-wallet-eval-v8"
+BLINDED_RUBRIC_VERSION = "model-authored-blinded-wallet-eval-v9"
 BLINDED_SEQUENCE_MODE = "teacher-forced-typed-context"
 BLINDED_POST_COMMIT_FAILURE_POLICY = (
     "abort-and-retire-suite-without-rerun-or-case-level-inspection"
 )
+BLINDED_AUTHOR_GENERATION_CONFIG = {
+    "batch_count": 8,
+    "interface": "claude-code-cli-json-schema",
+    "model_alias": "sonnet",
+    "no_session_persistence": True,
+    "safe_mode": True,
+    "tools": "disabled",
+    "whole_suite_regeneration_only": True,
+}
+BLINDED_AUTHOR_MODEL = "claude-code/sonnet"
+BLINDED_AUTHOR_ROLE = "model-authored blinded evaluator"
+BLINDED_BLINDING_SCOPE = (
+    "Claude was not given repository training or development plaintext; "
+    "the evaluator receives no case-level output. The developer operates "
+    "the workflow, so this is not independent-human evidence."
+)
+BLINDED_CANDIDATE_ARTIFACT_SHA256 = (
+    "d1602c2f94835ef42113c7394a5918263ddc31860fee2ef0e3fdddb33d73abc9"
+)
+BLINDED_CANDIDATE_CHECKPOINT = "checkpoint-25"
+BLINDED_CANDIDATE_SELECTION_COMMIT = "fc0547e"
 BLINDED_EVALUATION_CONFIG = {
     "base_model": "google/gemma-4-E2B-it",
     "base_model_revision": "3e22461f65e89153144f8adb70e3b8c2cc9845a7",
+    "cuda_version": "13.0",
+    "custody_bucket": "hf://buckets/critesjosh/agentic-wallet-smoke",
+    "custody_root": "/evaluation-custody",
     "device": "cuda",
     "do_sample": False,
     "load_in_4bit": True,
     "max_new_tokens": 256,
+    "job_flavor": "l4x1",
+    "job_image": "ghcr.io/astral-sh/uv:python3.12-bookworm",
+    "pythonpath": "/workspace/src",
     "quantization": "bnb-nf4-bfloat16-double-quant",
     "repair_attempts_per_stage": 1,
+    "python_version": "3.12.12",
+    "source_root": "/workspace",
     "runtime_constraints": {
-        "accelerate": ">=1.10",
-        "bitsandbytes": ">=0.49",
-        "peft": ">=0.19",
-        "torch": ">=2.7",
-        "transformers": ">=5.10.1",
+        "accelerate": "==1.14.0",
+        "bitsandbytes": "==0.49.2",
+        "eth-utils": "==6.0.0",
+        "packaging": "==26.2",
+        "peft": "==0.19.1",
+        "pydantic": "==2.13.4",
+        "torch": "==2.13.0",
+        "torchvision": "==0.28.0",
+        "transformers": "==5.10.1",
     },
 }
 BLINDED_HASHED_HARNESS_FILES = (
+    "src/agentic_wallet/benchmark/cases.py",
+    "src/agentic_wallet/benchmark/loader.py",
     "src/agentic_wallet/benchmark/runner.py",
     "src/agentic_wallet/benchmark/blinded_scenarios.py",
+    "src/agentic_wallet/blinded_evaluation.py",
     "src/agentic_wallet/candidate_binding.py",
+    "src/agentic_wallet/inference.py",
+    "src/agentic_wallet/providers/local_transformers.py",
+    "src/agentic_wallet/schemas/conversation.py",
+    "src/agentic_wallet/schemas/common.py",
+    "src/agentic_wallet/schemas/dialogue.py",
+    "src/agentic_wallet/schemas/tool_call.py",
+    "src/agentic_wallet/benchmark/registries.py",
     "src/agentic_wallet/tool_contract.py",
+    "src/agentic_wallet/training/blinded.py",
+    "src/agentic_wallet/training/blinded_authoring.py",
 )
 BLINDED_ADAPTER_FILES = ("adapter_config.json", "adapter_model.safetensors")
 _ADDRESS_RE = re.compile(r"0x[0-9a-fA-F]{40}")
@@ -75,43 +120,110 @@ def _walk_identifiers(value: Any, key: str = "") -> Iterable[str]:
         for child in value:
             yield from _walk_identifiers(child, key)
     elif isinstance(value, str) and re.search(
-        r"(?:^|_)(?:id|ids|source|directory|contact)(?:_|$)", key
+        r"(?:^|_)(?:"
+        r"id|ids|source|directory|contact|recipient|recipients|"
+        r"asset|assets|token|tokens|address|addresses"
+        r")(?:_|$)",
+        key.casefold(),
     ):
         yield _normalized(value)
 
 
-def _existing_records(root: Path) -> list[dict[str, Any]]:
-    records: list[dict[str, Any]] = []
-    for path in sorted((root / "data").rglob("*.jsonl")):
-        for line in path.read_text().splitlines():
-            if not line.strip():
+def _walk_text(
+    value: Any, key: str = "", *, inside_untrusted_data: bool = False
+) -> Iterable[str]:
+    """Yield exact text carried in request or explicitly untrusted fields."""
+
+    if isinstance(value, dict):
+        for child_key, child in value.items():
+            yield from _walk_text(
+                child,
+                str(child_key),
+                inside_untrusted_data=inside_untrusted_data
+                or str(child_key).casefold() == "untrusted_data",
+            )
+    elif isinstance(value, list):
+        for child in value:
+            yield from _walk_text(
+                child, key, inside_untrusted_data=inside_untrusted_data
+            )
+    elif isinstance(value, str) and (
+        inside_untrusted_data
+        or re.search(
+            r"(?:^|_)(?:user_request|request|text|memo|description|"
+            r"message|name|reason|untrusted_data)(?:_|$)",
+            key.casefold(),
+        )
+    ):
+        normalized = _normalized(value)
+        if normalized:
+            yield normalized
+
+
+def _plaintext_development_paths(root: Path) -> Iterable[Path]:
+    """Yield committed development/training records, not derived aggregates."""
+
+    data = root / "data"
+    for directory in (data / "benchmark", data / "training"):
+        if not directory.is_dir():
+            continue
+        for path in sorted(directory.rglob("*")):
+            if path.suffix not in {".json", ".jsonl"} or not path.is_file():
                 continue
-            value = json.loads(line)
-            if isinstance(value, dict):
-                records.append(value)
+            relative_parts = path.relative_to(directory).parts
+            if "results" in relative_parts:
+                continue
+            if path.name.endswith((".commitment.json", ".manifest.json")):
+                continue
+            yield path
+
+
+def _existing_records(root: Path) -> list[Any]:
+    records: list[Any] = []
+    for path in _plaintext_development_paths(root):
+        if path.suffix == ".jsonl":
+            for line in path.read_text().splitlines():
+                if line.strip():
+                    records.append(json.loads(line))
+        else:
+            records.append(json.loads(path.read_text()))
     return records
 
 
-def _request(record: dict[str, Any]) -> str | None:
-    direct = record.get("user_request")
-    if isinstance(direct, str):
-        return direct
-    context = record.get("context")
-    if isinstance(context, dict) and isinstance(context.get("user_request"), str):
-        return context["user_request"]
-    return None
+def _walk_requests(value: Any, key: str = "") -> Iterable[str]:
+    """Yield user requests from arbitrarily nested JSON development sources."""
+
+    if isinstance(value, dict):
+        for child_key, child in value.items():
+            yield from _walk_requests(child, str(child_key))
+    elif isinstance(value, list):
+        for child in value:
+            yield from _walk_requests(child, key)
+    elif isinstance(value, str) and key.casefold() == "user_request":
+        yield value
+
+
+def _walk_scenario_ids(value: Any, key: str = "") -> Iterable[str]:
+    if isinstance(value, dict):
+        for child_key, child in value.items():
+            yield from _walk_scenario_ids(child, str(child_key))
+    elif isinstance(value, list):
+        for child in value:
+            yield from _walk_scenario_ids(child, key)
+    elif isinstance(value, str) and key.casefold() == "scenario_id":
+        yield value
 
 
 def audit_blinded_disjointness(
     cases: list[BenchmarkCase], *, root: Path
 ) -> dict[str, Any]:
-    """Return aggregate-only overlap evidence against all committed JSONL data."""
+    """Return aggregate-only overlap evidence against committed plaintext data."""
 
     existing = _existing_records(root)
     existing_requests = [
         _normalized(request)
         for record in existing
-        if (request := _request(record)) is not None
+        for request in _walk_requests(record)
     ]
     suite_requests = [_normalized(case.user_request) for case in cases]
 
@@ -136,6 +248,8 @@ def audit_blinded_disjointness(
     suite_identifiers = {
         item for value in suite_values for item in _walk_identifiers(value)
     }
+    existing_text = {text for record in existing for text in _walk_text(record)}
+    suite_text = {text for value in suite_values for text in _walk_text(value)}
     existing_long_text = {
         _normalized(string)
         for string in existing_strings
@@ -167,9 +281,9 @@ def audit_blinded_disjointness(
         for match in _ADDRESS_RE.finditer(string)
     }
     existing_scenarios = {
-        str(record["scenario_id"])
+        scenario_id
         for record in existing
-        if "scenario_id" in record
+        for scenario_id in _walk_scenario_ids(record)
     }
     suite_scenarios = {case.scenario_id for case in cases}
     exact_overlap = set(existing_requests) & set(suite_requests)
@@ -184,6 +298,7 @@ def audit_blinded_disjointness(
     result = {
         "exact_request_overlap": len(exact_overlap),
         "identifier_overlap": len(existing_identifiers & suite_identifiers),
+        "text_overlap": len(existing_text & suite_text),
         "long_text_overlap": len(existing_long_text & suite_long_text),
         "asset_id_overlap": len(existing_assets & suite_assets),
         "address_overlap": len(existing_addresses & suite_addresses),
@@ -194,6 +309,8 @@ def audit_blinded_disjointness(
         raise ValueError("blinded suite repeats an existing request")
     if result["identifier_overlap"]:
         raise ValueError("blinded suite reuses an existing typed identifier")
+    if result["text_overlap"]:
+        raise ValueError("blinded suite repeats existing typed or untrusted text")
     if result["long_text_overlap"]:
         raise ValueError("blinded suite repeats existing context text")
     if result["asset_id_overlap"]:
@@ -240,6 +357,7 @@ def validate_blinded_commitment(path: str | Path) -> dict[str, Any]:
         "author_model",
         "author_prompt_sha256",
         "author_request_script_sha256",
+        "author_shard_sha256",
         "author_role",
         "authoring_attempt_count",
         "blinding_scope",
@@ -247,6 +365,7 @@ def validate_blinded_commitment(path: str | Path) -> dict[str, Any]:
         "candidate_checkpoint",
         "candidate_selection_commit",
         "case_count",
+        "commit_script_sha256",
         "created_at",
         "disjointness",
         "evaluation_config",
@@ -281,15 +400,34 @@ def validate_blinded_commitment(path: str | Path) -> dict[str, Any]:
         raise ValueError("model-authored suite cannot claim human independence")
     if metadata["release_claim_eligible"] is not False:
         raise ValueError("model-authored suite cannot authorize a release claim")
-    if not isinstance(metadata["case_count"], int) or (
-        metadata["case_count"] < MIN_BLINDED_CASES
+    if metadata["author_model"] != BLINDED_AUTHOR_MODEL:
+        raise ValueError("unexpected blinded-suite author model")
+    if metadata["author_role"] != BLINDED_AUTHOR_ROLE:
+        raise ValueError("unexpected blinded-suite author role")
+    if metadata["blinding_scope"] != BLINDED_BLINDING_SCOPE:
+        raise ValueError("unexpected blinded-suite blinding scope")
+    if (
+        metadata["candidate_artifact_sha256"]
+        != BLINDED_CANDIDATE_ARTIFACT_SHA256
+        or metadata["candidate_checkpoint"] != BLINDED_CANDIDATE_CHECKPOINT
+        or metadata["candidate_selection_commit"]
+        != BLINDED_CANDIDATE_SELECTION_COMMIT
     ):
-        raise ValueError("blinded suite has too few cases")
+        raise ValueError("unexpected frozen candidate identity")
+    if (
+        not isinstance(metadata["case_count"], int)
+        or isinstance(metadata["case_count"], bool)
+        or metadata["case_count"] != BLINDED_CASE_COUNT
+    ):
+        raise ValueError(
+            f"blinded suite must contain exactly {BLINDED_CASE_COUNT} cases"
+        )
     for field in (
         "sha256",
         "candidate_artifact_sha256",
         "author_prompt_sha256",
         "author_request_script_sha256",
+        "commit_script_sha256",
         "evaluation_script_sha256",
         "harness_sha256",
     ):
@@ -297,18 +435,62 @@ def validate_blinded_commitment(path: str | Path) -> dict[str, Any]:
             r"[0-9a-f]{64}", metadata[field]
         ):
             raise ValueError(f"invalid blinded commitment {field}")
+    if not isinstance(metadata["harness_commit"], str) or re.fullmatch(
+        r"[0-9a-f]{40}", metadata["harness_commit"]
+    ) is None:
+        raise ValueError("invalid blinded commitment harness_commit")
     if metadata["evaluation_config"] != BLINDED_EVALUATION_CONFIG:
         raise ValueError("blinded evaluation config is not the frozen config")
-    if not isinstance(metadata["author_generation_config"], dict):
-        raise ValueError("missing author generation configuration")
-    if metadata["authoring_attempt_count"] not in {1, 2}:
+    if metadata["author_generation_config"] != BLINDED_AUTHOR_GENERATION_CONFIG:
+        raise ValueError("unexpected author generation configuration")
+    shard_digests = metadata["author_shard_sha256"]
+    if (
+        not isinstance(shard_digests, list)
+        or len(shard_digests) != BLINDED_AUTHOR_GENERATION_CONFIG["batch_count"]
+        or any(
+            not isinstance(value, str)
+            or re.fullmatch(r"[0-9a-f]{64}", value) is None
+            for value in shard_digests
+        )
+    ):
+        raise ValueError("invalid author shard digests")
+    if (
+        not isinstance(metadata["authoring_attempt_count"], int)
+        or isinstance(metadata["authoring_attempt_count"], bool)
+        or metadata["authoring_attempt_count"] not in {1, 2}
+    ):
         raise ValueError("authoring attempts must be capped at two")
-    if not isinstance(metadata["blinding_scope"], str) or not metadata[
-        "blinding_scope"
-    ]:
-        raise ValueError("missing blinding-scope disclosure")
-    if not isinstance(metadata["disjointness"], dict):
+    disjointness = metadata["disjointness"]
+    expected_disjointness_keys = {
+        "exact_request_overlap",
+        "identifier_overlap",
+        "text_overlap",
+        "long_text_overlap",
+        "asset_id_overlap",
+        "address_overlap",
+        "scenario_id_overlap",
+        "max_request_similarity",
+    }
+    if not isinstance(disjointness, dict) or set(disjointness) != (
+        expected_disjointness_keys
+    ):
         raise ValueError("blinded suite lacks disjointness evidence")
+    overlap_keys = expected_disjointness_keys - {"max_request_similarity"}
+    if any(
+        not isinstance(disjointness[key], int)
+        or isinstance(disjointness[key], bool)
+        or disjointness[key] != 0
+        for key in overlap_keys
+    ):
+        raise ValueError("blinded suite has nonzero disjointness overlap")
+    similarity = disjointness["max_request_similarity"]
+    if (
+        not isinstance(similarity, (int, float))
+        or isinstance(similarity, bool)
+        or similarity < 0
+        or similarity >= 0.8
+    ):
+        raise ValueError("blinded suite has invalid request similarity evidence")
     return metadata
 
 
@@ -321,6 +503,10 @@ def load_verified_blinded_cases(
     if hashlib.sha256(payload).hexdigest() != commitment["sha256"]:
         raise ValueError("blinded suite digest does not match its commitment")
     cases = load_cases(suite)
+    if len(cases) != BLINDED_CASE_COUNT:
+        raise ValueError(
+            f"blinded suite must contain exactly {BLINDED_CASE_COUNT} cases"
+        )
     if len(cases) != commitment["case_count"]:
         raise ValueError("blinded suite case count does not match its commitment")
     if any(case.family != "sealed" for case in cases):

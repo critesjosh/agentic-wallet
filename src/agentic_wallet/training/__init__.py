@@ -26,6 +26,8 @@ from .pipeline_curriculum import (
 from .sealed import load_verified_sealed_cases, validate_sealed_commitment
 from .blinded import (
     BLINDED_ADAPTER_FILES,
+    BLINDED_AUTHOR_GENERATION_CONFIG,
+    BLINDED_CASE_COUNT,
     BLINDED_EVALUATION_CONFIG,
     BLINDED_HASHED_HARNESS_FILES,
     blinded_adapter_sha256,
@@ -50,6 +52,8 @@ from .evaluation import (
 
 __all__ = [
     "BLINDED_ADAPTER_FILES",
+    "BLINDED_AUTHOR_GENERATION_CONFIG",
+    "BLINDED_CASE_COUNT",
     "BLINDED_EVALUATION_CONFIG",
     "BLINDED_HASHED_HARNESS_FILES",
     "CoverageDimensions",
