@@ -23,5 +23,6 @@ def test_claude_request_schema_requires_exact_strict_shard():
     cases = schema["properties"]["cases"]
 
     assert cases["items"] == {"type": "string"}
+    assert module.SHARD_SIZE == 8
     assert "expected_action" not in module.TOP_LEVEL_FIELDS
     assert "context" in module.TOP_LEVEL_FIELDS

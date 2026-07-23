@@ -12,7 +12,7 @@ from typing import Any
 
 MODEL = "anthropic/claude-fable-5"
 ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
-SHARD_SIZE = 16
+SHARD_SIZE = 8
 TOP_LEVEL_FIELDS = (
     "id",
     "scenario_id",
@@ -110,11 +110,18 @@ def main() -> None:
     except urllib.error.HTTPError as exc:
         error = exc.read().decode(errors="replace")
         raise SystemExit(f"OpenRouter request failed ({exc.code}): {error}") from exc
-    content = result["choices"][0]["message"]["content"]
-    value = json.loads(content)
+    choice = result["choices"][0]
+    content = choice["message"]["content"]
+    try:
+        value = json.loads(content)
+    except json.JSONDecodeError as exc:
+        raise SystemExit(
+            "Claude structured response was invalid; "
+            f"finish_reason={choice.get('finish_reason')!r}"
+        ) from exc
     cases = value.get("cases")
     if not isinstance(cases, list) or len(cases) != SHARD_SIZE:
-        raise SystemExit("Claude response did not contain exactly 16 cases")
+        raise SystemExit(f"Claude response did not contain exactly {SHARD_SIZE} cases")
     normalized: list[dict[str, Any]] = []
     for encoded_case in cases:
         try:

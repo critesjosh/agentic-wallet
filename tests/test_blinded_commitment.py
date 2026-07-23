@@ -41,7 +41,7 @@ def _records() -> list[dict]:
 def _commitment(payload: bytes) -> dict:
     return {
         "author_generation_config": {
-            "batch_count": 4,
+            "batch_count": 8,
             "interface": "openrouter-chat-completions-json-schema",
             "provider_data_collection": "not-restricted-synthetic-prompts-only",
             "provider_require_parameters": True,
