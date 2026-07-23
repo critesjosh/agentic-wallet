@@ -19,7 +19,7 @@ from ..benchmark.blinded_scenarios import BLINDED_SCENARIO_CATALOG_VERSION
 
 BLINDED_CASE_COUNT = 64
 BLINDED_COMMITMENT_STATUS = "committed-before-evaluation"
-BLINDED_RUBRIC_VERSION = "model-authored-blinded-wallet-eval-v12"
+BLINDED_RUBRIC_VERSION = "model-authored-blinded-wallet-eval-v13"
 BLINDED_SEQUENCE_MODE = "teacher-forced-typed-context"
 BLINDED_POST_COMMIT_FAILURE_POLICY = (
     "abort-and-retire-suite-without-rerun-or-case-level-inspection"
@@ -29,7 +29,7 @@ BLINDED_AUTHOR_GENERATION_CONFIG = {
     "filesystem_output": "external-only",
     "local_validation_attempts_per_shard": 3,
     "requested_fork_turns": "none",
-    "interface": "codex-isolated-terra-subagent-with-frozen-validator",
+    "interface": "codex-isolated-terra-subagent-with-coded-validator",
     "model_alias": "gpt-5.6-terra",
     "requested_repository_access": "exact-validator-command-only",
     "whole_suite_regeneration_only": True,

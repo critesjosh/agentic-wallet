@@ -17,3 +17,8 @@ one-shot candidate evaluation.
 
 The evidence remains model-authored, operator-mediated, non-human-independent,
 and ineligible for a release claim.
+
+V12 attempt 1 was retired before commitment or candidate evaluation when one
+complex transfer shard remained invalid after three private generations. No
+source is reused. The successor is
+[`terra-blinded-eval-v13.md`](terra-blinded-eval-v13.md).

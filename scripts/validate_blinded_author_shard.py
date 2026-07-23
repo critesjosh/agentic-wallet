@@ -8,8 +8,9 @@ from pathlib import Path
 
 from agentic_wallet.training.blinded_authoring import (
     EXPECTED_SHARD_PREFIXES,
+    SOURCE_JSON_INVALID_CODE,
     _read_jsonl,
-    _validate_source_shard,
+    author_shard_validation_report,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -31,15 +32,26 @@ def main() -> None:
     if _within_checkout(args.source):
         raise SystemExit("author shard must stay outside checkout")
     try:
-        cases, _ = _validate_source_shard(
+        report = author_shard_validation_report(
             _read_jsonl(args.source), args.prefix
         )
     except Exception:
-        print(json.dumps({"valid": False}, sort_keys=True))
+        print(
+            json.dumps(
+                {
+                    "issues": [{"code": SOURCE_JSON_INVALID_CODE}],
+                    "valid": False,
+                },
+                sort_keys=True,
+            )
+        )
         raise SystemExit(1) from None
+    if not report["valid"]:
+        print(json.dumps(report, sort_keys=True))
+        raise SystemExit(1)
     print(
         json.dumps(
-            {"case_count": len(cases), "valid": True},
+            {"case_count": 8, "issues": [], "valid": True},
             sort_keys=True,
         )
     )

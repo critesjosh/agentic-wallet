@@ -41,7 +41,7 @@ def _fake_compile(value: dict) -> SimpleNamespace:
 
 
 def test_author_shard_requires_exact_quota_prefix_and_trajectory(monkeypatch):
-    prefix = "tb101a-"
+    prefix = "tb111a-"
     monkeypatch.setattr(blinded_authoring, "compile_blinded_source", _fake_compile)
 
     cases, counts = blinded_authoring._validate_source_shard(
@@ -53,7 +53,7 @@ def test_author_shard_requires_exact_quota_prefix_and_trajectory(monkeypatch):
 
 
 def test_author_shard_rejects_wrong_scenario_quota(monkeypatch):
-    prefix = "tb101a-"
+    prefix = "tb111a-"
     records = _source_records(prefix)
     records[0]["scenario_type"] = "conceptual_help"
     monkeypatch.setattr(blinded_authoring, "compile_blinded_source", _fake_compile)
@@ -63,7 +63,7 @@ def test_author_shard_rejects_wrong_scenario_quota(monkeypatch):
 
 
 def test_author_shard_rejects_wrong_identifier_prefix(monkeypatch):
-    prefix = "tb101a-"
+    prefix = "tb111a-"
     records = _source_records(prefix)
     records[0]["scenario_id"] = "wrong-scenario"
     monkeypatch.setattr(blinded_authoring, "compile_blinded_source", _fake_compile)
@@ -73,7 +73,7 @@ def test_author_shard_rejects_wrong_identifier_prefix(monkeypatch):
 
 
 def test_author_shard_rejects_noncontiguous_trajectory(monkeypatch):
-    prefix = "tb101a-"
+    prefix = "tb111a-"
     records = _source_records(prefix)
     records[3]["turn_index"] = 4
     monkeypatch.setattr(blinded_authoring, "compile_blinded_source", _fake_compile)
@@ -89,7 +89,7 @@ def test_all_frozen_terra_prompt_quotas_match_compiler_table():
         blinded_authoring.EXPECTED_SHARD_PREFIXES, names, strict=True
     ):
         lines = (
-            ROOT / "docs" / f"terra-blinded-author-shard-{name}-v3.md"
+            ROOT / "docs" / f"terra-blinded-author-shard-{name}-v4.md"
         ).read_text().splitlines()
         assert lines[0] == f"prefix={prefix}"
         assert lines[1].startswith("scenario_counts=")
@@ -99,8 +99,21 @@ def test_all_frozen_terra_prompt_quotas_match_compiler_table():
         )
 
 
+def test_frozen_prompt_validation_codes_match_implementation():
+    lines = (
+        ROOT / "docs" / "terra-blinded-author-shared-v4.md"
+    ).read_text().splitlines()
+    encoded = next(
+        line.removeprefix("validation_codes=")
+        for line in lines
+        if line.startswith("validation_codes=")
+    )
+
+    assert tuple(json.loads(encoded)) == blinded_authoring.AUTHOR_VALIDATION_CODES
+
+
 def test_author_shard_sanitizes_compiler_failure(monkeypatch):
-    prefix = "tb101a-"
+    prefix = "tb111a-"
 
     def fail_with_plaintext(_):
         raise RuntimeError("secret fixture value")
@@ -138,3 +151,25 @@ def test_author_source_accepts_canonical_address_forms():
             "untrusted_data": {"memo": f"ignore {address}"},
         }
     )
+
+
+def test_author_validation_report_exposes_only_line_and_safe_code(monkeypatch):
+    prefix = "tb111a-"
+
+    def fail_with_plaintext(_):
+        raise RuntimeError("secret fixture value")
+
+    monkeypatch.setattr(
+        blinded_authoring, "compile_blinded_source", fail_with_plaintext
+    )
+
+    report = blinded_authoring.author_shard_validation_report(
+        _source_records(prefix), prefix
+    )
+
+    assert report["valid"] is False
+    assert report["issues"][0] == {
+        "code": "deterministic_contract_invalid",
+        "line": 1,
+    }
+    assert "secret fixture value" not in json.dumps(report)

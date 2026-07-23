@@ -18,7 +18,7 @@ from .blinded import BLINDED_CASE_COUNT
 
 EXPECTED_TRAJECTORY_TURNS = frozenset(range(4))
 EXPECTED_SHARD_SCENARIO_COUNTS: dict[str, Counter[str]] = {
-    "tb101a-": Counter(
+    "tb111a-": Counter(
         {
             "read_portfolio": 2,
             "read_balance": 2,
@@ -26,14 +26,14 @@ EXPECTED_SHARD_SCENARIO_COUNTS: dict[str, Counter[str]] = {
             "read_registry": 2,
         }
     ),
-    "tb101b-": Counter(
+    "tb111b-": Counter(
         {
             "conceptual_help": 3,
             "unsupported_request": 2,
             "transfer_complete": 3,
         }
     ),
-    "tb102a-": Counter(
+    "tb112a-": Counter(
         {
             "transfer_complete": 1,
             "transfer_missing": 3,
@@ -41,7 +41,7 @@ EXPECTED_SHARD_SCENARIO_COUNTS: dict[str, Counter[str]] = {
             "transfer_wrong_chain": 1,
         }
     ),
-    "tb102b-": Counter(
+    "tb112b-": Counter(
         {
             "transfer_wrong_chain": 1,
             "transfer_ambiguous_asset": 2,
@@ -49,21 +49,21 @@ EXPECTED_SHARD_SCENARIO_COUNTS: dict[str, Counter[str]] = {
             "swap_quote": 3,
         }
     ),
-    "tb103a-": Counter(
+    "tb113a-": Counter(
         {
             "swap_quote": 1,
             "quote_expired": 3,
             "simulation_mismatch": 4,
         }
     ),
-    "tb103b-": Counter(
+    "tb113b-": Counter(
         {
             "simulation_match": 3,
             "cancel_workflow": 3,
             "duplicate_plan": 2,
         }
     ),
-    "tb104a-": Counter(
+    "tb114a-": Counter(
         {
             "duplicate_plan": 1,
             "stale_portfolio": 3,
@@ -71,7 +71,7 @@ EXPECTED_SHARD_SCENARIO_COUNTS: dict[str, Counter[str]] = {
             "unlimited_approval_attack": 1,
         }
     ),
-    "tb104b-": Counter(
+    "tb114b-": Counter(
         {
             "unlimited_approval_attack": 2,
             "prompt_injection": 3,
@@ -86,6 +86,25 @@ EXPECTED_SCENARIO_COUNTS = sum(
 _CANONICAL_ADDRESS_RE = re.compile(r"0x[0-9a-f]{40}")
 _ADDRESS_TOKEN_RE = re.compile(r"(?<![A-Za-z0-9])0x[A-Za-z0-9]+")
 _ADDRESS_KEY_RE = re.compile(r"(?:^|_)(?:address|addresses)(?:_|$)")
+SOURCE_JSON_INVALID_CODE = "source_json_invalid"
+AUTHOR_VALIDATION_CODES = (
+    "address_form_invalid",
+    "asset_not_in_canonical_assets",
+    "canonical_assets_invalid",
+    "complete_transfer_missing_trusted_fact",
+    "deterministic_contract_invalid",
+    "identifier_prefix_invalid",
+    "incomplete_transfer_fixture_invalid",
+    "incomplete_transfer_has_all_trusted_facts",
+    "recipient_candidate_invalid",
+    "record_contract_invalid",
+    "record_count_invalid",
+    "required_context_field_missing",
+    "scenario_quota_invalid",
+    "scenario_type_invalid",
+    SOURCE_JSON_INVALID_CODE,
+    "trajectory_or_shard_shape_invalid",
+)
 
 
 def _validate_address_forms(value: Any, key: str = "") -> None:
@@ -177,6 +196,75 @@ def _validate_source_shard(
             f"author shard {prefix} trajectory must contain turns zero through three"
         )
     return cases, counts
+
+
+def _safe_compiler_error_code(exc: Exception) -> str:
+    """Map compiler failures to value-free author repair categories."""
+
+    message = str(exc)
+    if "complete transfer did not produce" in message:
+        return "complete_transfer_missing_trusted_fact"
+    if "incomplete transfer unexpectedly has all" in message:
+        return "incomplete_transfer_has_all_trusted_facts"
+    if "incomplete transfer did not derive" in message:
+        return "incomplete_transfer_fixture_invalid"
+    if "missing deterministic argument fixtures" in message:
+        return "required_context_field_missing"
+    if "expected asset argument is not" in message:
+        return "asset_not_in_canonical_assets"
+    if "recipient candidate" in message:
+        return "recipient_candidate_invalid"
+    if "scenario source" in message or "scenario identifiers" in message:
+        return "record_contract_invalid"
+    if "canonical_asset_ids" in message:
+        return "canonical_assets_invalid"
+    if "unknown blinded scenario" in message:
+        return "scenario_type_invalid"
+    return "deterministic_contract_invalid"
+
+
+def author_shard_validation_report(
+    values: list[dict[str, Any]], prefix: str
+) -> dict[str, Any]:
+    """Return only line numbers and value-free repair codes to the shard author."""
+
+    issues: list[dict[str, Any]] = []
+    if len(values) != 8:
+        return {
+            "issues": [{"code": "record_count_invalid"}],
+            "valid": False,
+        }
+    counts = Counter(value.get("scenario_type") for value in values)
+    if counts != EXPECTED_SHARD_SCENARIO_COUNTS[prefix]:
+        issues.append({"code": "scenario_quota_invalid"})
+    for line_number, value in enumerate(values, 1):
+        try:
+            _validate_address_forms(value)
+            for field in ("id", "scenario_id"):
+                identifier = value.get(field)
+                if (
+                    not isinstance(identifier, str)
+                    or not identifier.startswith(prefix)
+                ):
+                    raise ValueError(f"{field} prefix is invalid")
+            case = compile_blinded_source(value)
+        except Exception as exc:
+            code = (
+                "address_form_invalid"
+                if "address" in str(exc).casefold()
+                else "identifier_prefix_invalid"
+                if "prefix is invalid" in str(exc)
+                else _safe_compiler_error_code(exc)
+            )
+            issues.append({"code": code, "line": line_number})
+        else:
+            del case
+    if not issues:
+        try:
+            _validate_source_shard(values, prefix)
+        except Exception:
+            issues.append({"code": "trajectory_or_shard_shape_invalid"})
+    return {"issues": issues, "valid": not issues}
 
 
 def materialize_author_shards(

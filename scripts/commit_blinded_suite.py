@@ -38,18 +38,18 @@ from agentic_wallet.benchmark.blinded_scenarios import (
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = (
-    ROOT / "data" / "benchmark" / "terra-blinded-suite-v12.commitment.json"
+    ROOT / "data" / "benchmark" / "terra-blinded-suite-v13.commitment.json"
 )
 AUTHOR_PROMPTS = (
-    "docs/terra-blinded-author-shared-v3.md",
-    "docs/terra-blinded-author-shard-1a-v3.md",
-    "docs/terra-blinded-author-shard-1b-v3.md",
-    "docs/terra-blinded-author-shard-2a-v3.md",
-    "docs/terra-blinded-author-shard-2b-v3.md",
-    "docs/terra-blinded-author-shard-3a-v3.md",
-    "docs/terra-blinded-author-shard-3b-v3.md",
-    "docs/terra-blinded-author-shard-4a-v3.md",
-    "docs/terra-blinded-author-shard-4b-v3.md",
+    "docs/terra-blinded-author-shared-v4.md",
+    "docs/terra-blinded-author-shard-1a-v4.md",
+    "docs/terra-blinded-author-shard-1b-v4.md",
+    "docs/terra-blinded-author-shard-2a-v4.md",
+    "docs/terra-blinded-author-shard-2b-v4.md",
+    "docs/terra-blinded-author-shard-3a-v4.md",
+    "docs/terra-blinded-author-shard-3b-v4.md",
+    "docs/terra-blinded-author-shard-4a-v4.md",
+    "docs/terra-blinded-author-shard-4b-v4.md",
 )
 PROTECTED_TRACKED_PATHS = (
     *BLINDED_HASHED_HARNESS_FILES,
@@ -57,7 +57,7 @@ PROTECTED_TRACKED_PATHS = (
     "scripts/commit_blinded_suite.py",
     "scripts/evaluate_blinded.py",
     "scripts/materialize_blinded_suite.py",
-    "docs/terra-blinded-author-procedure-v3.md",
+    "docs/terra-blinded-author-procedure-v4.md",
     "scripts/validate_blinded_author_shard.py",
 )
 
@@ -173,7 +173,7 @@ def main() -> None:
         "author_model": BLINDED_AUTHOR_MODEL,
         "author_prompt_sha256": _prompt_digest(),
         "author_procedure_sha256": sha256_named_files(
-            ROOT, ("docs/terra-blinded-author-procedure-v3.md",)
+            ROOT, ("docs/terra-blinded-author-procedure-v4.md",)
         ),
         "author_role": BLINDED_AUTHOR_ROLE,
         "author_shard_sha256": receipt["source_sha256"],
