@@ -43,7 +43,7 @@ def test_commitment_hashes_suite_not_prompt_payload(
     }
 
     monkeypatch.setattr(
-        module, "materialize_author_shards", lambda _: (cases, receipt)
+        module, "materialize_author_seed_shards", lambda _: (cases, receipt)
     )
     monkeypatch.setattr(module, "canonical_suite_bytes", lambda _: suite_payload)
     monkeypatch.setattr(module, "audit_blinded_disjointness", lambda *_args, **_kwargs: {

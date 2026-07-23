@@ -7,9 +7,9 @@ import json
 import os
 from pathlib import Path
 
-from agentic_wallet.training.blinded_authoring import (
+from agentic_wallet.training.blinded_seed_authoring import (
     canonical_suite_bytes,
-    materialize_author_shards,
+    materialize_author_seed_shards,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -49,7 +49,7 @@ def main() -> None:
         )
 
     try:
-        cases, receipt = materialize_author_shards(args.source)
+        cases, receipt = materialize_author_seed_shards(args.source)
     except Exception:
         raise SystemExit("blinded source failed deterministic validation") from None
     _write_new(args.output, canonical_suite_bytes(cases))

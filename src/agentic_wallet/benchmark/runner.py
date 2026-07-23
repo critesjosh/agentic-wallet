@@ -215,10 +215,6 @@ def run_benchmark(
                 entry.asset_id for entry in BENCHMARK_REGISTRIES[case.family].entries()
             ]
         chain_id = context.get("chain_id", 8453)
-        context["conversation_ledger"] = ConversationLedger(
-            workflow_state=case.workflow_state,
-            chain_id=chain_id if isinstance(chain_id, int) else 8453,
-        ).model_dump()
         schema_valid = True
         syntax_valid = True
         chosen: Optional[str] = None
@@ -226,6 +222,22 @@ def run_benchmark(
         chosen_arguments: Optional[dict] = None
         inference_error: Optional[str] = None
         try:
+            if "conversation_ledger" in context:
+                try:
+                    context["conversation_ledger"] = (
+                        ConversationLedger.model_validate(
+                            context["conversation_ledger"]
+                        ).model_dump()
+                    )
+                except ValueError as exc:
+                    raise InferenceError(
+                        "invalid typed conversation ledger"
+                    ) from exc
+            else:
+                context["conversation_ledger"] = ConversationLedger(
+                    workflow_state=case.workflow_state,
+                    chain_id=chain_id if isinstance(chain_id, int) else 8453,
+                ).model_dump()
             route = provider.propose_dialogue_route_with_repair(
                 {**context, "phase": "route_dialogue"},
                 case.available_actions,

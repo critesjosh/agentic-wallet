@@ -19,7 +19,7 @@ from ..benchmark.blinded_scenarios import BLINDED_SCENARIO_CATALOG_VERSION
 
 BLINDED_CASE_COUNT = 64
 BLINDED_COMMITMENT_STATUS = "committed-before-evaluation"
-BLINDED_RUBRIC_VERSION = "model-authored-blinded-wallet-eval-v13"
+BLINDED_RUBRIC_VERSION = "model-authored-blinded-wallet-eval-v14"
 BLINDED_SEQUENCE_MODE = "teacher-forced-typed-context"
 BLINDED_POST_COMMIT_FAILURE_POLICY = (
     "abort-and-retire-suite-without-rerun-or-case-level-inspection"
@@ -27,11 +27,19 @@ BLINDED_POST_COMMIT_FAILURE_POLICY = (
 BLINDED_AUTHOR_GENERATION_CONFIG = {
     "batch_count": 8,
     "filesystem_output": "external-only",
-    "local_validation_attempts_per_shard": 3,
+    "local_validation_attempts_per_shard": 0,
     "requested_fork_turns": "none",
-    "interface": "codex-isolated-terra-subagent-with-coded-validator",
+    "interface": "codex-isolated-terra-language-seed-author",
     "model_alias": "gpt-5.6-terra",
-    "requested_repository_access": "exact-validator-command-only",
+    "requested_repository_access": "none",
+    "seed_fields": [
+        "scenario_type",
+        "utterance",
+        "world_seed",
+        "trajectory_key",
+        "turn_index",
+    ],
+    "fixture_expansion": "frozen-deterministic-code",
     "whole_suite_regeneration_only": True,
 }
 BLINDED_AUTHOR_MODEL = "codex/gpt-5.6-terra"
@@ -39,8 +47,11 @@ BLINDED_AUTHOR_ROLE = "model-authored blinded evaluator"
 BLINDED_BLINDING_SCOPE = (
     "Terra subagents were invoked without forked conversation and instructed "
     "not to access repository training or development plaintext; "
-    "the evaluator receives no case-level output. The developer operates "
-    "the workflow, so this is not independent-human evidence."
+    "authors supplied only language, scenario, world-seed, and trajectory "
+    "seeds. Frozen deterministic code supplied canonical identifiers, typed "
+    "facts, and gold labels. The evaluator receives no case-level output. "
+    "The developer operates the workflow, so this is synthetic "
+    "compiler-conditioned evidence, not independent-human evidence."
 )
 BLINDED_CANDIDATE_ARTIFACT_SHA256 = (
     "d1602c2f94835ef42113c7394a5918263ddc31860fee2ef0e3fdddb33d73abc9"
@@ -93,6 +104,7 @@ BLINDED_HASHED_HARNESS_FILES = (
     "src/agentic_wallet/tool_contract.py",
     "src/agentic_wallet/training/blinded.py",
     "src/agentic_wallet/training/blinded_authoring.py",
+    "src/agentic_wallet/training/blinded_seed_authoring.py",
 )
 BLINDED_ADAPTER_FILES = ("adapter_config.json", "adapter_model.safetensors")
 _ADDRESS_RE = re.compile(r"0x[0-9a-fA-F]{40}")

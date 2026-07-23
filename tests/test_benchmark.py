@@ -124,6 +124,83 @@ def test_sequence_accuracy_requires_every_turn_to_pass():
     assert run_benchmark(provider, cases).sequence_accuracy == 0.0
 
 
+def test_benchmark_rejects_untyped_conversation_ledger_before_inference():
+    case = BenchmarkCase(
+        id="sealed-invalid-ledger",
+        family="sealed",
+        scenario_id="invalid-ledger",
+        user_request="Please show the current portfolio.",
+        workflow_state="IDLE",
+        available_actions=["get_portfolio", "reject_request"],
+        expected_action="get_portfolio",
+        context={
+            "canonical_asset_ids": ["independent:alpha"],
+            "conversation_ledger": {
+                "workflow_state": "IDLE",
+                "chain_id": 8453,
+                "approval": True,
+            },
+        },
+    )
+    provider = _MinimalRouteProvider({"invalid-ledger": "get_portfolio"})
+
+    result = run_benchmark(provider, [case]).results[0]
+
+    assert not result.schema_valid
+    assert result.chosen_action is None
+    assert result.inference_error == "invalid typed conversation ledger"
+
+
+def test_benchmark_normalizes_valid_supplied_conversation_ledger():
+    class RecordingRouteProvider(ScriptedProvider):
+        def __init__(self):
+            super().__init__(
+                {"valid-ledger": {"action": "get_portfolio", "arguments": {}}}
+            )
+            self.context = None
+
+        def propose_dialogue_route(
+            self, context, available_actions, suggested_action_ids
+        ):
+            self.context = context
+            return super().propose_dialogue_route(
+                context, available_actions, suggested_action_ids
+            )
+
+    case = BenchmarkCase(
+        id="sealed-valid-ledger",
+        family="sealed",
+        scenario_id="valid-ledger",
+        user_request="Please show the current portfolio.",
+        workflow_state="IDLE",
+        available_actions=["get_portfolio", "reject_request"],
+        expected_action="get_portfolio",
+        context={
+            "canonical_asset_ids": ["independent:alpha"],
+            "conversation_ledger": {
+                "workflow_state": "IDLE",
+                "chain_id": 8453,
+                "recent_messages": [
+                    {"role": "user", "content": "What did I ask before?"}
+                ],
+            },
+        },
+    )
+    provider = RecordingRouteProvider()
+
+    result = run_benchmark(provider, [case]).results[0]
+
+    assert result.ok
+    assert provider.context["conversation_ledger"]["resolved_intent"] == {
+        "chain_id": None,
+        "asset_id": None,
+        "amount": None,
+        "amount_base_units": None,
+        "recipient": None,
+    }
+    assert "approval" not in provider.context["conversation_ledger"]
+
+
 def test_sealed_case_requires_its_own_registry_context():
     with pytest.raises(ValueError, match="canonical_asset_ids"):
         BenchmarkCase(

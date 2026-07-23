@@ -32,8 +32,8 @@ def test_validator_emits_only_aggregate_success(
     monkeypatch.setattr(module, "_read_jsonl", lambda _: [{}] * 8)
     monkeypatch.setattr(
         module,
-        "author_shard_validation_report",
-        lambda *_: {"issues": [], "valid": True},
+        "author_seed_validation_report",
+        lambda *_: {"valid": True},
     )
     monkeypatch.setattr(
         sys,
@@ -43,7 +43,7 @@ def test_validator_emits_only_aggregate_success(
             "--source",
             str(source),
             "--prefix",
-            "tb111a-",
+            "tb121a-",
         ],
     )
 
@@ -51,7 +51,6 @@ def test_validator_emits_only_aggregate_success(
 
     assert json.loads(capsys.readouterr().out) == {
         "case_count": 8,
-        "issues": [],
         "valid": True,
     }
 
@@ -67,7 +66,7 @@ def test_validator_suppresses_failure_details(
     def fail(*_):
         raise RuntimeError("secret fixture")
 
-    monkeypatch.setattr(module, "author_shard_validation_report", fail)
+    monkeypatch.setattr(module, "author_seed_validation_report", fail)
     monkeypatch.setattr(
         sys,
         "argv",
@@ -76,7 +75,7 @@ def test_validator_suppresses_failure_details(
             "--source",
             str(source),
             "--prefix",
-            "tb111a-",
+            "tb121a-",
         ],
     )
 
@@ -84,7 +83,4 @@ def test_validator_suppresses_failure_details(
         module.main()
 
     assert exc.value.code == 1
-    assert json.loads(capsys.readouterr().out) == {
-        "issues": [{"code": "source_json_invalid"}],
-        "valid": False,
-    }
+    assert json.loads(capsys.readouterr().out) == {"valid": False}

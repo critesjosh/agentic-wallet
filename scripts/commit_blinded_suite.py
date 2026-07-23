@@ -28,9 +28,9 @@ from agentic_wallet.training.blinded import (
     blinded_harness_sha256,
     sha256_named_files,
 )
-from agentic_wallet.training.blinded_authoring import (
+from agentic_wallet.training.blinded_seed_authoring import (
     canonical_suite_bytes,
-    materialize_author_shards,
+    materialize_author_seed_shards,
 )
 from agentic_wallet.benchmark.blinded_scenarios import (
     BLINDED_SCENARIO_CATALOG_VERSION,
@@ -38,18 +38,18 @@ from agentic_wallet.benchmark.blinded_scenarios import (
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = (
-    ROOT / "data" / "benchmark" / "terra-blinded-suite-v13.commitment.json"
+    ROOT / "data" / "benchmark" / "terra-blinded-suite-v14.commitment.json"
 )
 AUTHOR_PROMPTS = (
-    "docs/terra-blinded-author-shared-v4.md",
-    "docs/terra-blinded-author-shard-1a-v4.md",
-    "docs/terra-blinded-author-shard-1b-v4.md",
-    "docs/terra-blinded-author-shard-2a-v4.md",
-    "docs/terra-blinded-author-shard-2b-v4.md",
-    "docs/terra-blinded-author-shard-3a-v4.md",
-    "docs/terra-blinded-author-shard-3b-v4.md",
-    "docs/terra-blinded-author-shard-4a-v4.md",
-    "docs/terra-blinded-author-shard-4b-v4.md",
+    "docs/terra-blinded-author-shared-v5.md",
+    "docs/terra-blinded-author-shard-1a-v5.md",
+    "docs/terra-blinded-author-shard-1b-v5.md",
+    "docs/terra-blinded-author-shard-2a-v5.md",
+    "docs/terra-blinded-author-shard-2b-v5.md",
+    "docs/terra-blinded-author-shard-3a-v5.md",
+    "docs/terra-blinded-author-shard-3b-v5.md",
+    "docs/terra-blinded-author-shard-4a-v5.md",
+    "docs/terra-blinded-author-shard-4b-v5.md",
 )
 PROTECTED_TRACKED_PATHS = (
     *BLINDED_HASHED_HARNESS_FILES,
@@ -57,7 +57,7 @@ PROTECTED_TRACKED_PATHS = (
     "scripts/commit_blinded_suite.py",
     "scripts/evaluate_blinded.py",
     "scripts/materialize_blinded_suite.py",
-    "docs/terra-blinded-author-procedure-v4.md",
+    "docs/terra-blinded-author-procedure-v5.md",
     "scripts/validate_blinded_author_shard.py",
 )
 
@@ -158,7 +158,7 @@ def main() -> None:
 
     harness_commit = _require_frozen_git_state()
     try:
-        cases, receipt = materialize_author_shards(args.source)
+        cases, receipt = materialize_author_seed_shards(args.source)
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         raise SystemExit(str(exc)) from exc
     suite_payload = args.suite.read_bytes()
@@ -173,7 +173,7 @@ def main() -> None:
         "author_model": BLINDED_AUTHOR_MODEL,
         "author_prompt_sha256": _prompt_digest(),
         "author_procedure_sha256": sha256_named_files(
-            ROOT, ("docs/terra-blinded-author-procedure-v4.md",)
+            ROOT, ("docs/terra-blinded-author-procedure-v5.md",)
         ),
         "author_role": BLINDED_AUTHOR_ROLE,
         "author_shard_sha256": receipt["source_sha256"],
