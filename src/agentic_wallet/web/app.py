@@ -1,8 +1,7 @@
-"""FastAPI read-only demo.
+"""FastAPI wallet capability and transaction proof of concept.
 
-Exposes the deterministic harness, registry, and workflow state machine as a
-small typed API, and serves a single static page. No signing, no submission,
-no key custody. Model inference is added later behind ``InferenceProvider``.
+The default remains read-only.  An explicit configuration can additionally
+enable the isolated, user-confirmed native-transfer path.
 """
 
 from __future__ import annotations
@@ -10,10 +9,11 @@ from __future__ import annotations
 import os
 from ipaddress import ip_address
 from pathlib import Path
+import secrets
 from urllib.parse import urlsplit
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
 
@@ -29,6 +29,12 @@ from ..schemas.tool_call import ToolCall
 from ..state_machine import TERMINAL, TRANSITIONS, WorkflowState
 from .chat import DemoChatAgent
 from .transcripts import debug_transcripts
+from .transactions import (
+    BrowserSessionStore,
+    TransactionController,
+    TransactionFlowError,
+    configured_transaction_controller,
+)
 
 _FIXTURE = Path(__file__).resolve().parents[3] / "fixtures" / "portfolio_base_watch.json"
 _STATIC = Path(__file__).resolve().parent / "static"
@@ -38,8 +44,9 @@ _ROOT = Path(__file__).resolve().parents[3]
 # environment win, and no secret is ever returned by an API endpoint.
 load_dotenv(_ROOT / ".env", override=False)
 
-app = FastAPI(title="Agentic Wallet (read-only demo)")
+app = FastAPI(title="Agentic Wallet")
 _harness = MockReadOnlyHarness.from_fixture(_FIXTURE)
+browser_sessions = BrowserSessionStore()
 
 
 def _inference_endpoint(provider_name: str) -> str | None:
@@ -152,6 +159,91 @@ _NO_STORE_HEADERS = {
     "X-Content-Type-Options": "nosniff",
 }
 
+_SESSION_COOKIE = "agentic_wallet_session"
+
+
+def _transactions_enabled() -> bool:
+    return os.getenv("AGENTIC_WALLET_TRANSACTION_ENABLED", "false").lower() in {
+        "1", "true", "yes"
+    }
+
+
+def _build_transaction_controller() -> TransactionController | None:
+    """Only construct the signer boundary for an explicitly enabled deployment."""
+
+    if not _transactions_enabled():
+        return None
+    rpc_url = os.getenv("AGENTIC_WALLET_SIGNER_RPC_URL", "")
+    encoded_secret = os.getenv("AGENTIC_WALLET_APPROVAL_HMAC_KEY", "")
+    if not rpc_url or not encoded_secret:
+        # Do not run a partly configured transaction surface that could make a
+        # user believe an action is live when its signer is unavailable.
+        return None
+    try:
+        # The web process checks only backend availability. Key material is
+        # loaded exclusively inside the isolated stdio signer process.
+        from ..signer.capability import decode_approval_hmac_key
+        from ..signer.key_store import require_secure_keyring_backend
+
+        require_secure_keyring_backend()
+        secret = decode_approval_hmac_key(encoded_secret)
+    except Exception:
+        return None
+    return configured_transaction_controller(
+        registry=BASE_REGISTRY, rpc_url=rpc_url, hmac_secret=secret
+    )
+
+
+_transactions = _build_transaction_controller()
+# The chat path can request a *review* only when the deployment has a complete
+# deterministic transaction controller.  It never receives an approval tool.
+_chat.transfer_requests_enabled = _transactions is not None
+
+
+def _require_transaction_controller() -> TransactionController:
+    if _transactions is None:
+        raise HTTPException(
+            status_code=503,
+            detail="transaction signing is not configured for this deployment",
+        )
+    return _transactions
+
+
+async def _transaction_ready_for_request(request: Request) -> bool:
+    return bool(
+        _transactions is not None
+        and _is_local_debug_request(request)
+        and await _transactions.ready()
+    )
+
+
+def _require_consequential_session(request: Request) -> str:
+    if not _is_local_debug_request(request):
+        raise HTTPException(
+            status_code=403,
+            detail="live transaction endpoints are local-only until user authentication exists",
+        )
+    try:
+        return browser_sessions.require(
+            request.cookies.get(_SESSION_COOKIE), request.headers.get("X-CSRF-Token")
+        ).session_id
+    except TransactionFlowError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+
+
+def _transaction_error(exc: TransactionFlowError) -> HTTPException:
+    return HTTPException(status_code=409, detail=str(exc))
+
+
+@app.middleware("http")
+async def _transaction_response_headers(request: Request, call_next):
+    """Keep approval digests and review summaries out of browser/proxy caches."""
+
+    response = await call_next(request)
+    if request.url.path == "/sessions" or request.url.path.startswith("/transactions/"):
+        response.headers.update(_NO_STORE_HEADERS)
+    return response
+
 
 def _debug_transcripts_enabled() -> bool:
     return os.getenv("AGENTIC_WALLET_DEBUG_TRANSCRIPTS", "false").lower() in {
@@ -180,7 +272,18 @@ def _host_header_is_loopback(request: Request) -> bool:
 
 
 def _is_local_debug_request(request: Request) -> bool:
-    return _is_loopback(request) and _host_header_is_loopback(request)
+    proxy_headers = {
+        "forwarded",
+        "x-forwarded-for",
+        "x-forwarded-host",
+        "x-forwarded-proto",
+        "x-real-ip",
+    }
+    return (
+        _is_loopback(request)
+        and _host_header_is_loopback(request)
+        and not proxy_headers.intersection(request.headers)
+    )
 
 
 def _require_local_debug(request: Request) -> None:
@@ -192,6 +295,17 @@ class ChatRequest(BaseModel):
     session_id: str = Field(min_length=1, max_length=128)
     message: str = Field(min_length=1, max_length=4_000)
     allow_remote_inference: bool = False
+
+
+class TransferProposalRequest(BaseModel):
+    chain_id: int = Field(gt=0)
+    recipient: str = Field(min_length=42, max_length=42)
+    amount_base_units: str = Field(pattern=r"^(0|[1-9]\d*)$")
+
+
+class ExactApprovalRequest(BaseModel):
+    workflow_id: str = Field(min_length=16, max_length=128)
+    envelope_digest: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
 
 
 @app.post("/chat")
@@ -208,21 +322,122 @@ async def chat(req: ChatRequest, request: Request) -> dict:
         }
     else:
         response = _chat.respond(req.session_id, req.message)
+    if not await _transaction_ready_for_request(request):
+        # A remotely reachable read-only deployment never emits an actionable
+        # review request. A local deployment also remains read-only until its
+        # isolated signer key and Base RPC both pass readiness.
+        response["transaction_request"] = None
+        response["transaction_status_request"] = None
     if _debug_transcripts_enabled() and _is_local_debug_request(request):
         debug_transcripts.record(req.session_id, req.message, response)
     return response
 
 
+@app.post("/sessions")
+async def create_browser_session(request: Request, response: Response) -> dict:
+    """Mint the cookie and anti-CSRF token required for live actions.
+
+    The opaque session identifier is HttpOnly; only the independently random
+    CSRF token is returned to page JavaScript.  The optional chat session ID is
+    not an authorization credential and merely keeps the existing chat ledger
+    aligned with the transaction review for this browser.
+    """
+
+    if not await _transaction_ready_for_request(request):
+        return {
+            "csrf_token": None,
+            "chat_session_id": secrets.token_urlsafe(24),
+            "expires_at": None,
+        }
+    session = browser_sessions.create()
+    response.set_cookie(
+        _SESSION_COOKIE,
+        session.session_id,
+        httponly=True,
+        samesite="strict",
+        secure=os.getenv("AGENTIC_WALLET_SESSION_SECURE", "true").lower()
+        not in {"0", "false", "no"},
+        path="/",
+    )
+    response.headers.update(_NO_STORE_HEADERS)
+    return {
+        "csrf_token": session.csrf_token,
+        "chat_session_id": session.chat_session_id,
+        "expires_at": session.expires_at,
+    }
+
+
+@app.post("/transactions/propose")
+async def propose_transfer(req: TransferProposalRequest, request: Request) -> dict:
+    """Create a review-only exact native-transfer proposal; never approve it."""
+
+    session_id = _require_consequential_session(request)
+    try:
+        return await _require_transaction_controller().propose_native_transfer(
+            session_id=session_id,
+            chain_id=req.chain_id,
+            recipient=req.recipient,
+            amount_base_units=req.amount_base_units,
+        )
+    except TransactionFlowError as exc:
+        raise _transaction_error(exc) from exc
+
+
+@app.post("/transactions/approve")
+async def approve_transfer(req: ExactApprovalRequest, request: Request) -> dict:
+    """Record explicit approval for exactly the displayed digest only."""
+
+    session_id = _require_consequential_session(request)
+    try:
+        return await _require_transaction_controller().approve(
+            session_id=session_id,
+            workflow_id=req.workflow_id,
+            envelope_digest=req.envelope_digest,
+        )
+    except TransactionFlowError as exc:
+        raise _transaction_error(exc) from exc
+
+
+@app.post("/transactions/submit")
+async def submit_transfer(req: ExactApprovalRequest, request: Request) -> dict:
+    """Freshness-check and hand an approved digest to the isolated signer."""
+
+    session_id = _require_consequential_session(request)
+    try:
+        return await _require_transaction_controller().submit(
+            session_id=session_id,
+            workflow_id=req.workflow_id,
+            envelope_digest=req.envelope_digest,
+        )
+    except TransactionFlowError as exc:
+        raise _transaction_error(exc) from exc
+
+
+@app.get("/transactions/{transaction_hash}")
+async def transaction_status(transaction_hash: str, request: Request) -> dict:
+    """Session-scoped status lookup and receipt refresh with a trusted explorer URL."""
+
+    session_id = _require_consequential_session(request)
+    try:
+        return await _require_transaction_controller().transaction_status(
+            session_id=session_id, transaction_hash=transaction_hash
+        )
+    except TransactionFlowError as exc:
+        raise _transaction_error(exc) from exc
+
+
 @app.get("/capabilities")
-async def capabilities() -> dict:
+async def capabilities(request: Request) -> dict:
+    signing_ready = await _transaction_ready_for_request(request)
     return {
         "inference_provider": _provider_name,
         "inference_location": _inference_location,
         "inference_host": _inference_host,
         "model_id": _model_id,
         "remote_consent_required": _inference_location == "remote-model",
-        "read_only": True,
-        "signing": False,
+        "read_only": not signing_ready,
+        "signing": signing_ready,
+        "transaction_scope": "native_eip1559_transfer" if signing_ready else None,
         "debug_transcripts": _debug_transcripts_enabled(),
         "native_constrained_decoding": bool(
             _chat.provider and _chat.provider.native_constrained_decoding

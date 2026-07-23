@@ -27,6 +27,7 @@ class WorkflowState(str, Enum):
     QUOTE_EXPIRED = "QUOTE_EXPIRED"
     READY_TO_SIGN = "READY_TO_SIGN"
     SUBMITTING = "SUBMITTING"
+    SUBMISSION_UNKNOWN = "SUBMISSION_UNKNOWN"
     SUBMITTED = "SUBMITTED"
     CONFIRMED = "CONFIRMED"
     FAILED = "FAILED"
@@ -36,7 +37,14 @@ class WorkflowState(str, Enum):
 _S = WorkflowState
 
 TERMINAL: frozenset[WorkflowState] = frozenset(
-    {_S.CONFIRMED, _S.FAILED, _S.USER_REJECTED, _S.CANCELLED, _S.REJECTED_BY_POLICY}
+    {
+        _S.CONFIRMED,
+        _S.FAILED,
+        _S.USER_REJECTED,
+        _S.CANCELLED,
+        _S.REJECTED_BY_POLICY,
+        _S.SUBMISSION_UNKNOWN,
+    }
 )
 
 # Explicit allowed transitions. CANCELLED is handled separately: the user may
@@ -64,7 +72,9 @@ TRANSITIONS: dict[WorkflowState, frozenset[WorkflowState]] = {
     _S.SIMULATION_FAILED: frozenset({_S.PLANNING, _S.FAILED}),
     _S.SIMULATION_MISMATCH: frozenset({_S.PLANNING, _S.USER_REJECTED}),
     _S.QUOTE_EXPIRED: frozenset({_S.PLANNING}),
-    _S.AWAITING_CONFIRMATION: frozenset({_S.READY_TO_SIGN, _S.USER_REJECTED, _S.QUOTE_EXPIRED}),
+    _S.AWAITING_CONFIRMATION: frozenset(
+        {_S.READY_TO_SIGN, _S.SIMULATING, _S.USER_REJECTED, _S.QUOTE_EXPIRED}
+    ),
     # READY_TO_SIGN may fall back to SIMULATING on staleness/approval invalidation (C1).
     _S.READY_TO_SIGN: frozenset({_S.SIMULATING, _S.SUBMITTING, _S.USER_REJECTED, _S.QUOTE_EXPIRED}),
     _S.SUBMITTING: frozenset({_S.SUBMITTED, _S.FAILED}),
@@ -73,6 +83,7 @@ TRANSITIONS: dict[WorkflowState, frozenset[WorkflowState]] = {
     _S.USER_REJECTED: frozenset(),
     _S.CANCELLED: frozenset(),
     _S.REJECTED_BY_POLICY: frozenset(),
+    _S.SUBMISSION_UNKNOWN: frozenset(),
     _S.CONFIRMED: frozenset(),
     _S.FAILED: frozenset(),
 }
@@ -86,12 +97,27 @@ class StateMachine:
     def __init__(self, state: WorkflowState = WorkflowState.IDLE) -> None:
         self.state = state
         self.history: list[WorkflowState] = [state]
+        self._submission_guard: object | None = None
+
+    def bind_submission_guard(self, guard: object) -> None:
+        """Bind the one deterministic component permitted to enter SUBMITTING.
+
+        ``SUBMITTING`` is not a normal model- or UI-selectable transition.  The
+        approval guard binds itself once during workflow construction and must
+        re-check approval freshness before using the private transition below.
+        """
+
+        if self._submission_guard is not None:
+            raise TransitionError("a submission guard is already bound")
+        self._submission_guard = guard
 
     def allowed(self, target: WorkflowState) -> bool:
         if self.state in TERMINAL:
             return False
         if target is WorkflowState.CANCELLED:
             return True  # user may cancel from any non-terminal state
+        if target is WorkflowState.SUBMITTING:
+            return False  # only ApprovalGuard may perform this guarded edge
         return target in TRANSITIONS.get(self.state, frozenset())
 
     def transition(self, target: WorkflowState) -> WorkflowState:
@@ -101,4 +127,48 @@ class StateMachine:
             )
         self.state = target
         self.history.append(target)
+        return self.state
+
+    def _enter_submitting(self, guard: object) -> WorkflowState:
+        """Guard-owned READY_TO_SIGN -> SUBMITTING transition.
+
+        Kept private so only the approval subsystem reaches the signing handoff;
+        callers must never treat a state transition as authorization.
+        """
+
+        if guard is not self._submission_guard:
+            raise TransitionError("SUBMITTING requires the bound approval guard")
+        if self.state is not WorkflowState.READY_TO_SIGN:
+            raise TransitionError(
+                f"illegal transition {self.state.value} -> {WorkflowState.SUBMITTING.value}"
+            )
+        self.state = WorkflowState.SUBMITTING
+        self.history.append(self.state)
+        return self.state
+
+    def _invalidate_submitting(self, guard: object) -> WorkflowState:
+        """Guard-owned signer-freshness rejection requiring re-simulation."""
+
+        if guard is not self._submission_guard:
+            raise TransitionError("submission invalidation requires the bound approval guard")
+        if self.state is not WorkflowState.SUBMITTING:
+            raise TransitionError(
+                f"illegal transition {self.state.value} -> {WorkflowState.SIMULATING.value}"
+            )
+        self.state = WorkflowState.SIMULATING
+        self.history.append(self.state)
+        return self.state
+
+    def _mark_submission_unknown(self, guard: object) -> WorkflowState:
+        """Guard-owned terminal edge for an ambiguous post-sign broadcast."""
+
+        if guard is not self._submission_guard:
+            raise TransitionError("unknown submission requires the bound approval guard")
+        if self.state is not WorkflowState.SUBMITTING:
+            raise TransitionError(
+                f"illegal transition {self.state.value} -> "
+                f"{WorkflowState.SUBMISSION_UNKNOWN.value}"
+            )
+        self.state = WorkflowState.SUBMISSION_UNKNOWN
+        self.history.append(self.state)
         return self.state

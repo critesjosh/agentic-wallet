@@ -30,3 +30,8 @@ class SimulationResult(StrictModel):
     unexpected_transfers: list[BalanceChange] = Field(default_factory=list)
     mismatch: bool = False
     logs_summary: str = ""
+    # Present when a Phase 8 simulation was performed against an exact EIP-1559
+    # preimage. Older unsigned-only simulations deliberately omit it.
+    transaction_digest: str | None = Field(
+        default=None, pattern=r"^sha256:[0-9a-f]{64}$"
+    )

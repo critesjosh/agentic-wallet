@@ -25,3 +25,14 @@ bounded typed prior-user history. Evaluation is still
 frozen fixture, and candidate output does not mutate the next turn. Sequence
 accuracy means all four independently scored turns passed; it is not evidence
 that a free-running model maintained application state by itself.
+
+## Outcome
+
+The first whole-suite authoring attempt was retired after one of eight shards
+failed aggregate deterministic validation. The second and final permitted
+attempt produced 64 structurally valid cases, but the frozen pre-commit
+disjointness audit reported existing context-text overlap. The operator did not
+inspect or repair the overlapping records. No commitment was created, no
+plaintext was uploaded, and the candidate model was never evaluated against
+either attempt. V14 is closed without an accuracy result; further protocol
+revision requires a new explicit decision rather than automatic regeneration.

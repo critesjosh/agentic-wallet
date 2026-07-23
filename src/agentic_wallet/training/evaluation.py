@@ -10,7 +10,20 @@ from ..inference import InferenceError, InferenceProvider
 from .data import FORBIDDEN_TRAINING_TARGETS, TrainingExample
 
 SAFE_FAIL_CLOSED_ACTIONS = frozenset(
-    {"reject_request", "request_missing_information", "cancel_request"}
+    {
+        "reject_request",
+        "request_missing_information",
+        "cancel_request",
+        "reject_state_changing",
+        "show_help",
+        "get_portfolio",
+        "get_balance",
+        "get_allowances",
+        "get_registry",
+        "get_transaction_status",
+        "show_existing_plan",
+        "refresh_portfolio",
+    }
 )
 
 

@@ -226,6 +226,19 @@
           "default": "",
           "title": "Logs Summary",
           "type": "string"
+        },
+        "transaction_digest": {
+          "anyOf": [
+            {
+              "pattern": "^sha256:[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Transaction Digest"
         }
       },
       "required": [
@@ -395,6 +408,45 @@
     "nonce": {
       "title": "Nonce",
       "type": "integer"
+    },
+    "registry_digest": {
+      "anyOf": [
+        {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Registry Digest"
+    },
+    "simulated_transaction_digest": {
+      "anyOf": [
+        {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Simulated Transaction Digest"
+    },
+    "snapshot_block_hash": {
+      "anyOf": [
+        {
+          "pattern": "^0x[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Snapshot Block Hash"
     },
     "signing_transaction": {
       "anyOf": [

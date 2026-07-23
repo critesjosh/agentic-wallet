@@ -1,0 +1,134 @@
+{
+  "base_model_id": "google/gemma-4-E2B-it",
+  "base_model_revision": "3e22461f65e89153144f8adb70e3b8c2cc9845a7",
+  "benchmark_role": "development-regression-only",
+  "dataset_sha256": "a567f33a094443909ea686a5f60f6c07d74d139b931f5faf12ab6534b9879ccc",
+  "dataset_version": "wallet-sft-v6-transaction-boundary-route",
+  "frozen_benchmark": {
+    "eval_family.jsonl": "d410832d3841852e323167a4856108a4640c066db364fc250523023acdd8f066",
+    "train_family.jsonl": "3905abebf59c1728dfcb3c31a4db092e8decd3e10e943006c90acabd145dd84b"
+  },
+  "generator_version": "wallet-transaction-boundary-curriculum-v6-3",
+  "profile": "transaction-boundary-v6",
+  "seed": null,
+  "source": {
+    "path": "data/training/natural_v3_source.jsonl",
+    "sha256": "ac3c644f97e762a0b634563eb49831bf103052f9d9ab6adeec573d2b708490ff"
+  },
+  "validation": {
+    "coverage_counts": {
+      "adversarial_condition": {
+        "automatic-retry": 1,
+        "chat-approval": 1,
+        "chat-history-approval": 1,
+        "execution-before-result": 1,
+        "fake-transaction-link": 1,
+        "injected-approval": 1,
+        "nonce-drift": 1,
+        "none": 194,
+        "remote-signing-request": 1,
+        "signing-action-distractor": 17,
+        "typed-untrusted-data": 32,
+        "unlimited-approval-distractor": 16,
+        "untrusted-transaction-hash": 1
+      },
+      "ambiguity_type": {
+        "invalid-previous-output": 8,
+        "missing-recipient": 18,
+        "missing-transaction-hash": 1,
+        "none": 240,
+        "wrong-chain": 1
+      },
+      "conversational_intent": {
+        "clarify": 4,
+        "conversation": 39,
+        "none": 216,
+        "propose_tool": 8,
+        "refuse": 1
+      },
+      "intended_action": {
+        "create_exact_approval_plan": 32,
+        "create_transfer_plan_from_candidate": 8,
+        "get_swap_quote": 64,
+        "get_transaction_status": 2,
+        "none": 44,
+        "refresh_swap_quote": 32,
+        "reject_simulation": 32,
+        "request_missing_information": 16,
+        "request_native_transfer_review": 6,
+        "request_user_confirmation": 32
+      },
+      "risk_category": {
+        "ambiguous-broadcast": 2,
+        "arbitrary-address-invention": 2,
+        "fake-transaction-hash": 2,
+        "none": 55,
+        "prompt-injection": 33,
+        "recipient-preflight": 3,
+        "registry-drift": 1,
+        "remote-signing": 2,
+        "signing-boundary-violation": 38,
+        "stale-quote": 32,
+        "stale-state": 5,
+        "unexpected-transfer": 32,
+        "unlimited-approval": 32,
+        "wrong-chain": 1,
+        "wrong-recipient": 28
+      },
+      "tool_result_type": {
+        "allowance": 4,
+        "approval_invalidation": 4,
+        "balance": 4,
+        "none": 238,
+        "quote": 4,
+        "recipient_preflight": 3,
+        "simulation": 4,
+        "transaction_capability": 1,
+        "transaction_lookup": 1,
+        "transaction_submission": 3,
+        "transfer_review": 2
+      },
+      "user_correction_type": {
+        "none": 259,
+        "recipient": 9
+      },
+      "workflow_state": {
+        "AWAITING_CONFIRMATION": 39,
+        "IDLE": 32,
+        "PLANNING": 105,
+        "QUOTE_EXPIRED": 32,
+        "SIMULATING": 37,
+        "SUBMISSION_UNKNOWN": 2,
+        "SUBMITTED": 4,
+        "UNDERSTANDING_INTENT": 17
+      }
+    },
+    "dialogue_routes": 164,
+    "dialogue_turns": 0,
+    "label_counts": {
+      "route:conversation": 44,
+      "route:create_exact_approval_plan": 16,
+      "route:create_transfer_plan_from_candidate": 8,
+      "route:get_swap_quote": 32,
+      "route:get_transaction_status": 2,
+      "route:refresh_swap_quote": 16,
+      "route:reject_simulation": 16,
+      "route:request_missing_information": 8,
+      "route:request_native_transfer_review": 6,
+      "route:request_user_confirmation": 16,
+      "tool:create_exact_approval_plan": 16,
+      "tool:get_swap_quote": 32,
+      "tool:refresh_swap_quote": 16,
+      "tool:reject_simulation": 16,
+      "tool:request_missing_information": 8,
+      "tool:request_user_confirmation": 16
+    },
+    "max_benchmark_similarity": 0.660194,
+    "split_counts": {
+      "train": 197,
+      "validation": 71
+    },
+    "tool_calls": 104,
+    "total": 268
+  }
+}

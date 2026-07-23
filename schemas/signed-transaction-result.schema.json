@@ -1,6 +1,15 @@
 {
   "additionalProperties": false,
+  "description": "Safe submission metadata; raw signed bytes never cross the signer boundary.",
   "properties": {
+    "status": {
+      "enum": [
+        "SUBMITTED",
+        "UNKNOWN"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
     "from_address": {
       "pattern": "^0x[0-9a-fA-F]{40}$",
       "title": "From Address",
@@ -16,11 +25,6 @@
       "title": "Transaction Signing Hash",
       "type": "string"
     },
-    "raw_transaction": {
-      "pattern": "^0x[0-9a-fA-F]*$",
-      "title": "Raw Transaction",
-      "type": "string"
-    },
     "transaction_hash": {
       "pattern": "^0x[0-9a-fA-F]{64}$",
       "title": "Transaction Hash",
@@ -28,10 +32,10 @@
     }
   },
   "required": [
+    "status",
     "from_address",
     "envelope_digest",
     "transaction_signing_hash",
-    "raw_transaction",
     "transaction_hash"
   ],
   "title": "SignedTransactionResult",

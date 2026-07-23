@@ -32,6 +32,7 @@ from agentic_wallet.training.config import (
     SUPPORTED_DATASET_VERSIONS,
     CANDIDATE_PIPELINE_DATASET_VERSION,
     PIPELINE_DATASET_VERSION,
+    TRANSACTION_PIPELINE_DATASET_VERSION,
     WORKFLOW_DATASET_VERSION,
 )
 
@@ -131,6 +132,7 @@ def main() -> None:
         WORKFLOW_DATASET_VERSION,
         PIPELINE_DATASET_VERSION,
         CANDIDATE_PIPELINE_DATASET_VERSION,
+        TRANSACTION_PIPELINE_DATASET_VERSION,
     }:
         if not train_examples or not validation_examples:
             raise ValueError(

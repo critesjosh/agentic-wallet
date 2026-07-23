@@ -16,6 +16,10 @@ from agentic_wallet.training import (
     load_pipeline_curriculum,
     validate_training_dataset,
 )
+from agentic_wallet.training.transaction_curriculum import (
+    load_transaction_candidate_curriculum,
+    validate_transaction_curriculum_coverage,
+)
 
 DATA = Path(__file__).resolve().parents[1] / "data"
 
@@ -218,6 +222,103 @@ def test_candidate_pipeline_removes_free_generated_transfer_arguments():
         for item in examples
         if item.kind == "tool_call"
     )
+
+
+def test_transaction_boundary_curriculum_routes_reviews_but_never_wallet_authority():
+    examples = load_transaction_candidate_curriculum(
+        DATA / "training" / "natural_v3_source.jsonl"
+    )
+    report = validate_training_dataset(examples, _benchmark())
+    validate_transaction_curriculum_coverage(examples)
+    additions = [item for item in examples if item.id.startswith("sft-v6-")]
+
+    assert report.total == 268
+    assert report.split_counts == {"train": 197, "validation": 71}
+    assert len(additions) == 36
+    assert any(
+        item.target.get("proposed_action") == "request_native_transfer_review"
+        for item in additions
+    )
+    review_routes = [
+        item
+        for item in additions
+        if item.target.get("proposed_action") == "request_native_transfer_review"
+    ]
+    assert all(set(item.target) == {"proposed_action"} for item in review_routes)
+    assert all(
+        item.context["parsed_native_transfer_candidate"]["provenance"]
+        == "exact_current_user_message"
+        for item in review_routes
+    )
+    assert any(
+        item.target.get("proposed_action") == "get_transaction_status"
+        and set(item.target) == {"proposed_action"}
+        for item in additions
+    )
+    status_routes = [
+        item
+        for item in additions
+        if item.target.get("proposed_action") == "get_transaction_status"
+    ]
+    assert all(set(item.target) == {"proposed_action"} for item in status_routes)
+    assert all(
+        item.context["parsed_transaction_status_candidate"]["provenance"]
+        == "exact_current_user_message"
+        for item in status_routes
+    )
+    assert all(
+        item.target.get("proposed_action") != "proceed_to_signing"
+        and item.target.get("action") != "proceed_to_signing"
+        for item in additions
+    )
+    assert all(
+        item.action_exposure == "adversarial"
+        for item in additions
+        if "proceed_to_signing" in item.available_actions
+    )
+    assert all(
+        "private key" not in str(item.model_dump()).casefold()
+        and "raw transaction" not in str(item.model_dump()).casefold()
+        and "capability token" not in str(item.model_dump()).casefold()
+        for item in additions
+    )
+    assert {
+        item.context["verified_tool_result"]["reason"]
+        for item in additions
+        if item.coverage.tool_result_type == "recipient_preflight"
+    } == {"zero-address", "self-recipient", "recipient-not-eoa"}
+    unknown = [
+        item
+        for item in additions
+        if item.context.get("verified_tool_result", {}).get("status") == "UNKNOWN"
+    ]
+    assert len(unknown) == 2
+    assert all(
+        item.coverage.workflow_state == "SUBMISSION_UNKNOWN"
+        and item.context["verified_tool_result"]["automatic_retry"] is False
+        for item in unknown
+    )
+    recovered = next(
+        item
+        for item in unknown
+        if item.context["verified_tool_result"]["transaction_hash"] is not None
+    )
+    unrecoverable = next(
+        item
+        for item in unknown
+        if item.context["verified_tool_result"]["transaction_hash"] is None
+    )
+    assert recovered.context["verified_tool_result"]["explorer_url"].startswith(
+        "https://basescan.org/tx/"
+    )
+    assert unrecoverable.context["verified_tool_result"] == {
+        "transaction_hash": None,
+        "status": "UNKNOWN",
+        "explorer_url": None,
+        "recovery_available": False,
+        "automatic_retry": False,
+    }
+    assert all(item.context["chain_id"] == 8453 for item in additions)
 
 
 def test_pipeline_checkpoint_subset_round_robins_runtime_phases():

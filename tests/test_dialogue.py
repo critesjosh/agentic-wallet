@@ -212,6 +212,103 @@ def test_history_is_bounded_and_remains_context_not_approval():
     assert all("sign" not in actions for actions in provider.available_actions)
 
 
+def test_model_routes_only_an_exact_user_transfer_candidate_to_review():
+    provider = SequenceDialogueProvider(
+        [
+            {
+                "message": "I will request a deterministic review.",
+                "intent": "propose_tool",
+                "proposed_action": {
+                    "action": "request_native_transfer_review",
+                    "arguments": {},
+                    "reason": "exact current-message candidate",
+                },
+                "suggested_actions": [],
+            }
+        ]
+    )
+    agent = DemoChatAgent(
+        MockReadOnlyHarness.from_fixture(FIXTURE),
+        provider=provider,
+        transfer_requests_enabled=True,
+    )
+    recipient = "0x3333333333333333333333333333333333333333"
+
+    response = agent.respond("s1", f"send 7 wei to {recipient} on base")
+
+    assert response["transaction_request"] == {
+        "chain_id": 8453,
+        "amount_base_units": "7",
+        "recipient": recipient,
+    }
+    assert "request_native_transfer_review" in provider.available_actions[0]
+    assert provider.contexts[0]["parsed_native_transfer_candidate"][
+        "provenance"
+    ] == "exact_current_user_message"
+
+
+def test_model_cannot_invent_transfer_fields_when_no_candidate_was_parsed():
+    provider = SequenceDialogueProvider(
+        [
+            {
+                "message": "I will request a transfer review.",
+                "intent": "propose_tool",
+                "proposed_action": {
+                    "action": "request_native_transfer_review",
+                    "arguments": {},
+                    "reason": "invented request",
+                },
+                "suggested_actions": [],
+            }
+        ]
+    )
+    agent = DemoChatAgent(
+        MockReadOnlyHarness.from_fixture(FIXTURE),
+        provider=provider,
+        transfer_requests_enabled=True,
+    )
+
+    response = agent.respond("s1", "Can you explain native transfers?")
+
+    assert response["transaction_request"] is None
+    assert "exact current-message transfer candidate" in response["reply"]
+    assert provider.contexts[0]["parsed_native_transfer_candidate"] is None
+
+
+def test_model_routes_only_an_exact_current_message_transaction_hash():
+    transaction_hash = "0x" + "a" * 64
+    provider = SequenceDialogueProvider(
+        [
+            {
+                "message": "I will look up that saved transaction.",
+                "intent": "propose_tool",
+                "proposed_action": {
+                    "action": "get_transaction_status",
+                    "arguments": {},
+                    "reason": "exact current-message hash",
+                },
+                "suggested_actions": [],
+            }
+        ]
+    )
+    agent = DemoChatAgent(
+        MockReadOnlyHarness.from_fixture(FIXTURE),
+        provider=provider,
+        transfer_requests_enabled=True,
+    )
+
+    response = agent.respond("s1", f"look up tx {transaction_hash}")
+
+    assert response["transaction_status_request"] == {
+        "transaction_hash": transaction_hash
+    }
+    candidate = provider.contexts[0]["parsed_transaction_status_candidate"]
+    assert candidate == {
+        "transaction_hash": transaction_hash,
+        "provenance": "exact_current_user_message",
+    }
+
+
 def test_keyword_fallback_can_explain_state_changes_without_executing():
     agent = DemoChatAgent(MockReadOnlyHarness.from_fixture(FIXTURE))
     response = agent.respond("s1", "Can you explain how swaps work?")

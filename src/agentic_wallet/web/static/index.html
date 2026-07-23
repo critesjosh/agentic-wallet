@@ -29,6 +29,13 @@
       .digest { opacity: .6; font-size: .72rem; word-break: break-all; margin-top: .3rem; }
       .suggestions { align-self: flex-start; display: flex; flex-wrap: wrap; gap: .4rem; }
       .suggestions button { padding: .4rem .65rem; border: 1px solid #3b82f688; background: transparent; color: inherit; font-size: .78rem; }
+      .review { align-self: flex-start; max-width: 100%; width: 100%; border: 1px solid #f59e0b88; border-radius: .8rem; padding: .8rem; background: #f59e0b12; }
+      .review h2 { font-size: .95rem; margin: 0 0 .5rem; }
+      .review dl { display: grid; grid-template-columns: minmax(7rem, 1fr) 2fr; gap: .3rem .6rem; margin: 0; font-size: .8rem; }
+      .review dt { opacity: .7; } .review dd { margin: 0; overflow-wrap: anywhere; }
+      .review .actions { display: flex; gap: .5rem; margin-top: .75rem; }
+      .review .actions button[disabled] { opacity: .55; cursor: not-allowed; }
+      .review .notice { font-size: .78rem; margin-top: .6rem; }
       form { display: flex; gap: .5rem; padding: .75rem 0 1rem; border-top: 1px solid #8884; }
       input { flex: 1; padding: .6rem .8rem; border-radius: .6rem; border: 1px solid #8886; background: transparent; color: inherit; font-size: .95rem; }
       button { padding: .6rem 1rem; border-radius: .6rem; border: none; background: #3b82f6; color: #fff; cursor: pointer; font-size: .95rem; }
@@ -37,7 +44,7 @@
   <body>
     <header>
       <h1>Agentic Wallet</h1>
-      <p>Read-only demo · chat is the only interface · no signing, no key custody · <a href="/project">project map</a><span id="debug-nav"></span></p>
+      <p id="scope">Read-only demo · chat is the only interface · no signing, no key custody · <a href="/project">project map</a><span id="debug-nav"></span></p>
       <div id="mode">Checking inference mode…</div>
       <label id="remote-consent">
         <input id="allow-remote" type="checkbox" /> Allow this message to be processed remotely
@@ -50,7 +57,8 @@
     </form>
 
     <script>
-      const sessionId = "s-" + Math.random().toString(36).slice(2);
+      let sessionId = "s-" + Math.random().toString(36).slice(2);
+      let csrfToken = null;
       const log = document.getElementById("log");
       let capabilities = { inference_location: "server-deterministic", remote_consent_required: false };
 
@@ -100,6 +108,97 @@
         log.scrollTop = log.scrollHeight;
       }
 
+      function apiError(body, fallback) {
+        return (body && typeof body.detail === "string") ? body.detail : fallback;
+      }
+
+      async function transactionRequest(path, body) {
+        if (!csrfToken) throw new Error("Transaction session is not ready. Reload and try again.");
+        const r = await fetch(path, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken },
+          credentials: "same-origin", body: JSON.stringify(body),
+        });
+        const result = await r.json();
+        if (!r.ok) throw new Error(apiError(result, "The transaction request was rejected."));
+        return result;
+      }
+
+      async function transactionStatusRequest(transactionHash) {
+        if (!csrfToken) throw new Error("Transaction session is not ready. Reload and try again.");
+        const r = await fetch(`/transactions/${encodeURIComponent(transactionHash)}`, {
+          headers: { "X-CSRF-Token": csrfToken },
+          credentials: "same-origin",
+        });
+        const result = await r.json();
+        if (!r.ok) throw new Error(apiError(result, "The transaction lookup was rejected."));
+        return result;
+      }
+
+      function reviewCard(review) {
+        const old = document.getElementById("transaction-review");
+        if (old) old.remove();
+        const card = document.createElement("section");
+        card.id = "transaction-review";
+        card.className = "review";
+        const simulation = review.simulation || {};
+        const policy = review.policy || {};
+        card.innerHTML = `<h2>Review native transfer</h2>
+          <dl>
+            <dt>Network</dt><dd>${esc(review.chain_name)} (${esc(review.chain_id)})</dd>
+            <dt>From</dt><dd><code>${esc(review.sender)}</code></dd>
+            <dt>To</dt><dd><code>${esc(review.recipient)}</code></dd>
+            <dt>Amount</dt><dd>${esc(review.amount_base_units)} base units (${esc(review.asset_id)})</dd>
+            <dt>Nonce</dt><dd>${esc(review.nonce)}</dd>
+            <dt>Transaction type</dt><dd>${esc(review.transaction_type)} (EIP-1559)</dd>
+            <dt>Gas limit</dt><dd>${esc(review.gas_limit)}</dd>
+            <dt>Max fee per gas</dt><dd>${esc(review.max_fee_per_gas)} base units</dd>
+            <dt>Max priority fee per gas</dt><dd>${esc(review.max_priority_fee_per_gas)} base units</dd>
+            <dt>Max network fee</dt><dd>${esc(review.maximum_gas_fee_base_units)} base units</dd>
+            <dt>Calldata</dt><dd><code>${esc(review.calldata)}</code></dd>
+            <dt>Access list</dt><dd><code>${esc(JSON.stringify(review.access_list || []))}</code></dd>
+            <dt>Hash-pinned EVM preflight</dt><dd>${simulation.success && !simulation.mismatch ? "call succeeded; deterministic native-transfer changes match" : "not safe"} at block ${esc(simulation.block)}</dd>
+            <dt>Snapshot block hash</dt><dd><code>${esc(review.snapshot_block_hash)}</code></dd>
+            <dt>State anchor</dt><dd><code>${esc(review.state_anchor)}</code></dd>
+            <dt>Simulation gas used</dt><dd>${esc(simulation.gas_used)}</dd>
+            <dt>Simulation changes</dt><dd><code>${esc(JSON.stringify(simulation.balance_changes || []))}</code></dd>
+            <dt>Policy</dt><dd>${policy.allowed ? "allowed" : "rejected"}; violations: <code>${esc(JSON.stringify(policy.violations || []))}</code></dd>
+            <dt>Plan digest</dt><dd><code>${esc(review.plan_digest)}</code></dd>
+            <dt>Registry digest</dt><dd><code>${esc(review.registry_digest)}</code></dd>
+            <dt>Simulated transaction digest</dt><dd><code>${esc(review.simulated_transaction_digest)}</code></dd>
+            <dt>Approval digest</dt><dd><code>${esc(review.envelope_digest)}</code></dd>
+            <dt>Expires</dt><dd>${new Date(Number(review.expires_at) * 1000).toLocaleTimeString()}</dd>
+          </dl>
+          <div class="actions"><button type="button" id="approve-transfer">Approve exact review</button><button type="button" id="submit-transfer" disabled>Submit approved transaction</button></div>
+          <div class="notice" id="review-notice">This card is not an approval. Approval is a separate action bound to the digest above.</div>`;
+        log.appendChild(card); log.scrollTop = log.scrollHeight;
+        const notice = card.querySelector("#review-notice");
+        card.querySelector("#approve-transfer").addEventListener("click", async e => {
+          e.currentTarget.disabled = true;
+          try {
+            const approved = await transactionRequest("/transactions/approve", { workflow_id: review.workflow_id, envelope_digest: review.envelope_digest });
+            if (approved.state !== "READY_TO_SIGN") throw new Error("The review was not ready to sign.");
+            notice.textContent = "Exact digest approved. Submission will re-check chain state before the isolated signer runs.";
+            card.querySelector("#submit-transfer").disabled = false;
+          } catch (error) { notice.textContent = error.message; e.currentTarget.disabled = false; }
+        });
+        card.querySelector("#submit-transfer").addEventListener("click", async e => {
+          e.currentTarget.disabled = true;
+          try {
+            const result = await transactionRequest("/transactions/submit", { workflow_id: review.workflow_id, envelope_digest: review.envelope_digest });
+            const prefix = result.status === "UNKNOWN"
+              ? "Submission status is unknown—do not retry automatically. Check"
+              : "Submitted";
+            const storageNote = result.app_state_saved === false
+              ? " App-state indexing failed, so save this hash; in-app lookup may be unavailable."
+              : "";
+            notice.innerHTML = `${esc(prefix)}: <a href="${esc(result.explorer_url)}" target="_blank" rel="noopener noreferrer">${esc(result.transaction_hash)}</a>. The link is generated from the trusted network mapping.${esc(storageNote)}`;
+          } catch (error) {
+            notice.textContent = `${error.message} Start a fresh review if the app requires re-simulation; this submission cannot be retried from the current card.`;
+          }
+        });
+      }
+
       async function send(message) {
         el("msg user", esc(message));
         const r = await fetch("/chat", {
@@ -117,6 +216,20 @@
         el("msg bot", esc(b.reply));
         renderData(b.data);
         renderSuggestions(b.suggested_actions);
+        // Only the server's deterministic chat fallback can request this
+        // review. The proposal endpoint independently validates every field.
+        if (b.transaction_request && capabilities.signing) {
+          try {
+            const review = await transactionRequest("/transactions/propose", b.transaction_request);
+            reviewCard(review);
+          } catch (error) { el("msg bot", esc(error.message)); }
+        }
+        if (b.transaction_status_request && capabilities.signing) {
+          try {
+            const result = await transactionStatusRequest(b.transaction_status_request.transaction_hash);
+            el("msg bot", `${esc(result.status)} · <a href="${esc(result.explorer_url)}" target="_blank" rel="noopener noreferrer">${esc(result.transaction_hash)}</a>`);
+          } catch (error) { el("msg bot", esc(error.message)); }
+        }
       }
 
       document.getElementById("form").addEventListener("submit", e => {
@@ -128,9 +241,11 @@
         send(msg);
       });
 
-      el("msg bot", "Hi. I'm a read-only wallet assistant. Ask me to show your portfolio, a balance, allowances, or the registry.");
-      fetch("/capabilities").then(r => r.json()).then(c => {
+      el("msg bot", "Hi. I can explain your portfolio, balances, allowances, or the registry.");
+      Promise.all([fetch("/capabilities").then(r => r.json()), fetch("/sessions", { method: "POST", credentials: "same-origin" }).then(r => r.json())]).then(([c, session]) => {
         capabilities = c;
+        csrfToken = session.csrf_token;
+        sessionId = session.chat_session_id;
         const remote = c.inference_location === "remote-model";
         const label = remote
           ? `Remote ${c.model_id || "model"} · wallet intent leaves this server only with consent`
@@ -139,6 +254,10 @@
             : "Deterministic server fallback · no model inference";
         document.getElementById("mode").textContent = label;
         document.getElementById("remote-consent").style.display = remote ? "block" : "none";
+        if (c.signing) {
+          document.getElementById("scope").innerHTML = `Native Base transfers · chat is the only interface · every transfer is simulated, digest-bound, and separately approved · <a href="/project">project map</a><span id="debug-nav"></span>`;
+          el("msg bot", "Live native-transfer review is enabled. To open one, type: send &lt;amount in wei&gt; wei to &lt;0x address&gt; on base. This only creates a review; it never approves or sends it.");
+        }
         if (c.debug_transcripts) {
           const link = document.createElement("a");
           link.href = "/debug/transcripts";

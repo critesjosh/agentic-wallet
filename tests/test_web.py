@@ -1,4 +1,5 @@
 from pathlib import Path
+import base64
 
 import httpx
 import pytest
@@ -39,7 +40,8 @@ async def test_project_status_page_explains_boundaries(client):
     assert response.status_code == 200
     assert "Where the project stands" in response.text
     assert "Model proposes" in response.text
-    assert "No signing or key custody" in response.text
+    assert "Private MCP signer" in response.text
+    assert "Disabled by default" in response.text
 
 
 @pytest.mark.anyio
@@ -216,6 +218,24 @@ def test_openrouter_provider_can_be_selected_without_exposing_key(monkeypatch):
     assert agent.provider.name == "openrouter"
     assert agent.provider.model == "google/gemma-4-E2B-test"
     assert "private-test-key" not in repr(agent.provider.last_response_metadata)
+
+
+def test_transaction_controller_is_not_built_without_secure_keyring(monkeypatch):
+    import agentic_wallet.signer.key_store as key_store
+
+    monkeypatch.setenv("AGENTIC_WALLET_TRANSACTION_ENABLED", "true")
+    monkeypatch.setenv("AGENTIC_WALLET_SIGNER_RPC_URL", "https://rpc.example")
+    monkeypatch.setenv(
+        "AGENTIC_WALLET_APPROVAL_HMAC_KEY",
+        base64.urlsafe_b64encode(b"x" * 32).decode("ascii"),
+    )
+    monkeypatch.setattr(
+        key_store,
+        "require_secure_keyring_backend",
+        lambda: (_ for _ in ()).throw(key_store.KeyStoreError("not secure")),
+    )
+
+    assert web_app._build_transaction_controller() is None
 
 
 def _model_agent(raw_call):

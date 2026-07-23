@@ -92,6 +92,10 @@ TOOL_ARGUMENT_MODELS: dict[str, type[StrictModel]] = {
     "get_registry": NoArguments,
     "show_help": NoArguments,
     "reject_state_changing": NoArguments,
+    # Route-only live request. Deterministic code extracts and revalidates the
+    # exact current-user-message candidate before any review is built.
+    "request_native_transfer_review": NoArguments,
+    "get_transaction_status": NoArguments,
     # Benchmark and planned deterministic workflow proposals.
     "get_swap_quote": SwapQuoteArguments,
     "request_missing_information": MissingInformationArguments,
@@ -194,6 +198,14 @@ TOOL_DESCRIPTIONS = {
     "get_registry": "Show the trusted canonical asset registry.",
     "show_help": "Explain the capabilities of this read-only demo.",
     "reject_state_changing": "Explain that state-changing execution is unavailable.",
+    "request_native_transfer_review": (
+        "Ask deterministic code to build a simulated native-transfer review "
+        "from an exact current-user-message candidate; never approve or submit it."
+    ),
+    "get_transaction_status": (
+        "Look up a session-owned transaction using an exact hash parsed from "
+        "the current user message; never accept a model-invented hash."
+    ),
     "get_swap_quote": "Request a typed swap quote without signing.",
     "request_missing_information": "Ask for required missing fields.",
     "reject_request": "Decline an unsafe or unsupported request.",

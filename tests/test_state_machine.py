@@ -9,7 +9,7 @@ from agentic_wallet.state_machine import (
 from agentic_wallet.state_machine import WorkflowState as S
 
 
-def test_happy_path_to_confirmed():
+def test_normal_workflow_path_reaches_ready_to_sign():
     sm = StateMachine()
     for nxt in [
         S.UNDERSTANDING_INTENT,
@@ -19,12 +19,16 @@ def test_happy_path_to_confirmed():
         S.SIMULATING,
         S.AWAITING_CONFIRMATION,
         S.READY_TO_SIGN,
-        S.SUBMITTING,
-        S.SUBMITTED,
-        S.CONFIRMED,
     ]:
         sm.transition(nxt)
-    assert sm.state is S.CONFIRMED
+    assert sm.state is S.READY_TO_SIGN
+
+
+def test_submitting_cannot_be_entered_by_an_arbitrary_transition():
+    sm = StateMachine(S.READY_TO_SIGN)
+    assert not sm.allowed(S.SUBMITTING)
+    with pytest.raises(TransitionError, match="READY_TO_SIGN -> SUBMITTING"):
+        sm.transition(S.SUBMITTING)
 
 
 def test_planning_cannot_jump_to_ready_to_sign():
@@ -60,3 +64,10 @@ def test_terminal_states_have_no_exits():
     for st in TERMINAL:
         assert TRANSITIONS[st] == frozenset()
         assert not StateMachine(st).allowed(S.PLANNING)
+
+
+def test_ambiguous_submission_is_terminal_and_non_retryable():
+    assert S.SUBMISSION_UNKNOWN in TERMINAL
+    sm = StateMachine(S.SUBMISSION_UNKNOWN)
+    assert not sm.allowed(S.SIMULATING)
+    assert not sm.allowed(S.SUBMITTING)

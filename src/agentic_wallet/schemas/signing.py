@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import re
 from typing import Annotated, Literal
 
 from pydantic import Field, StringConstraints, field_validator, model_validator
 
+from ..digest import canonical_digest
 from .common import EvmAddress, HexData, StrictModel
 
 UintString = Annotated[str, StringConstraints(pattern=r"^(0|[1-9]\d*)$")]
@@ -68,18 +68,21 @@ class Eip1559Transaction(StrictModel):
             ],
         }
 
+    def digest(self) -> str:
+        """Canonical digest of every EIP-1559 preimage field.
 
-class ApprovedSigningRequest(StrictModel):
-    expected_envelope_digest: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
-    current_state_anchor: str
-    current_nonce: UintString
-    now: int
-    authorization_token: str = Field(min_length=32, max_length=256)
+        This is an application binding digest, not a signed transaction hash.
+        A signer still computes and verifies the chain-native signing hash.
+        """
+
+        return canonical_digest(self.model_dump(mode="json"))
 
 
 class SignedTransactionResult(StrictModel):
+    """Safe submission metadata; raw signed bytes never cross the signer boundary."""
+
+    status: Literal["SUBMITTED", "UNKNOWN"]
     from_address: EvmAddress
     envelope_digest: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
     transaction_signing_hash: Bytes32
-    raw_transaction: HexData
     transaction_hash: Bytes32

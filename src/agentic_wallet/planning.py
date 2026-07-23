@@ -17,6 +17,7 @@ from .harness import HarnessError, MockReadOnlyHarness
 from .registry import RegistryError
 from .schemas.common import Amount
 from .schemas.quote import SwapQuote
+from .schemas.signing import AccessListEntry, Eip1559Transaction
 from .schemas.transaction_plan import AssetDelta, TransactionPlan
 
 APPROVED_ROUTER_ID = "base:fixture-swap-router"
@@ -64,6 +65,42 @@ def _plan_id(payload: dict[str, Any]) -> str:
     return canonical_digest(payload)
 
 
+def build_eip1559_transaction(
+    plan: TransactionPlan,
+    *,
+    nonce: int,
+    gas_limit: int,
+    max_priority_fee_per_gas: int,
+    max_fee_per_gas: int,
+    access_list: list[AccessListEntry] | None = None,
+) -> Eip1559Transaction:
+    """Assemble every EIP-1559 preimage field from a deterministic plan.
+
+    Fee and nonce values are typed trusted inputs from the chain-state reader;
+    the model never supplies them.  This function only constructs an unsigned
+    preimage and has no signing or submission authority.
+    """
+
+    if nonce < 0:
+        raise PlanningError("nonce must not be negative")
+    if gas_limit <= 0:
+        raise PlanningError("gas limit must be positive")
+    if max_priority_fee_per_gas < 0 or max_fee_per_gas < 0:
+        raise PlanningError("EIP-1559 fees must not be negative")
+    return Eip1559Transaction(
+        chain_id=plan.chain_id,
+        nonce=str(nonce),
+        max_priority_fee_per_gas=str(max_priority_fee_per_gas),
+        max_fee_per_gas=str(max_fee_per_gas),
+        gas_limit=str(gas_limit),
+        from_address=plan.from_address,
+        to_address=plan.to_address,
+        value=plan.value.base_units,
+        data=plan.calldata,
+        access_list=access_list or [],
+    )
+
+
 def build_transfer_plan(
     harness: MockReadOnlyHarness,
     *,
@@ -79,11 +116,14 @@ def build_transfer_plan(
     if asset.chain_id != harness.portfolio.chain_id:
         raise PlanningError("asset chain does not match the wallet chain")
     amount_value = _require_amount(amount, asset.decimals, name="amount")
-    gas_value = _require_amount(gas_reserve, 18, name="gas reserve")
+    native_asset = harness.registry.native_asset(harness.portfolio.chain_id)
+    gas_value = _require_amount(
+        gas_reserve, native_asset.decimals, name="gas reserve"
+    )
     sender = _address(harness.portfolio.address)
     native_balance = harness.get_native_balance()
 
-    if asset_id == "base:native":
+    if asset.is_native:
         _require_balance(
             native_balance, amount_value + gas_value, asset_id=asset_id
         )
@@ -96,9 +136,9 @@ def build_transfer_plan(
         except HarnessError as exc:
             raise PlanningError(str(exc)) from exc
         _require_balance(token_balance, amount_value, asset_id=asset_id)
-        _require_balance(native_balance, gas_value, asset_id="base:native")
+        _require_balance(native_balance, gas_value, asset_id=native_asset.asset_id)
         to_address = _address(asset.address)
-        value = Amount(base_units="0", decimals=18)
+        value = Amount(base_units="0", decimals=native_asset.decimals)
         calldata = _erc20_transfer_calldata(recipient, amount_value)
 
     payload = {
@@ -195,11 +235,14 @@ def build_swap_plan(
         quote.amount_in, input_asset.decimals, name="input amount"
     )
     _require_amount(quote.amount_out, output_asset.decimals, name="output amount")
-    gas_value = _require_amount(gas_reserve, 18, name="gas reserve")
+    native_asset = harness.registry.native_asset(harness.portfolio.chain_id)
+    gas_value = _require_amount(
+        gas_reserve, native_asset.decimals, name="gas reserve"
+    )
     native_balance = harness.get_native_balance()
-    if quote.input_asset_id == "base:native":
+    if input_asset.is_native:
         _require_balance(
-            native_balance, amount_in + gas_value, asset_id="base:native"
+            native_balance, amount_in + gas_value, asset_id=native_asset.asset_id
         )
         value = quote.amount_in
     else:
@@ -208,8 +251,8 @@ def build_swap_plan(
             amount_in,
             asset_id=quote.input_asset_id,
         )
-        _require_balance(native_balance, gas_value, asset_id="base:native")
-        value = Amount(base_units="0", decimals=18)
+        _require_balance(native_balance, gas_value, asset_id=native_asset.asset_id)
+        value = Amount(base_units="0", decimals=native_asset.decimals)
 
     sender = _address(harness.portfolio.address)
     route_hash = canonical_digest(quote.model_dump(mode="json")).split(":", 1)[1]

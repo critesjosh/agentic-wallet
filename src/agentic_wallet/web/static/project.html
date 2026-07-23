@@ -140,14 +140,14 @@
     <header>
       <div class="shell hero-grid">
         <div>
-          <div class="eyebrow">Build report · July 22, 2026</div>
+          <div class="eyebrow">Build report · July 23, 2026</div>
           <h1>Where the project stands.</h1>
-          <p class="lede">The safety core and read-only proof are real. The product can interpret a small set of wallet questions through Gemma 4 E2B and execute typed fixture-backed reads. It cannot touch real funds.</p>
+          <p class="lede">The read-only proof and a narrowly bounded transaction proof now exist. The default remains fixture-backed and read-only; an explicitly enabled local deployment can review and submit one Base native transfer through a separate secure signer.</p>
         </div>
         <div class="snapshot" aria-label="Current snapshot">
-          <div class="snapshot-row"><span>Milestone</span><strong>Web read-only POC</strong></div>
+          <div class="snapshot-row"><span>Milestone</span><strong>User-confirmed transfer POC</strong></div>
           <div class="snapshot-row"><span>Target</span><strong>Gemma 4 E2B on mobile</strong></div>
-          <div class="snapshot-row"><span>Chain</span><strong>Base fixture</strong></div>
+          <div class="snapshot-row"><span>Chain</span><strong>Base only</strong></div>
           <div class="snapshot-row"><span>Runtime</span><strong><span class="live-dot" id="runtime-dot"></span><span id="runtime">Checking this server…</span></strong></div>
         </div>
       </div>
@@ -168,16 +168,16 @@
               <div class="boundary">Local Ollama, local Transformers, llama.cpp HTTP, OpenRouter, and a deterministic fallback share one provider seam.</div>
             </article>
             <article class="status-card">
-              <span class="pill working">Working in core</span>
-              <h3>Unsigned safety flow</h3>
-              <p>Code can construct transfer and pinned-route swap plans, simulate expected balance changes, apply wallet policy, bind approval to a C1 digest, and invalidate stale or mutated approval.</p>
-              <div class="boundary">This flow is tested at the Python layer but is not yet connected end-to-end to the chat interface or live providers.</div>
+              <span class="pill working">Working</span>
+              <h3>Digest-bound transfer review</h3>
+              <p>Chat can request a Base native-transfer review. Deterministic code reads typed RPC state, constructs the exact EIP-1559 preimage, runs a block-pinned preflight, applies policy, and binds the result to an expiring digest.</p>
+              <div class="boundary">Chat text and model output cannot approve. A separate button must approve the exact displayed digest.</div>
             </article>
             <article class="status-card">
-              <span class="pill locked">Not enabled</span>
-              <h3>No signing or key custody</h3>
-              <p>There is a typed EIP-1559 signing-request schema, but no Ethereum MCP signer, secure key store, transaction broadcast, or receipt monitor. The web app explicitly reports <code>signing: false</code>.</p>
-              <div class="boundary">A signing request from chat is rejected before model inference. No private key is available to the model or current server.</div>
+              <span class="pill working">Implemented, gated</span>
+              <h3>Private MCP signer</h3>
+              <p>A stdio-only Ethereum MCP process loads a provisioned key from an approved OS keyring, rechecks state, signs once, submits, and returns only safe hash metadata and a trusted explorer link.</p>
+              <div class="boundary">Disabled by default, direct-loopback only, Base/EOA-only, and unavailable on this machine until a secure OS keyring is configured. The model never sees the key or signer tool; the local web process remains trusted to attest the browser approval click.</div>
             </article>
           </div>
         </div>
@@ -212,15 +212,15 @@
                 <li>C1 approval digest + freshness</li>
               </ul>
             </article>
-            <article class="lane locked-lane">
+            <article class="lane">
               <div class="lane-number">03 / AUTHORIZE</div>
               <h3>Wallet signer</h3>
-              <p>Will render and sign only the exact user-approved transaction after every guard passes.</p>
+              <p>Signs only the exact user-approved transaction after every guard passes.</p>
               <ul>
                 <li>Secure OS-backed key custody</li>
                 <li>Single-use authorization</li>
-                <li>Signer-side human review</li>
-                <li>Currently absent and locked</li>
+                <li>Signer-side freshness recheck</li>
+                <li>Unknown broadcasts cannot retry</li>
               </ul>
             </article>
           </div>
@@ -237,12 +237,12 @@
           <div class="roadmap">
             <article class="phase"><div class="phase-index">01 · DONE</div><h3>Schemas + state machine</h3><div class="phase-copy"><strong>The foundation is implemented.</strong>Strict models, canonical serialization, approval digesting, terminal states, quote expiry, and re-simulation edges have tests.</div></article>
             <article class="phase"><div class="phase-index">02 · PART</div><h3>Read-only harness</h3><div class="phase-copy"><strong>Fixture reads work; live-chain reads do not.</strong>Portfolio, balances, allowances, and registry are available. Transaction history, RPC-backed data, provider privacy controls, and signed registry updates remain.</div></article>
-            <article class="phase"><div class="phase-index">03 · PART</div><h3>Baseline evaluation</h3><div class="phase-copy"><strong>The untuned E2B is not release-ready.</strong>The 29-case Ollama run scored 5 exact passes, 24.1% structured output, and two signing-boundary critical failures. That suite is now development regression data because later training was designed from its failures; a separately authored sealed suite and real-device metrics remain.</div></article>
-            <article class="phase"><div class="phase-index">04 · PART</div><h3>Planning + simulation</h3><div class="phase-copy"><strong>The deterministic Python flow works.</strong>Transfer/swap construction, gas reserve, quote expiry, state diffs, policy, and approval invalidation exist. A real quote route, simulator, human summary, and chat integration remain.</div></article>
-            <article class="phase"><div class="phase-index">05 · PART</div><h3>Natural curriculum</h3><div class="phase-copy"><strong>The v3 candidate is prepared, not trained.</strong>Its 64 fixed, naturally phrased records split into 48 training and 16 development-validation examples across eight balanced workflow families. The old repetitive 560-record corpus was replaced. An independently human-authored sealed suite remains the blocking prerequisite.</div></article>
-            <article class="phase"><div class="phase-index">06 · SPIKE</div><h3>QLoRA fine-tuning</h3><div class="phase-copy"><strong>Error-driven v2 improved only the development suite.</strong>At 150 steps it reached 15/29 schema-valid and 13 exact with zero critical failures, but held-out assets stayed at 3/10. Native Ollama constraints yielded 5/29 exact for E2B and 9/29 for E4B, with neither solving any multi-argument case. No v3 GPU job was launched because the sealed-suite independence gate is unmet.</div></article>
+            <article class="phase"><div class="phase-index">03 · PART</div><h3>Baseline evaluation</h3><div class="phase-copy"><strong>The untuned E2B is not release-ready.</strong>On the transaction-boundary v6 development split it scored 45/61 schema-valid, 39/61 correct actions, and 34/61 exact, with 0/12 multi-argument items and seven development safety failures. Every failure was contained by deterministic code, but a separately authored sealed suite and real-device metrics remain.</div></article>
+            <article class="phase"><div class="phase-index">04 · PART</div><h3>Planning + simulation</h3><div class="phase-copy"><strong>The Base native-transfer path is connected.</strong>Exact preimage construction, gas reserve, EOA/code checks, a block-pinned call preflight, normalized expected delta, policy, review, and approval invalidation work. Contract recipients and general trace/state-diff simulation remain excluded.</div></article>
+            <article class="phase"><div class="phase-index">05 · PART</div><h3>Transaction curriculum</h3><div class="phase-copy"><strong>V6 matches the bounded signer architecture.</strong>It contains 268 deterministic records: 197 training and 71 development-validation examples covering route-only review, application-owned approval, re-simulation, response-loss recovery, unknown broadcasts, saved hashes, explorer links, and adversarial boundaries. It has been generated and validated but not trained.</div></article>
+            <article class="phase"><div class="phase-index">06 · SPIKE</div><h3>QLoRA fine-tuning</h3><div class="phase-copy"><strong>V5 proved that earlier stopping matters.</strong>The safety-selected step-25 checkpoint improved an independently authored development suite from 23/40 to 33/40 with zero hard-zero failures, while later checkpoints regressed. V6 is the next training candidate; its untuned result confirms that multi-argument generation and transaction-boundary routing still require work.</div></article>
             <article class="phase"><div class="phase-index">07 · SPIKE</div><h3>On-device integration</h3><div class="phase-copy"><strong>Runtime feasibility is partially proven.</strong>The GGUF emulator path ran but was slow and unreliable. A stock 2.59 GB LiteRT-LM artifact completed desktop CPU inference; its structured-output behavior, Android packaging, real-device latency, memory, and thermals remain gates.</div></article>
-            <article class="phase"><div class="phase-index">08 · LOCKED</div><h3>User-confirmed signing</h3><div class="phase-copy"><strong>Schema scaffolding only.</strong>Implement the Ethereum MCP signer after the read/simulate experience is connected and reviewed. Keys must stay in secure storage and outside model context.</div></article>
+            <article class="phase"><div class="phase-index">08 · POC</div><h3>User-confirmed signing</h3><div class="phase-copy"><strong>The bounded local proof is implemented.</strong>A single-use digest capability reaches a private MCP signer only after separate user approval. The signer journals safe hash metadata before broadcast, and hashes, status, and Basescan links are saved in session-scoped app state. Remote authentication, durable app history, contract calls, and production deployment remain out of scope.</div></article>
           </div>
         </div>
       </section>
@@ -263,12 +263,13 @@
             </article>
             <article class="test-card">
               <h3>2. Try these chat prompts</h3>
-              <p>These cover valid reads, missing information, and the hard read-only boundary.</p>
+              <p>These cover valid reads and, only when the gated local signer is ready, review and saved-hash lookup.</p>
               <pre>Show my portfolio
 What is my USDC balance?
 Show my allowances
 Show the asset registry
-Sign and send 1 ETH</pre>
+send 1 wei to 0x3333333333333333333333333333333333333333 on base
+check transaction 0x&lt;64 hex characters&gt;</pre>
             </article>
             <article class="test-card">
               <h3>3. Safety and workflow tests</h3>
@@ -297,13 +298,13 @@ Sign and send 1 ETH</pre>
               <li><strong>Proves:</strong> a small target model can sit behind a replaceable provider contract.</li>
               <li><strong>Proves:</strong> invalid or unavailable tool calls fail closed.</li>
               <li><strong>Proves:</strong> deterministic plans can be bound to simulation, policy, and explicit approval.</li>
-              <li><strong>Proves:</strong> state-changing chat requests are blocked in the current demo.</li>
+              <li><strong>Proves:</strong> model routing, approval, signing, and submission remain separate boundaries.</li>
             </ul>
             <ul class="limit-list">
               <li><strong>Does not prove:</strong> accurate behavior on a broad production benchmark.</li>
               <li><strong>Does not prove:</strong> acceptable speed, memory, or thermals on a real phone.</li>
               <li><strong>Does not prove:</strong> correctness of live quotes, RPC data, or simulations.</li>
-              <li><strong>Does not prove:</strong> secure transaction signing or safe mainnet operation.</li>
+              <li><strong>Does not prove:</strong> production user-presence authentication, durable wallet state, private RPC metadata, or safe broad mainnet operation.</li>
             </ul>
           </div>
         </div>
@@ -313,7 +314,7 @@ Sign and send 1 ETH</pre>
     <footer>
       <div class="shell footer-inner">
         <span>Agentic Wallet · local-first inference, typed external facts</span>
-        <a href="/">Return to the read-only demo →</a>
+        <a href="/">Return to the chat demo →</a>
       </div>
     </footer>
 

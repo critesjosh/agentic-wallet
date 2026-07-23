@@ -493,3 +493,76 @@ literal recipient can validate under the new action, absent or multiple
 recipient candidates cannot reach planning, and an unknown candidate ID fails
 closed during deterministic binding. Future evaluation must measure routing
 and clarification separately from fields the model no longer owns.
+
+## V6 transaction-boundary curriculum and untuned development result
+
+The Phase 8 proof adds a deliberately narrow live path: an exact current-message
+request may route to a review for native ETH on Base, while deterministic code
+owns every transaction field, state read, simulation check, policy decision,
+approval digest, signer capability, and submission result. A separate
+session-scoped route may look up a transaction hash already saved by the
+application. Neither route gives the model approval, signing, submission, raw
+transaction, key, capability-token, or RPC access.
+
+`transaction-boundary-v6` retains the 232 v5 records and adds 36 records for:
+
+- Base-only native-transfer review routing and wrong-chain contrasts;
+- application-owned digest approval and signer-action distractors;
+- nonce, registry, and account-state drift followed by re-simulation;
+- `SUBMITTED`, `SUBMISSION_UNKNOWN`, saved hashes, trusted explorer links, and
+  the no-automatic-retry rule;
+- lost signer responses with and without a recoverable journaled hash;
+- EOA/contract/zero/self recipient preflight and pinned-block provenance;
+- exact-current-message status lookup versus fake or untrusted hashes; and
+- grounded narration of typed transaction outcomes.
+
+The generated artifact has 268 records, split 197 training and 71
+development-validation, with 104 tool calls and 163 dialogue routes. Its
+dataset SHA-256 is
+`a567f33a094443909ea686a5f60f6c07d74d139b931f5faf12ab6534b9879ccc`;
+the manifest records curriculum version
+`wallet-transaction-boundary-curriculum-v6-3`. Coverage validation rejects
+sensitive signing material and prevents the live curriculum from exposing
+signing or submission as production model actions.
+
+No v6 adapter has been trained. Before spending GPU time, the untuned
+`gemma4:e2b` Ollama runtime was evaluated against the V6.2 validation partition.
+Nine grounded-display records were predeclared ineligible for the minimal-route
+evaluator, leaving 61 scored records:
+
+| Metric | Result |
+| --- | ---: |
+| Schema-valid | 45/61 (73.8%) |
+| Correct action | 39/61 (63.9%) |
+| Exact action and arguments | 34/61 (55.7%) |
+| Complete trajectories | 2/3 (66.7%) |
+| Multi-argument exact | 0/12 |
+| Development safety failures | 7 |
+
+The seven safety failures include a wrong-chain request routed to Base transfer
+review and an adversarial repair that repeated `proceed_to_signing`. The other
+five selected the expected action but supplied a wrong missing field or a
+quote/plan identifier contaminated with generated control text. Sixteen total
+records failed schema validity: all 12 multi-argument items returned non-JSON,
+and four digest-confirmation items ended before Ollama reported completion.
+
+Every observed failure remained proposal-only and failed closed. A
+wrong-chain route had no deterministically parsed Base candidate; the production
+allowlist does not contain `proceed_to_signing`; unrecognized opaque IDs do not
+resolve; and malformed arguments cannot reach planning or the signer. This is
+evidence that the deterministic split is doing necessary work, not that the
+model is safe. A future v6 fine-tune should use safety-lexicographic checkpoint
+selection and must reach zero hard-zero failures before ordinary accuracy is
+considered. This validation partition is development data and cannot support a
+generalization or sealed-evaluation claim.
+
+The seven eligible Phase 8 route cases were 7/7 schema-valid and 3/7 exact; two
+additional misses chose safe read-only fallbacks and are semantic errors rather
+than safety failures. The canonical report is
+`data/training/results/ollama-e2b-v6-transaction-20260723-rescored.json`; see
+`docs/model-failures.md` for reproducible examples and proposed curriculum
+targets. V6.3 adds one grounded narration for terminal unknown status without a
+recoverable hash. That record is predeclared ineligible for this minimal-route
+evaluator, and none of the 61 scored inputs changed. A requested repeat was
+blocked by the local execution-credit limit, so the committed report remains
+honestly labeled as the V6.2 model run rather than a fabricated V6.3 rerun.

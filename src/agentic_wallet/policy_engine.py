@@ -71,10 +71,9 @@ def evaluate_policy(
         asset = resolved_assets.get(plan.asset_id)
         if asset is not None and asset.chain_id != plan.chain_id:
             violations.append("asset-chain-mismatch")
+        is_native = asset.is_native if asset is not None else False
         expected_target = (
-            plan.recipient_address
-            if plan.asset_id == "base:native"
-            else asset.address if asset is not None else None
+            plan.recipient_address if is_native else asset.address if asset is not None else None
         )
         if expected_target is None or plan.to_address.lower() != expected_target.lower():
             violations.append("wrong-recipient-or-token-contract")
@@ -86,7 +85,7 @@ def evaluate_policy(
             outgoing = plan.expected_outgoing[0]
             if outgoing.asset_id != plan.asset_id:
                 violations.append("transfer-asset-mismatch")
-            elif plan.asset_id == "base:native":
+            elif is_native:
                 if plan.calldata != "0x" or plan.value != outgoing.amount:
                     violations.append("invalid-native-transfer-encoding")
             elif plan.recipient_address is not None:

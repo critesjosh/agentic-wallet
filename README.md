@@ -23,17 +23,31 @@ research and safety design.
 
 ## Current status
 
-The browser demo is fixture-backed and read-only. It demonstrates chat-to-tool
-routing, strict schemas, fail-closed validation, and deterministic portfolio
-reads, but it does **not** read a live chain or load a real account yet. The
-unsigned transfer/swap, simulation, policy, and approval-integrity workflow is
-implemented and tested in the Python core but is not yet connected end-to-end
-to chat. There is no transaction submission or key custody.
+The browser defaults to a fixture-backed, read-only demo. It demonstrates
+chat-to-tool routing, strict schemas, fail-closed validation, and deterministic
+portfolio reads.
 
-The repository contains typed schemas, the workflow state machine, a read-only
-harness, swappable inference providers, the behavioral benchmark, an Android
-runtime spike, and a deterministic unsigned planning/simulation flow. There is
-no signing, submission, or key custody.
+An explicitly enabled, **loopback-only Phase 8 proof of concept** now adds one
+live workflow: a native ETH transfer on Base to an externally owned account.
+Chat or Gemma may request a review, but deterministic code reads live RPC state,
+constructs the exact EIP-1559 preimage, performs a pinned preflight, applies
+policy, and renders the digest-bound review. Approval is a separate browser
+action. A private stdio MCP process loads the key only from an approved OS
+keyring, rechecks freshness, signs, and submits. The model receives no approval,
+capability, raw transaction, RPC credential, or key.
+
+This remains a research POC, not a production wallet. Live signing is disabled
+unless the feature flag, Base RPC, high-entropy capability key, secure keyring,
+and provisioned signer all pass readiness. The current development shell has no
+approved keyring backend, so its real-funds path correctly remains disabled;
+tests use fake RPC and signer implementations.
+
+The loopback web process is inside this POC's trusted computing base because it
+mints the signer capability after the browser approval request. The isolated
+signer still revalidates the exact envelope and live state and is the only
+process that can access the key, but it cannot independently prove that a human
+clicked Approve. Any broader release requires wallet- or signer-local user
+presence rather than this web-process trust.
 
 ## Layout
 
@@ -51,10 +65,14 @@ src/agentic_wallet/
   simulation.py   normalized before/after diff verification
   policy_engine.py deterministic plan and simulation policy enforcement
   approval_guard.py C1 approval freshness and mutation invalidation
+  ethereum_rpc.py narrow, pinned-endpoint Base JSON-RPC client
+  signer/         private stdio MCP signer, secure keyring, replay/outcome journals
+  signer_outcome.py safe submission/re-simulation/unknown outcomes
+  transaction_store.py bounded session-owned hash/status application state
   harness/        fixture-backed, network-free, read-only tools
   benchmark/      29 familiar/held-out eval cases with arguments and P6 blockers
   training/       deterministic SFT generation, leakage checks, prompt masking
-  web/            FastAPI read-only demo + static page
+  web/            FastAPI chat demo + optional loopback transaction review
 fixtures/         sample watch-only portfolio
 data/benchmark/   train and held-out eval families (distinct asset universes)
 data/training/    generated SFT v1 data, manifest, and non-weight run results
@@ -111,16 +129,13 @@ recent messages. It deliberately contains no approval field: history is context,
 never authorization. Observed failures are recorded in
 [`docs/model-failures.md`](docs/model-failures.md).
 
-Candidate-bound transfers now remove recipient-address generation from the
-v3 candidate-binding model contract. Deterministic code extracts a
-checksum-valid address only from
-the current user message (or a separately verified contact), assigns an opaque
-`recipient:*` ID, and constructs the transfer fields without an argument-model
-call. Missing or multiple recipients force clarification before planning.
-Transaction-history addresses are never promoted to candidates automatically.
-The resolved address still enters the existing unsigned planning, simulation,
-policy, and digest-bound approval flow; this adds no signing authority and is
-not yet exposed by the read-only web demo.
+Candidate-bound transfers remove recipient-address generation from the model
+contract. For the live proof, deterministic code accepts only the exact narrow
+current-message form `send <integer> wei to <0x address> on base`; Gemma can
+select the argument-free `request_native_transfer_review` route but cannot
+compose or alter its fields. The endpoint repeats checksum, chain, balance,
+recipient-class, simulation, and policy checks. Missing, ambiguous, contract,
+zero, self, and non-Base recipients fail closed.
 
 Ollama, llama.cpp, and OpenRouter request native schema-constrained decoding.
 The direct Transformers provider currently has post-hoc whole-output validation
@@ -133,10 +148,41 @@ no-store headers, requires both a loopback client and loopback Host header,
 never writes messages to disk, and clears on server restart.
 Set `AGENTIC_WALLET_DEBUG_TRANSCRIPTS=0` to disable it.
 
-The EIP-1559 signing-request types and optional `signer` dependencies are Phase
-8 preparation authorized for the upcoming Ethereum MCP signer. They contain no
-signing implementation or key material; the running web app still advertises
-`signing: false` and rejects signing requests before inference.
+The Phase 8 signer is implemented but disabled by default and restricted to
+direct loopback because the POC has no remote-user authentication. Do not place
+signing mode behind a reverse proxy; common proxy headers are rejected, but
+header rejection is not a substitute for authentication. Install the signer
+extra, provision through the hidden-TTY script, and configure a Base RPC plus a
+URL-safe base64 key that decodes to at least 32 random bytes:
+
+```bash
+pip install -e ".[dev,web,signer]"
+python scripts/provision_signer_key.py
+
+# Example generator; keep the resulting value secret.
+openssl rand -base64 32 | tr '+/' '-_' | tr -d '='
+
+AGENTIC_WALLET_TRANSACTION_ENABLED=true \
+AGENTIC_WALLET_SIGNER_RPC_URL=https://your-base-rpc.example \
+AGENTIC_WALLET_APPROVAL_HMAC_KEY='URL_SAFE_BASE64_VALUE' \
+  uvicorn agentic_wallet.web.app:app --host 127.0.0.1
+```
+
+Never put a private key in `.env`; only the OS keyring may hold it. The UI
+advertises signing only after signer and RPC readiness succeed. A successful or
+ambiguous submission saves its local transaction hash in bounded app state and
+returns a code-owned Basescan link. `check transaction <hash>` performs a
+session-scoped lookup. An ambiguous broadcast is marked `UNKNOWN` and cannot be
+signed again automatically. The signer fsyncs secret-free `UNKNOWN` recovery
+metadata before broadcast, so a lost MCP response can recover the existing hash
+without signing again. If recovery is also unavailable, the workflow enters
+terminal `SUBMISSION_UNKNOWN` and cannot retry.
+
+The Base RPC remains a privacy boundary even when inference is local. It can
+observe the wallet address, balance and nonce reads, recipient, value-bearing
+preflight, receipt lookups, and raw signed transaction. Use a fixed trusted or
+self-hosted endpoint for privacy-sensitive testing; this POC does not verify an
+RPC provider's retention policy.
 
 The Android GGUF is an optional, separately downloaded model pack, never part
 of the APK/AAB. See [docs/android-spike.md](docs/android-spike.md) for the
@@ -183,6 +229,7 @@ Generate and validate the data and inspect the run configuration without a GPU:
 python scripts/generate_training_data.py
 python scripts/generate_training_data.py --profile pipeline-v4
 python scripts/generate_training_data.py --profile candidate-pipeline-v5
+python scripts/generate_training_data.py --profile transaction-boundary-v6
 python scripts/train_qlora.py --dataset data/training/sft-v4-pipeline.jsonl
 ```
 
@@ -219,6 +266,28 @@ checkpoint-25 repeats reproduced both development reports byte-for-byte. On
 the matching untuned local E2B pilot, raw routing was 7/12 while deterministic
 required-fact checks produced 12/12 correct guarded outcomes and contained all
 six hazardous cases.
+
+The v6 transaction-boundary curriculum preserves v5 and adds 36 examples for
+the loopback-only Base transfer proof: route-only transfer review and
+session-scoped status lookup, application-owned approval, signer-request
+isolation, freshness re-simulation, ambiguous broadcast handling, trusted
+explorer links, response-loss recovery, and recipient preflight. The generated
+dataset contains 268 records (197 train, 71 development-validation), with
+SHA-256
+`a567f33a094443909ea686a5f60f6c07d74d139b931f5faf12ab6534b9879ccc`.
+It contains no private key, raw transaction, capability token, or RPC endpoint.
+
+The untuned local Ollama E2B run on the 61 eligible V6.2 validation records scored
+45/61 schema-valid, 39/61 correct actions, and 34/61 exact
+action-and-arguments. It failed all 12 multi-argument records and produced seven
+safety failures under the corrected development scorer, including a wrong-chain
+review route and an adversarial signing-boundary choice. Deterministic candidate
+binding, action allowlists, exact-ID lookup, approval separation, and signer
+preflight prevented every observed output from authorizing or submitting a
+transaction. These are development diagnostics and fine-tuning targets, not
+evidence of release readiness. V6.3 adds one grounded narration for an
+unrecoverable signer response; it is predeclared ineligible for the minimal-route
+evaluator, so the 61 scored records and their reported outputs are unchanged.
 
 The training path evaluates and checkpoints every 25 optimizer steps and uses a
 safety-lexicographic development score. The

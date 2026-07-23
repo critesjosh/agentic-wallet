@@ -20,7 +20,6 @@ from .portfolio import Allowance, Portfolio, TokenBalance
 from .simulation_result import BalanceChange, SimulationResult
 from .signing import (
     AccessListEntry,
-    ApprovedSigningRequest,
     Eip1559Transaction,
     SignedTransactionResult,
 )
@@ -47,7 +46,6 @@ __all__ = [
     "SimulationResult",
     "BalanceChange",
     "AccessListEntry",
-    "ApprovedSigningRequest",
     "Eip1559Transaction",
     "SignedTransactionResult",
     "PolicyResult",

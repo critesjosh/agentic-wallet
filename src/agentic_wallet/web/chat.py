@@ -1,10 +1,9 @@
-"""Deterministic read-only chat responder.
+"""Deterministic chat responder with an optional review-only transfer request.
 
 Chat is the only user interface to the wallet. This responder stands in for the
-fine-tuned target model behind ``InferenceProvider``: when the model is wired
-(``RemoteHTTPProvider`` -> Gemma), it replaces this keyword logic while the
-harness, tools, and state machine stay identical. It is read-only and never
-signs, submits, or drafts an executable plan.
+fine-tuned target model behind ``InferenceProvider``.  It never approves,
+signs, or submits; when live transactions are explicitly enabled, one narrow
+deterministic command may only request that the server build a review.
 """
 
 from __future__ import annotations
@@ -47,8 +46,18 @@ _STATE_CHANGING = re.compile(
     re.IGNORECASE,
 )
 _CONCEPTUAL = re.compile(r"\b(?:what|why|how|explain|learn|mean|work)\b", re.IGNORECASE)
+_NATIVE_TRANSFER_COMMAND = re.compile(
+    r"^\s*send\s+(?P<amount>0|[1-9]\d*)\s+wei\s+to\s+"
+    r"(?P<recipient>0x[0-9a-fA-F]{40})\s+on\s+base\s*$",
+    re.IGNORECASE,
+)
+_TRANSACTION_STATUS_COMMAND = re.compile(
+    r"^\s*(?:check|show|look\s+up)\s+(?:transaction|tx)\s+"
+    r"(?P<transaction_hash>0x[0-9a-fA-F]{64})\s*$",
+    re.IGNORECASE,
+)
 
-_MODEL_ACTIONS = [
+_BASE_MODEL_ACTIONS = [
     "get_portfolio",
     "get_balance",
     "get_allowances",
@@ -83,11 +92,24 @@ class DemoChatAgent:
         harness: MockReadOnlyHarness,
         registry: Registry = BASE_REGISTRY,
         provider: InferenceProvider | None = None,
+        transfer_requests_enabled: bool = False,
     ) -> None:
-        validate_production_actions(_MODEL_ACTIONS)
         self.harness = harness
         self.registry = registry
         self.provider = provider
+        # This only permits a deterministic user-supplied command to request a
+        # review.  It never enables approval, signing, or submission in chat.
+        self.transfer_requests_enabled = transfer_requests_enabled
+        self.model_actions = [
+            *_BASE_MODEL_ACTIONS,
+            *(
+                ["request_native_transfer_review"]
+                if transfer_requests_enabled
+                else []
+            ),
+            *(["get_transaction_status"] if transfer_requests_enabled else []),
+        ]
+        validate_production_actions(self.model_actions)
         self._sessions: dict[str, _Session] = {}
 
     def _session(self, session_id: str) -> _Session:
@@ -118,12 +140,16 @@ class DemoChatAgent:
         reply: str,
         data: Any = None,
         suggested_action_ids: list[str] | None = None,
+        transaction_request: dict[str, str | int] | None = None,
+        transaction_status_request: dict[str, str] | None = None,
     ) -> dict:
         return {
             "reply": reply,
             "state": session.sm.state.value,
             "data": data,
             "suggested_actions": self._suggestions(suggested_action_ids or []),
+            "transaction_request": transaction_request,
+            "transaction_status_request": transaction_status_request,
         }
 
     @staticmethod
@@ -131,6 +157,35 @@ class DemoChatAgent:
         session.ledger.workflow_state = session.sm.state.value
         session.ledger.record_message("user", user_message)
         session.ledger.record_message("assistant", reply)
+
+    def _transfer_review_response(
+        self, session: _Session, transfer: re.Match[str]
+    ) -> dict:
+        """Return only a review request from exact current-message fields."""
+
+        return self._response(
+            session,
+            "I can create a simulated native-transfer review. It is not approved "
+            "and nothing will be signed or sent until you separately approve the "
+            "exact digest shown in the review card.",
+            transaction_request={
+                "chain_id": 8453,
+                "amount_base_units": transfer.group("amount"),
+                "recipient": transfer.group("recipient"),
+            },
+        )
+
+    def _transaction_status_response(
+        self, session: _Session, status_match: re.Match[str]
+    ) -> dict:
+        return self._response(
+            session,
+            "I’ll look up that exact transaction hash in this browser session’s "
+            "saved transaction state.",
+            transaction_status_request={
+                "transaction_hash": status_match.group("transaction_hash").lower()
+            },
+        )
 
     def debug_ledger(self, session_id: str) -> dict:
         """Return a copy for local tests/debugging; never an authorization object."""
@@ -175,8 +230,15 @@ class DemoChatAgent:
                 validate_tool_arguments(call.action, call.arguments)
                 return self._response(
                     session,
-                    "State-changing actions are not enabled in this read-only demo. "
-                    "No transaction was drafted, signed, or submitted.",
+                    (
+                        "That state-changing request is not supported. Only an exact "
+                        "native Base transfer command can open a review, and no "
+                        "transaction was drafted, signed, or submitted."
+                        if self.transfer_requests_enabled
+                        else
+                        "State-changing actions are not enabled in this read-only "
+                        "demo. No transaction was drafted, signed, or submitted."
+                    ),
                 )
             else:
                 return self._response(session, "The proposed action was rejected.")
@@ -188,15 +250,38 @@ class DemoChatAgent:
             return self._response(session, f"The proposed read action was rejected: {exc}")
 
     def _respond_with_model(self, session: _Session, message: str) -> dict:
+        transfer = _NATIVE_TRANSFER_COMMAND.fullmatch(message)
+        status_match = _TRANSACTION_STATUS_COMMAND.fullmatch(message)
         context = {
             "user_request": message,
             "conversation_ledger": session.ledger.model_dump(),
             "canonical_asset_ids": [entry.asset_id for entry in self.registry.entries()],
-            "read_only": True,
+            "transaction_review_enabled": self.transfer_requests_enabled,
+            "read_only": not self.transfer_requests_enabled,
+            "parsed_native_transfer_candidate": (
+                {
+                    "chain_id": 8453,
+                    "amount_base_units": transfer.group("amount"),
+                    "recipient": transfer.group("recipient"),
+                    "provenance": "exact_current_user_message",
+                }
+                if transfer is not None and self.transfer_requests_enabled
+                else None
+            ),
+            "parsed_transaction_status_candidate": (
+                {
+                    "transaction_hash": status_match.group(
+                        "transaction_hash"
+                    ).lower(),
+                    "provenance": "exact_current_user_message",
+                }
+                if status_match is not None and self.transfer_requests_enabled
+                else None
+            ),
         }
         try:
             route = self.provider.propose_dialogue_route_with_repair(
-                context, _MODEL_ACTIONS, list(_SUGGESTIONS)
+                context, self.model_actions, list(_SUGGESTIONS)
             )
         except InferenceError:
             return self._response(
@@ -210,6 +295,22 @@ class DemoChatAgent:
                 route.message,
                 suggested_action_ids=route.suggested_actions,
             )
+        if route.proposed_action == "request_native_transfer_review":
+            if transfer is None or not self.transfer_requests_enabled:
+                return self._response(
+                    session,
+                    "I need an exact current-message transfer candidate before I "
+                    "can open a review. Use: send <integer> wei to <0x address> on base.",
+                )
+            return self._transfer_review_response(session, transfer)
+        if route.proposed_action == "get_transaction_status":
+            if status_match is None or not self.transfer_requests_enabled:
+                return self._response(
+                    session,
+                    "I need an exact transaction hash in the current message. "
+                    "Use: check transaction <0x transaction hash>.",
+                )
+            return self._transaction_status_response(session, status_match)
 
         argument_context = {
             **context,
@@ -328,8 +429,17 @@ class DemoChatAgent:
 
     def respond(self, session_id: str, message: str) -> dict:
         session = self._session(session_id)
+        transfer = _NATIVE_TRANSFER_COMMAND.fullmatch(message)
+        status_match = _TRANSACTION_STATUS_COMMAND.fullmatch(message)
         if self.provider is not None:
             response = self._respond_with_model(session, message)
+        elif transfer is not None and self.transfer_requests_enabled:
+            # In deterministic fallback mode, exact current-message extraction
+            # replaces model routing. The proposal endpoint revalidates all
+            # fields and this response still cannot approve or submit.
+            response = self._transfer_review_response(session, transfer)
+        elif status_match is not None and self.transfer_requests_enabled:
+            response = self._transaction_status_response(session, status_match)
         else:
             response = self._respond_with_keywords(session, message)
         self._record_history(session, message, response["reply"])

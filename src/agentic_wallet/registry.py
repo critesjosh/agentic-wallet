@@ -21,6 +21,7 @@ class RegistryEntry:
     address: str
     symbol: str
     decimals: int
+    is_native: bool = False
 
 
 class RegistryError(KeyError):
@@ -32,6 +33,14 @@ class Registry:
         if len({entry.asset_id for entry in entries}) != len(entries):
             raise ValueError("registry contains duplicate canonical ids")
         self._by_id: dict[str, RegistryEntry] = {e.asset_id: e for e in entries}
+        native_by_chain: dict[int, RegistryEntry] = {}
+        for entry in entries:
+            if not entry.is_native:
+                continue
+            if entry.chain_id in native_by_chain:
+                raise ValueError("registry contains multiple native assets for one chain")
+            native_by_chain[entry.chain_id] = entry
+        self._native_by_chain = native_by_chain
 
     def resolve(self, asset_id: str) -> RegistryEntry:
         try:
@@ -42,9 +51,22 @@ class Registry:
     def entries(self) -> list[RegistryEntry]:
         return list(self._by_id.values())
 
+    def native_asset(self, chain_id: int) -> RegistryEntry:
+        """Return the code-pinned native asset for ``chain_id`` or fail closed."""
+
+        try:
+            return self._native_by_chain[chain_id]
+        except KeyError as exc:
+            raise RegistryError(f"no native asset configured for chain: {chain_id}") from exc
+
+    def is_native(self, asset_id: str) -> bool:
+        """Whether a canonical asset is the pinned native asset for its chain."""
+
+        return self.resolve(asset_id).is_native
+
     def version_digest(self) -> str:
         payload = sorted(
-            f"{e.asset_id}|{e.chain_id}|{e.address.lower()}|{e.symbol}|{e.decimals}"
+            f"{e.asset_id}|{e.chain_id}|{e.address.lower()}|{e.symbol}|{e.decimals}|{e.is_native}"
             for e in self._by_id.values()
         )
         return canonical_digest(payload)
@@ -55,7 +77,7 @@ class Registry:
 # and must never be used for a live transaction.
 BASE_REGISTRY = Registry(
     [
-        RegistryEntry("base:native", 8453, "native", "ETH", 18),
+        RegistryEntry("base:native", 8453, "native", "ETH", 18, is_native=True),
         RegistryEntry("base:usdc", 8453, "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", "USDC", 6),
         RegistryEntry("base:weth", 8453, "0x4200000000000000000000000000000000000006", "WETH", 18),
         RegistryEntry(
