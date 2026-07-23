@@ -36,6 +36,14 @@ def _evaluate(
     label: str,
     repeat: int = 1,
 ) -> None:
+    child_env = os.environ.copy()
+    source_path = str(WORKSPACE / "src")
+    existing_pythonpath = child_env.get("PYTHONPATH")
+    child_env["PYTHONPATH"] = (
+        f"{source_path}{os.pathsep}{existing_pythonpath}"
+        if existing_pythonpath
+        else source_path
+    )
     for index in range(1, repeat + 1):
         suffix = f"-repeat-{index}" if repeat > 1 else ""
         name = f"{checkpoint}-{label}{suffix}"
@@ -56,7 +64,7 @@ def _evaluate(
             check=False,
             text=True,
             capture_output=True,
-            env=os.environ.copy(),
+            env=child_env,
         )
         (OUTPUT_DIR / f"{name}.log").write_text(
             completed.stdout + completed.stderr

@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 def test_v5_checkpoint_eval_driver_is_evaluation_only(monkeypatch, tmp_path):
-    calls: list[list[str]] = []
+    calls: list[tuple[list[str], dict]] = []
 
     class _Completed:
         stdout = "{}\n"
@@ -19,7 +19,7 @@ def test_v5_checkpoint_eval_driver_is_evaluation_only(monkeypatch, tmp_path):
     monkeypatch.setenv("AGENTIC_WALLET_OUTPUT_DIR", str(tmp_path))
     monkeypatch.setattr(
         "subprocess.run",
-        lambda command, **kwargs: calls.append(command) or _Completed(),
+        lambda command, **kwargs: calls.append((command, kwargs)) or _Completed(),
     )
 
     namespace = runpy.run_path(
@@ -33,5 +33,9 @@ def test_v5_checkpoint_eval_driver_is_evaluation_only(monkeypatch, tmp_path):
     namespace["main"]()
 
     assert len(calls) == 8
-    assert all("evaluate_development.py" in call[1] for call in calls)
-    assert all("train_qlora.py" not in " ".join(call) for call in calls)
+    assert all("evaluate_development.py" in call[1] for call, _ in calls)
+    assert all("train_qlora.py" not in " ".join(call) for call, _ in calls)
+    assert all(
+        str(Path("/workspace/src")) in call_kwargs["env"]["PYTHONPATH"]
+        for _, call_kwargs in calls
+    )
