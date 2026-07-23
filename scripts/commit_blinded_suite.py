@@ -38,18 +38,18 @@ from agentic_wallet.benchmark.blinded_scenarios import (
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = (
-    ROOT / "data" / "benchmark" / "terra-blinded-suite-v11.commitment.json"
+    ROOT / "data" / "benchmark" / "terra-blinded-suite-v12.commitment.json"
 )
 AUTHOR_PROMPTS = (
-    "docs/terra-blinded-author-shared-v2.md",
-    "docs/terra-blinded-author-shard-1a-v2.md",
-    "docs/terra-blinded-author-shard-1b-v2.md",
-    "docs/terra-blinded-author-shard-2a-v2.md",
-    "docs/terra-blinded-author-shard-2b-v2.md",
-    "docs/terra-blinded-author-shard-3a-v2.md",
-    "docs/terra-blinded-author-shard-3b-v2.md",
-    "docs/terra-blinded-author-shard-4a-v2.md",
-    "docs/terra-blinded-author-shard-4b-v2.md",
+    "docs/terra-blinded-author-shared-v3.md",
+    "docs/terra-blinded-author-shard-1a-v3.md",
+    "docs/terra-blinded-author-shard-1b-v3.md",
+    "docs/terra-blinded-author-shard-2a-v3.md",
+    "docs/terra-blinded-author-shard-2b-v3.md",
+    "docs/terra-blinded-author-shard-3a-v3.md",
+    "docs/terra-blinded-author-shard-3b-v3.md",
+    "docs/terra-blinded-author-shard-4a-v3.md",
+    "docs/terra-blinded-author-shard-4b-v3.md",
 )
 PROTECTED_TRACKED_PATHS = (
     *BLINDED_HASHED_HARNESS_FILES,
@@ -57,7 +57,8 @@ PROTECTED_TRACKED_PATHS = (
     "scripts/commit_blinded_suite.py",
     "scripts/evaluate_blinded.py",
     "scripts/materialize_blinded_suite.py",
-    "docs/terra-blinded-author-procedure-v2.md",
+    "docs/terra-blinded-author-procedure-v3.md",
+    "scripts/validate_blinded_author_shard.py",
 )
 
 
@@ -89,6 +90,11 @@ def _require_frozen_git_state() -> str:
         check=False,
     ).returncode:
         raise SystemExit("candidate selection commit is not an ancestor of HEAD")
+    for path in PROTECTED_TRACKED_PATHS:
+        if _git("ls-files", "--error-unmatch", path, check=False).returncode:
+            raise SystemExit("frozen evaluator scope contains an untracked path")
+        if _git("cat-file", "-e", f"HEAD:{path}", check=False).returncode:
+            raise SystemExit("frozen evaluator path is absent from HEAD")
     for cached in (False, True):
         arguments = ["diff", "--quiet"]
         if cached:
@@ -167,10 +173,13 @@ def main() -> None:
         "author_model": BLINDED_AUTHOR_MODEL,
         "author_prompt_sha256": _prompt_digest(),
         "author_procedure_sha256": sha256_named_files(
-            ROOT, ("docs/terra-blinded-author-procedure-v2.md",)
+            ROOT, ("docs/terra-blinded-author-procedure-v3.md",)
         ),
         "author_role": BLINDED_AUTHOR_ROLE,
         "author_shard_sha256": receipt["source_sha256"],
+        "author_validator_sha256": sha256_named_files(
+            ROOT, ("scripts/validate_blinded_author_shard.py",)
+        ),
         "authoring_attempt_count": args.authoring_attempt_count,
         "blinding_scope": BLINDED_BLINDING_SCOPE,
         "candidate_artifact_sha256": BLINDED_CANDIDATE_ARTIFACT_SHA256,

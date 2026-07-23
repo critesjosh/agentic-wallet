@@ -54,6 +54,7 @@ def _commitment(payload: bytes) -> dict:
         "author_procedure_sha256": "e" * 64,
         "author_role": BLINDED_AUTHOR_ROLE,
         "author_shard_sha256": [f"{index:064x}" for index in range(8)],
+        "author_validator_sha256": "8" * 64,
         "authoring_attempt_count": 1,
         "blinding_scope": BLINDED_BLINDING_SCOPE,
         "candidate_artifact_sha256": BLINDED_CANDIDATE_ARTIFACT_SHA256,

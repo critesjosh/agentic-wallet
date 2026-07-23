@@ -19,7 +19,7 @@ from ..benchmark.blinded_scenarios import BLINDED_SCENARIO_CATALOG_VERSION
 
 BLINDED_CASE_COUNT = 64
 BLINDED_COMMITMENT_STATUS = "committed-before-evaluation"
-BLINDED_RUBRIC_VERSION = "model-authored-blinded-wallet-eval-v11"
+BLINDED_RUBRIC_VERSION = "model-authored-blinded-wallet-eval-v12"
 BLINDED_SEQUENCE_MODE = "teacher-forced-typed-context"
 BLINDED_POST_COMMIT_FAILURE_POLICY = (
     "abort-and-retire-suite-without-rerun-or-case-level-inspection"
@@ -27,10 +27,11 @@ BLINDED_POST_COMMIT_FAILURE_POLICY = (
 BLINDED_AUTHOR_GENERATION_CONFIG = {
     "batch_count": 8,
     "filesystem_output": "external-only",
+    "local_validation_attempts_per_shard": 3,
     "requested_fork_turns": "none",
-    "interface": "codex-isolated-terra-subagent",
+    "interface": "codex-isolated-terra-subagent-with-frozen-validator",
     "model_alias": "gpt-5.6-terra",
-    "requested_repository_access": "none-instruction-only",
+    "requested_repository_access": "exact-validator-command-only",
     "whole_suite_regeneration_only": True,
 }
 BLINDED_AUTHOR_MODEL = "codex/gpt-5.6-terra"
@@ -359,6 +360,7 @@ def validate_blinded_commitment(path: str | Path) -> dict[str, Any]:
         "author_prompt_sha256",
         "author_procedure_sha256",
         "author_shard_sha256",
+        "author_validator_sha256",
         "author_role",
         "authoring_attempt_count",
         "blinding_scope",
@@ -428,6 +430,7 @@ def validate_blinded_commitment(path: str | Path) -> dict[str, Any]:
         "candidate_artifact_sha256",
         "author_prompt_sha256",
         "author_procedure_sha256",
+        "author_validator_sha256",
         "commit_script_sha256",
         "evaluation_script_sha256",
         "harness_sha256",

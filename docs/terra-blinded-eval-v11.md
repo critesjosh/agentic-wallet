@@ -12,3 +12,8 @@ validation enforces the address rule on every address-valued field and every
 Materialization failures have no retained compiler exception chain and expose
 only an aggregate message. All other v10 one-shot, disjointness, custody,
 frozen-candidate, aggregate-only, and non-release controls remain unchanged.
+
+Both permitted v11 whole-suite attempts failed aggregate deterministic
+validation before commitment or candidate evaluation. No v11 source is reused.
+The successor is
+[`terra-blinded-eval-v12.md`](terra-blinded-eval-v12.md).

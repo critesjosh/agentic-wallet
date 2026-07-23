@@ -41,7 +41,7 @@ def _fake_compile(value: dict) -> SimpleNamespace:
 
 
 def test_author_shard_requires_exact_quota_prefix_and_trajectory(monkeypatch):
-    prefix = "tb91a-"
+    prefix = "tb101a-"
     monkeypatch.setattr(blinded_authoring, "compile_blinded_source", _fake_compile)
 
     cases, counts = blinded_authoring._validate_source_shard(
@@ -53,7 +53,7 @@ def test_author_shard_requires_exact_quota_prefix_and_trajectory(monkeypatch):
 
 
 def test_author_shard_rejects_wrong_scenario_quota(monkeypatch):
-    prefix = "tb91a-"
+    prefix = "tb101a-"
     records = _source_records(prefix)
     records[0]["scenario_type"] = "conceptual_help"
     monkeypatch.setattr(blinded_authoring, "compile_blinded_source", _fake_compile)
@@ -63,7 +63,7 @@ def test_author_shard_rejects_wrong_scenario_quota(monkeypatch):
 
 
 def test_author_shard_rejects_wrong_identifier_prefix(monkeypatch):
-    prefix = "tb91a-"
+    prefix = "tb101a-"
     records = _source_records(prefix)
     records[0]["scenario_id"] = "wrong-scenario"
     monkeypatch.setattr(blinded_authoring, "compile_blinded_source", _fake_compile)
@@ -73,7 +73,7 @@ def test_author_shard_rejects_wrong_identifier_prefix(monkeypatch):
 
 
 def test_author_shard_rejects_noncontiguous_trajectory(monkeypatch):
-    prefix = "tb91a-"
+    prefix = "tb101a-"
     records = _source_records(prefix)
     records[3]["turn_index"] = 4
     monkeypatch.setattr(blinded_authoring, "compile_blinded_source", _fake_compile)
@@ -89,7 +89,7 @@ def test_all_frozen_terra_prompt_quotas_match_compiler_table():
         blinded_authoring.EXPECTED_SHARD_PREFIXES, names, strict=True
     ):
         lines = (
-            ROOT / "docs" / f"terra-blinded-author-shard-{name}-v2.md"
+            ROOT / "docs" / f"terra-blinded-author-shard-{name}-v3.md"
         ).read_text().splitlines()
         assert lines[0] == f"prefix={prefix}"
         assert lines[1].startswith("scenario_counts=")
@@ -100,7 +100,7 @@ def test_all_frozen_terra_prompt_quotas_match_compiler_table():
 
 
 def test_author_shard_sanitizes_compiler_failure(monkeypatch):
-    prefix = "tb91a-"
+    prefix = "tb101a-"
 
     def fail_with_plaintext(_):
         raise RuntimeError("secret fixture value")
