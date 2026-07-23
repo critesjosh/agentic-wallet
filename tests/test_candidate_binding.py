@@ -112,6 +112,24 @@ def test_complete_transfer_is_bound_without_an_argument_model_call() -> None:
     assert bound.recipient_id == recipient_id
 
 
+def test_base_units_do_not_select_the_base_network() -> None:
+    provider = CandidateRouteProvider()
+    context = prepare_inference_context(
+        {
+            "user_request": (
+                f"Draft 2500000 base units of QUARTZ to {ADDRESS}."
+            ),
+            "chain_id": 777777,
+            "canonical_asset_ids": ["sealed:quartz"],
+        }
+    )
+
+    call = provider.propose_tool_call_with_repair(context, ACTION)
+
+    assert call.arguments["chain_id"] == 777777
+    assert call.arguments["amount_base_units"] == "2500000"
+
+
 def test_missing_or_ambiguous_recipient_forces_clarification() -> None:
     provider = CandidateRouteProvider()
     context = prepare_inference_context(

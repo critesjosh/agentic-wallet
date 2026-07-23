@@ -190,11 +190,18 @@ def _single_asset_id(context: dict[str, Any], request: str) -> str | None:
 def _request_matches_chain(request: str, chain_id: int) -> bool:
     explicit_ids = {int(value) for value in _CHAIN_ID_RE.findall(request)}
     lowered = request.casefold()
-    named_ids = {
-        value
-        for name, value in _CHAIN_NAMES.items()
-        if re.search(rf"\b{re.escape(name)}\b", lowered)
-    }
+    named_ids: set[int] = set()
+    for name, value in _CHAIN_NAMES.items():
+        if name == "base":
+            # "base units" is an amount denomination, not chain selection.
+            pattern = (
+                r"\b(?:on|over|via)\s+(?:the\s+)?base\b"
+                r"|\bbase\s+(?:chain|network)\b"
+            )
+        else:
+            pattern = rf"\b{re.escape(name)}\b"
+        if re.search(pattern, lowered):
+            named_ids.add(value)
     requested = explicit_ids | named_ids
     return not requested or requested == {chain_id}
 
