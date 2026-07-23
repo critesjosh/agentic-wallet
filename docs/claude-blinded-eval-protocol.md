@@ -1,4 +1,4 @@
-# Claude-authored blinded evaluation v5
+# Claude-authored blinded evaluation v6
 
 This is a single-use experimental evaluation, not the independently
 human-authored sealed release gate in
@@ -26,7 +26,11 @@ Protocol v4 was retired before authoring because OpenRouter's compatible
 provider route rejected the nested record schema even after unsupported
 constraints were removed.
 
-Each v5 whole-suite attempt uses four independently generated 16-case batches
+Protocol v5 was retired before authoring because the compatible Azure
+structured-output endpoint does not accept an explicit `temperature` parameter
+when OpenRouter is required to preserve every supplied parameter.
+
+Each v6 whole-suite attempt uses four independently generated 16-case batches
 with fixed quotas, two trajectories per batch, and OpenRouter's strict JSON
 Schema response format. The constrained outer response is an array of 16
 strings. Each string encodes one complete source record; deterministic code

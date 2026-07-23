@@ -83,7 +83,6 @@ def main() -> None:
         "model": MODEL,
         "messages": [{"role": "user", "content": prompt}],
         "max_completion_tokens": 24_000,
-        "temperature": 0.7,
         "provider": {
             "require_parameters": True,
         },

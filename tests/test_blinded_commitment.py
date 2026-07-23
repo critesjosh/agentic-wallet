@@ -45,7 +45,7 @@ def _commitment(payload: bytes) -> dict:
             "interface": "openrouter-chat-completions-json-schema",
             "provider_data_collection": "not-restricted-synthetic-prompts-only",
             "provider_require_parameters": True,
-            "temperature": 0.7,
+            "temperature": "provider-default-unsupported-with-structured-output",
             "whole_suite_regeneration_only": True,
         },
         "author_model": "openrouter/anthropic/claude-fable-5",
