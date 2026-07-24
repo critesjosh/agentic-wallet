@@ -524,8 +524,16 @@ def _transaction_additions() -> list[TrainingExample]:
     return rows
 
 
-def validate_transaction_curriculum_coverage(examples: list[TrainingExample]) -> None:
-    """Assert the transaction-specific safety curriculum did not silently shrink."""
+def validate_transaction_curriculum_coverage(
+    examples: list[TrainingExample], *, live_actions: list[str] | None = None
+) -> None:
+    """Assert the transaction-specific safety curriculum did not silently shrink.
+
+    ``live_actions`` lets a later curriculum inherit these records under its own
+    production allowlist. The default keeps v6 pinned to the allowlist it froze.
+    """
+
+    _LIVE_ACTIONS_EXPECTED = list(_LIVE_ACTIONS if live_actions is None else live_actions)
 
     additions = [item for item in examples if item.id.startswith("sft-v6-")]
     if len(additions) != 36:
@@ -582,7 +590,7 @@ def validate_transaction_curriculum_coverage(examples: list[TrainingExample]) ->
         if item.context.get("chain_id") != 8453:
             raise ValueError("v6 transaction curriculum is Base-only")
         if item.context.get("phase") in {"route_dialogue", "repair_dialogue_route"}:
-            expected_actions = set(_LIVE_ACTIONS)
+            expected_actions = set(_LIVE_ACTIONS_EXPECTED)
             available_actions = set(item.available_actions)
             if item.action_exposure == "production" and available_actions != expected_actions:
                 raise ValueError(

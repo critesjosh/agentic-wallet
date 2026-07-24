@@ -39,11 +39,28 @@ from ..state_machine import TransitionError, WorkflowState
 from ..transaction_store import TransactionStatus, TransactionStore
 from ..unsigned_workflow import UnsignedTransactionWorkflow, UnsignedWorkflowError
 
-_LIVE_CHAIN_ID = 8453
+DEFAULT_LIVE_CHAIN_ID = 8453
+
+# Signing stays narrower than the explorer-link allowlist: these are the only
+# chains whose native transfers this POC will sign. Ethereum mainnet is
+# deliberately absent.
+SIGNABLE_CHAIN_IDS = frozenset({8453, 84532})
 
 
 class TransactionFlowError(RuntimeError):
     """A safe, client-displayable reason that a transaction flow was rejected."""
+
+
+def require_signable_chain_id(chain_id: int) -> int:
+    """Fail closed for any chain outside the signing allowlist."""
+
+    if isinstance(chain_id, bool) or not isinstance(chain_id, int):
+        raise ValueError("live chain ID must be an integer")
+    if chain_id not in SIGNABLE_CHAIN_IDS:
+        raise ValueError(f"chain {chain_id} is not enabled for signing")
+    # Both mappings must agree before the chain is usable.
+    get_chain_metadata(chain_id)
+    return chain_id
 
 
 class TransactionRpc(Protocol):
@@ -190,11 +207,13 @@ class TransactionController:
         max_workflows: int = 128,
         transaction_store: TransactionStore | None = None,
         clock: Any = _now,
+        live_chain_id: int = DEFAULT_LIVE_CHAIN_ID,
     ) -> None:
         if approval_ttl_seconds <= 0 or max_workflows <= 0:
             raise ValueError("approval TTL and workflow capacity must be positive")
         if len(approval_capability_secret) < 32:
             raise ValueError("approval capability secret must be at least 32 bytes")
+        self.live_chain_id = require_signable_chain_id(live_chain_id)
         self.registry = registry
         self.rpc = rpc
         self.signer = signer
@@ -225,7 +244,7 @@ class TransactionController:
         except Exception:
             return False
         return (
-            chain_id == _LIVE_CHAIN_ID
+            chain_id == self.live_chain_id
             and native.asset_id == get_chain_metadata(chain_id).native_asset_id
             and native.is_native
             and bool(sender)
@@ -305,9 +324,10 @@ class TransactionController:
         """Build and simulate an exact native EIP-1559 preimage for review."""
 
         try:
-            if chain_id != _LIVE_CHAIN_ID:
+            if chain_id != self.live_chain_id:
                 raise TransactionFlowError(
-                    "the live transaction proof of concept supports Base only"
+                    "this deployment signs only on "
+                    f"{get_chain_metadata(self.live_chain_id).name}"
                 )
             metadata = get_chain_metadata(chain_id)
             actual_chain = await self.rpc.require_expected_chain()
@@ -571,17 +591,23 @@ class TransactionController:
 
 
 def configured_transaction_controller(
-    *, registry: Registry, rpc_url: str, hmac_secret: bytes
+    *,
+    registry: Registry,
+    rpc_url: str,
+    hmac_secret: bytes,
+    live_chain_id: int = DEFAULT_LIVE_CHAIN_ID,
 ) -> TransactionController:
     """Production wiring, kept explicit so disabled demos own no signer client."""
 
     from ..signer.capability import create_approval_capability
     from ..signer.client import StdioSignerClient
 
+    chain_id = require_signable_chain_id(live_chain_id)
     return TransactionController(
         registry=registry,
-        rpc=EthereumJsonRpcClient(rpc_url, expected_chain_id=_LIVE_CHAIN_ID),
+        rpc=EthereumJsonRpcClient(rpc_url, expected_chain_id=chain_id),
         signer=StdioSignerClient(),
         approval_capability_factory=create_approval_capability,
         approval_capability_secret=hmac_secret,
+        live_chain_id=chain_id,
     )

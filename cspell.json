@@ -9,7 +9,7 @@
     "untuned", "reproducible", "jsonl", "dataclass", "agentic", "fastapi",
     "uvicorn", "starlette", "importorskip", "venv", "pytest", "ipynb",
     "setuptools", "httpx", "testpaths", "addopts", "negotiables",
-    "requotes", "resimulate", "xblockhash"
+    "requotes", "resimulate", "xblockhash", "retargeted"
   ],
   "ignorePaths": [
     "*.ipynb", ".venv/**", "**/__pycache__/**", "data/**", "fixtures/**",

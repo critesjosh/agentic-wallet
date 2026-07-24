@@ -31,6 +31,10 @@ class KeyStore(Protocol):
         """Return a key only to the signing process; never log it."""
 
 
+class KeyAlreadyExistsError(KeyStoreError):
+    """Raised rather than replacing a key that may still control funds."""
+
+
 def _backend_name(backend: object) -> str:
     backend_type = type(backend)
     return f"{backend_type.__module__}.{backend_type.__qualname__}"
@@ -87,10 +91,50 @@ class OSKeyringKeyStore:
             address = Account.from_key(private_key).address
         except Exception as error:
             raise KeyStoreError("provided private key is invalid") from error
+        self._write_private_key(private_key)
+        return address
+
+    def _write_private_key(self, private_key: str) -> None:
         try:
             self._secure_backend().set_password(
                 KEYRING_SERVICE, KEYRING_ACCOUNT, private_key
             )
         except Exception as error:
             raise KeyStoreError("could not write to OS secure store") from error
-        return address
+
+    def signer_address(self) -> str | None:
+        """Return the provisioned address, or None when no key exists.
+
+        This never returns, logs, or derives anything from the key beyond its
+        public address, so it is safe for a status or display path.
+        """
+
+        try:
+            private_key = self.load_private_key()
+        except KeyStoreError:
+            return None
+        return Account.from_key(private_key).address
+
+    def create_private_key(self) -> str:
+        """Generate a new key inside this process and return only its address.
+
+        Refuses when a key already exists: silently replacing one would destroy
+        access to any funds the previous account controls. Deleting a key stays
+        a deliberate manual action outside this code.
+        """
+
+        backend = self._secure_backend()
+        try:
+            existing = backend.get_password(KEYRING_SERVICE, KEYRING_ACCOUNT)
+        except Exception as error:
+            raise KeyStoreError("OS secure store is unavailable") from error
+        if existing:
+            raise KeyAlreadyExistsError(
+                "a signer key already exists; remove it deliberately before "
+                "creating another"
+            )
+        # eth-account draws from os.urandom; no application-supplied seed,
+        # passphrase, or mnemonic is involved.
+        account = Account.create()
+        self._write_private_key(account.key.hex())
+        return account.address

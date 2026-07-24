@@ -69,6 +69,7 @@ class OllamaProvider(InferenceProvider):
         timeout: float = 120.0,
         keep_alive: str = "5m",
         transport: OllamaTransport | None = None,
+        think: bool = False,
     ) -> None:
         if not model.strip():
             raise InferenceError("an Ollama model is required")
@@ -76,6 +77,12 @@ class OllamaProvider(InferenceProvider):
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
         self.keep_alive = keep_alive
+        # Reasoning is off by default. It was originally disabled because
+        # thinking mode returned incomplete responses, and the done/done_reason
+        # gates below still reject those. Enabling it is an evaluated choice:
+        # hidden reasoning tokens are a large latency cost on the mobile target,
+        # and the SFT corpus contains no reasoning traces.
+        self.think = think
         self._transport = transport or _transport
         self.last_response_metadata: dict[str, Any] = {}
 
@@ -94,7 +101,7 @@ class OllamaProvider(InferenceProvider):
             "messages": messages,
             "stream": False,
             "format": schema,
-            "think": False,
+            "think": self.think,
             "options": {"temperature": 0, "seed": 0},
             "keep_alive": self.keep_alive,
         }

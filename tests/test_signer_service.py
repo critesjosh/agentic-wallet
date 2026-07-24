@@ -613,11 +613,12 @@ def test_keyring_adapter_refuses_plaintext_fail_and_unknown_backends():
             require_secure_keyring_backend(backend_type())
 
 
-def test_mcp_surface_has_exactly_three_safe_internal_tools():
+def test_mcp_surface_has_exactly_four_safe_internal_tools():
     server = create_signer_server(_service(FakeRpc()))
     tools = asyncio.run(server.list_tools())
 
     assert {tool.name for tool in tools} == {
+        "create_signer_account",
         "get_signer_address",
         "lookup_submission_outcome",
         "sign_and_submit_approved",
@@ -626,6 +627,11 @@ def test_mcp_surface_has_exactly_three_safe_internal_tools():
     serialized = submission.model_dump_json()
     assert "raw_transaction" not in serialized
     assert "private_key" not in serialized
+    # Account creation must not accept or return key material of any kind.
+    creation = next(tool for tool in tools if tool.name == "create_signer_account")
+    creation_json = creation.model_dump_json()
+    for secret in ("private_key", "mnemonic", "seed", "passphrase"):
+        assert secret not in creation_json
 
     async def lookup_missing() -> dict:
         _, structured = await server.call_tool(

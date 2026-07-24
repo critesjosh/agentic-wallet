@@ -158,6 +158,7 @@ def test_explanation_call_cannot_smuggle_in_another_tool():
     )
     assert provider.available_actions == [
         [
+            "get_account",
             "get_portfolio",
             "get_balance",
             "get_allowances",

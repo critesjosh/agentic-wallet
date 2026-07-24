@@ -30,10 +30,12 @@ from ..state_machine import TERMINAL, TRANSITIONS, WorkflowState
 from .chat import DemoChatAgent
 from .transcripts import debug_transcripts
 from .transactions import (
+    DEFAULT_LIVE_CHAIN_ID,
     BrowserSessionStore,
     TransactionController,
     TransactionFlowError,
     configured_transaction_controller,
+    require_signable_chain_id,
 )
 
 _FIXTURE = Path(__file__).resolve().parents[3] / "fixtures" / "portfolio_base_watch.json"
@@ -168,6 +170,20 @@ def _transactions_enabled() -> bool:
     }
 
 
+def _configured_live_chain_id() -> int:
+    """Resolve the signing chain, failing closed on anything unrecognized."""
+
+    raw = os.getenv("AGENTIC_WALLET_SIGNER_CHAIN_ID", "").strip()
+    if not raw:
+        return DEFAULT_LIVE_CHAIN_ID
+    try:
+        return require_signable_chain_id(int(raw))
+    except ValueError as exc:
+        raise RuntimeError(
+            f"AGENTIC_WALLET_SIGNER_CHAIN_ID is invalid: {exc}"
+        ) from exc
+
+
 def _build_transaction_controller() -> TransactionController | None:
     """Only construct the signer boundary for an explicitly enabled deployment."""
 
@@ -190,14 +206,22 @@ def _build_transaction_controller() -> TransactionController | None:
     except Exception:
         return None
     return configured_transaction_controller(
-        registry=BASE_REGISTRY, rpc_url=rpc_url, hmac_secret=secret
+        registry=BASE_REGISTRY,
+        rpc_url=rpc_url,
+        hmac_secret=secret,
+        live_chain_id=_configured_live_chain_id(),
     )
 
 
 _transactions = _build_transaction_controller()
 # The chat path can request a *review* only when the deployment has a complete
 # deterministic transaction controller.  It never receives an approval tool.
+# ``model_actions`` is derived from this flag, so setting it here also decides
+# whether the model is ever offered the transfer and status routes.
 _chat.transfer_requests_enabled = _transactions is not None
+if _transactions is not None:
+    # Chat must parse transfer commands for the same chain the signer will use.
+    _chat.live_chain_id = _transactions.live_chain_id
 
 
 def _require_transaction_controller() -> TransactionController:
@@ -207,6 +231,23 @@ def _require_transaction_controller() -> TransactionController:
             detail="transaction signing is not configured for this deployment",
         )
     return _transactions
+
+
+async def _current_signer_address(request: Request) -> str | None:
+    """Ask the isolated signer for its address, or None when unavailable.
+
+    Returns None for any remote request so a non-loopback client can never
+    learn the signer account of a local deployment.
+    """
+
+    if _transactions is None or not _is_local_debug_request(request):
+        return None
+    try:
+        return await _transactions.signer.get_signer_address()
+    except Exception:
+        # No provisioned key, or the signer is unavailable. The account view
+        # falls back to the clearly labelled fixture.
+        return None
 
 
 async def _transaction_ready_for_request(request: Request) -> bool:
@@ -321,6 +362,10 @@ async def chat(req: ChatRequest, request: Request) -> dict:
             "data": None,
         }
     else:
+        # Resolve the live signer address here, where async calls are possible,
+        # so the account view reports the real account instead of the fixture.
+        # The key itself never leaves the isolated signer process.
+        _chat.signer_address = await _current_signer_address(request)
         response = _chat.respond(req.session_id, req.message)
     if not await _transaction_ready_for_request(request):
         # A remotely reachable read-only deployment never emits an actionable

@@ -566,3 +566,83 @@ recoverable hash. That record is predeclared ineligible for this minimal-route
 evaluator, and none of the 61 scored inputs changed. A requested repeat was
 blocked by the local execution-credit limit, so the committed report remains
 honestly labeled as the V6.2 model run rather than a fabricated V6.3 rerun.
+
+## V7 account-identity curriculum
+
+`get_account` is a read tool that reports the account identity: the isolated
+signer's address when a key is provisioned, and otherwise the demo fixture
+explicitly labelled as a placeholder. The address is always a typed fact from
+deterministic code, so the curriculum teaches routing and honest narration
+rather than address generation.
+
+`account-identity-v7` retains the 268 v6 records and adds 12 records for:
+
+- explicit identity routing, including chain and account phrasing;
+- disambiguation from `get_registry` and `get_portfolio` when keywords overlap;
+- refusal of private-key, seed-phrase, and key-export requests;
+- refusal to adopt an address supplied by untrusted retrieved text; and
+- grounded narration of both signer-backed and fixture account results.
+
+The inherited v6 records are unchanged except for one field: every record that
+carried the production chat allowlist now carries the current allowlist, which
+includes `get_account`. Training a model on a stale allowlist while serving it a
+different one at inference is exactly the drift this avoids. The v6 artifact
+itself is untouched and still reproduces
+`a567f33a094443909ea686a5f60f6c07d74d139b931f5faf12ab6534b9879ccc`.
+
+The generated artifact has 280 records, split 205 training and 75
+development-validation, with 104 tool calls and 176 dialogue routes. Its
+dataset SHA-256 is
+`62cb7176369773504b5e7e87e1c17fb5535ed8ae4f240430bff57a6129b1064e`; the manifest
+records curriculum version `wallet-account-identity-curriculum-v7-0`.
+
+Because this corpus deliberately contains the phrases "private key" and "seed
+phrase" as user requests, the usual forbidden-keyword scan cannot apply to it.
+Coverage validation instead asserts that no key-shaped or mnemonic-shaped value
+is present, that every key or seed request targets `none` rather than any tool,
+and that no untrusted address is ever restated in a target message.
+
+## 2026-07-23 reasoning mode A/B on the untuned model
+
+Ollama reasoning was originally disabled because thinking mode returned
+incomplete responses that the `done`/`done_reason` gates rejected. That failure
+no longer reproduces on the current runtime: thinking combined with
+schema-constrained output now returns a normal stop and valid JSON. Whether
+reasoning helps was therefore re-opened as an empirical question rather than
+left as a workaround.
+
+Untuned `gemma4:e2b` was evaluated twice against the V7 validation partition,
+changing only the `think` flag. Both runs scored the same 64 records with the
+same seed and temperature.
+
+| Metric | Reasoning off | Reasoning on |
+| --- | ---: | ---: |
+| Correct action | 41/64 (64.1%) | 38/64 (59.4%) |
+| Exact action and arguments | 36/64 (56.2%) | 33/64 (51.6%) |
+| Zero-argument exact | 31/38 | 28/38 |
+| Single-argument exact | 5/14 | 5/14 |
+| Multi-argument exact | 0/12 | 0/12 |
+| Development safety failures | 7 | 7 |
+| Wall clock | 49.5s | 4m48.7s |
+
+Reasoning lowered accuracy and cost 5.8 times the wall clock. It recovered no
+multi-argument case and removed no hard-zero failure; the seven safety failures
+were identical in kind and count. Its only measured effect on correctness was
+regressing three zero-argument cases that had passed without it.
+
+The reports are
+`data/training/results/ollama-e2b-v7-account-reasoning-off-20260723.json` and
+`data/training/results/ollama-e2b-v7-account-reasoning-on-20260723.json`.
+
+This is development evidence from one untuned model, 64 records, and a single
+seed. It does not prove that reasoning cannot help a tuned checkpoint. It does
+remove the motivation for authoring a reasoning-trace corpus, which would only
+be worth its cost if reasoning showed promise on the cases that currently fail.
+Supervised targets in this repository remain bare decision objects, so training
+on them and then enabling reasoning at inference would also mismatch what the
+fine-tune teaches.
+
+Reasoning stays off by default. `scripts/evaluate_development.py --think` keeps
+the comparison cheap to repeat against a tuned checkpoint. A further argument
+against enabling it is the mobile target, which measured roughly 3 tokens per
+second: the observed reasoning traces would add minutes per turn on device.

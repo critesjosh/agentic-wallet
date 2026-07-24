@@ -86,6 +86,7 @@ class ExactApprovalArguments(StrictModel):
 
 TOOL_ARGUMENT_MODELS: dict[str, type[StrictModel]] = {
     # Current read-only web tools.
+    "get_account": NoArguments,
     "get_portfolio": NoArguments,
     "get_balance": BalanceArguments,
     "get_allowances": NoArguments,
@@ -192,6 +193,9 @@ _LEGACY_ROUTE_SYSTEM_PROMPT = (
 )
 
 TOOL_DESCRIPTIONS = {
+    "get_account": (
+        "Read the watched account's identity: address, chain, and block anchor."
+    ),
     "get_portfolio": "Read the normalized watch-only portfolio snapshot.",
     "get_balance": "Read one canonical asset balance; asset_id is required.",
     "get_allowances": "Read current token allowances.",

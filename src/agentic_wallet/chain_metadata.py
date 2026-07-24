@@ -12,6 +12,7 @@ import re
 
 
 _TRANSACTION_HASH_RE = re.compile(r"^0x[0-9a-fA-F]{64}$")
+_ADDRESS_RE = re.compile(r"^0x[0-9a-fA-F]{40}$")
 
 
 class ChainMetadataError(ValueError):
@@ -26,26 +27,47 @@ class InvalidTransactionHashError(ChainMetadataError):
     """Raised when a value is not an Ethereum transaction hash."""
 
 
+class InvalidAddressError(ChainMetadataError):
+    """Raised when a value is not an Ethereum address."""
+
+
 @dataclass(frozen=True, slots=True)
 class ChainMetadata:
     chain_id: int
     name: str
     native_asset_id: str
     explorer_transaction_prefix: str
+    explorer_address_prefix: str
 
     def transaction_url(self, transaction_hash: str) -> str:
         return f"{self.explorer_transaction_prefix}{normalize_transaction_hash(transaction_hash)}"
 
+    def address_url(self, address: str) -> str:
+        return f"{self.explorer_address_prefix}{normalize_address(address)}"
+
 
 # This is deliberately a small allowlist for the Phase 8 native-transfer POC.
 _SUPPORTED_CHAINS: dict[int, ChainMetadata] = {
-    1: ChainMetadata(1, "Ethereum", "ethereum:native", "https://etherscan.io/tx/"),
-    8453: ChainMetadata(8453, "Base", "base:native", "https://basescan.org/tx/"),
+    1: ChainMetadata(
+        1,
+        "Ethereum",
+        "ethereum:native",
+        "https://etherscan.io/tx/",
+        "https://etherscan.io/address/",
+    ),
+    8453: ChainMetadata(
+        8453,
+        "Base",
+        "base:native",
+        "https://basescan.org/tx/",
+        "https://basescan.org/address/",
+    ),
     84532: ChainMetadata(
         84532,
         "Base Sepolia",
         "base:sepolia-native",
         "https://sepolia.basescan.org/tx/",
+        "https://sepolia.basescan.org/address/",
     ),
 }
 
@@ -72,7 +94,21 @@ def normalize_transaction_hash(transaction_hash: str) -> str:
     return transaction_hash.lower()
 
 
+def normalize_address(address: str) -> str:
+    """Validate an address for link building without accepting bytes."""
+
+    if not isinstance(address, str) or not _ADDRESS_RE.fullmatch(address):
+        raise InvalidAddressError("address must be 20-byte 0x-prefixed hex")
+    return address
+
+
 def explorer_transaction_url(chain_id: int, transaction_hash: str) -> str:
     """Build a link using only trusted metadata and a validated hash."""
 
     return get_chain_metadata(chain_id).transaction_url(transaction_hash)
+
+
+def explorer_address_url(chain_id: int, address: str) -> str:
+    """Build an account link using only trusted metadata and a validated address."""
+
+    return get_chain_metadata(chain_id).address_url(address)

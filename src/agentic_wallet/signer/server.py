@@ -31,6 +31,19 @@ def create_signer_server(service: SignerService) -> FastMCP:
             raise ValueError(str(error)) from error
 
     @server.tool(
+        name="create_signer_account",
+        description=(
+            "Generate a new signer key inside this process and return only its "
+            "address. Refuses when a key already exists."
+        ),
+    )
+    async def create_signer_account() -> dict[str, str]:
+        try:
+            return await service.create_signer_account()
+        except SignerDenied as error:
+            raise ValueError(str(error)) from error
+
+    @server.tool(
         name="sign_and_submit_approved",
         description="Verify and submit one exact, explicitly approved native transfer.",
     )

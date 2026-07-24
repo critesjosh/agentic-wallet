@@ -471,7 +471,7 @@ async def test_controller_live_scope_rejects_non_base_before_rpc_use():
     rpc, signer = FakeRpc(), FakeSigner()
     subject = controller(rpc=rpc, signer=signer)
 
-    with pytest.raises(Exception, match="supports Base only"):
+    with pytest.raises(Exception, match="signs only on Base"):
         await subject.propose_native_transfer(
             session_id="session-one",
             chain_id=1,

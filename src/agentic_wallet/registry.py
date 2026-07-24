@@ -72,12 +72,18 @@ class Registry:
         return canonical_digest(payload)
 
 
-# Pinned Base mainnet assets for the fixture-backed read-only demo. Native is a
-# sentinel, not an address. The router is intentionally a non-production mock
-# and must never be used for a live transaction.
+# Pinned Base assets for the fixture-backed read-only demo and the Phase 8
+# native-transfer POC. Native is a sentinel, not an address. The router is
+# intentionally a non-production mock and must never be used for a live
+# transaction. Base Sepolia carries only its native asset because the POC signs
+# native transfers and nothing else; its ID must match the code-owned
+# ``chain_metadata`` entry for that chain.
 BASE_REGISTRY = Registry(
     [
         RegistryEntry("base:native", 8453, "native", "ETH", 18, is_native=True),
+        RegistryEntry(
+            "base:sepolia-native", 84532, "native", "ETH", 18, is_native=True
+        ),
         RegistryEntry("base:usdc", 8453, "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", "USDC", 6),
         RegistryEntry("base:weth", 8453, "0x4200000000000000000000000000000000000006", "WETH", 18),
         RegistryEntry(

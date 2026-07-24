@@ -41,12 +41,35 @@ def signer_child_environment(environment: dict[str, str] | None = None) -> dict[
     return {name: source[name] for name in allowed if name in source}
 
 
+def _require_address(response: dict[str, Any]) -> str:
+    address = response.get("address")
+    if not isinstance(address, str):
+        raise SignerClientError("private signer returned an invalid address")
+    return address
+
+
+def _rejection_reason(result: Any) -> str | None:
+    """Read the server's own message, which never contains key material."""
+
+    for item in getattr(result, "content", None) or []:
+        text = getattr(item, "text", None)
+        if isinstance(text, str) and text.strip():
+            return text.strip()
+    return None
+
+
 @dataclass(frozen=True)
 class StdioSignerClient:
     command: str = sys.executable
     args: tuple[str, ...] = ("-m", "agentic_wallet.signer.server")
 
-    async def _call(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+    async def _call(
+        self,
+        name: str,
+        arguments: dict[str, Any],
+        *,
+        surface_rejection_reason: bool = False,
+    ) -> dict[str, Any]:
         # MCP intentionally inherits only a safe environment allowlist.  Forward
         # the signer's two server-owned configuration values explicitly; neither
         # is a private key and neither is exposed through an MCP argument.
@@ -58,6 +81,13 @@ class StdioSignerClient:
                 await session.initialize()
                 result = await session.call_tool(name, arguments)
         if result.isError:
+            # Signing rejections stay opaque so a caller cannot probe the
+            # boundary. Administrative calls opt in to their own secret-free
+            # reason, which the service builds without touching key material.
+            if surface_rejection_reason:
+                raise SignerClientError(
+                    _rejection_reason(result) or "private signer rejected the request"
+                )
             raise SignerClientError("private signer rejected the request")
         if result.structuredContent is None or not isinstance(result.structuredContent, dict):
             raise SignerClientError("private signer returned an invalid response")
@@ -65,10 +95,15 @@ class StdioSignerClient:
 
     async def get_signer_address(self) -> str:
         response = await self._call("get_signer_address", {})
-        address = response.get("address")
-        if not isinstance(address, str):
-            raise SignerClientError("private signer returned an invalid address")
-        return address
+        return _require_address(response)
+
+    async def create_signer_account(self) -> str:
+        """Ask the signer to generate a key and return only its address."""
+
+        response = await self._call(
+            "create_signer_account", {}, surface_rejection_reason=True
+        )
+        return _require_address(response)
 
     async def sign_and_submit_approved(
         self, *, envelope: dict[str, Any], approval_capability: str

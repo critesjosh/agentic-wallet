@@ -35,7 +35,7 @@ class UserCorrection(StrictModel):
 class VerifiedFact(StrictModel):
     """Trusted tool output retained as data, never as an instruction."""
 
-    fact_type: Literal["portfolio", "balance", "allowances", "registry"]
+    fact_type: Literal["account", "portfolio", "balance", "allowances", "registry"]
     data: dict[str, Any]
 
 

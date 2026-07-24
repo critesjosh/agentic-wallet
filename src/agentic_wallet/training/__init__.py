@@ -26,6 +26,10 @@ from .pipeline_curriculum import (
 from .transaction_curriculum import (
     TRANSACTION_PIPELINE_CURRICULUM_VERSION,
     load_transaction_candidate_curriculum,
+)
+from .account_curriculum import (
+    ACCOUNT_PIPELINE_CURRICULUM_VERSION,
+    load_account_curriculum,
     validate_transaction_curriculum_coverage,
 )
 from .sealed import load_verified_sealed_cases, validate_sealed_commitment
@@ -72,6 +76,7 @@ __all__ = [
     "PIPELINE_CURRICULUM_VERSION",
     "CANDIDATE_PIPELINE_CURRICULUM_VERSION",
     "TRANSACTION_PIPELINE_CURRICULUM_VERSION",
+    "ACCOUNT_PIPELINE_CURRICULUM_VERSION",
     "TrainingExample",
     "audit_blinded_disjointness",
     "blinded_adapter_sha256",
@@ -86,6 +91,7 @@ __all__ = [
     "load_pipeline_curriculum",
     "load_candidate_pipeline_curriculum",
     "load_transaction_candidate_curriculum",
+    "load_account_curriculum",
     "load_verified_sealed_cases",
     "load_verified_blinded_cases",
     "render_training_pair",

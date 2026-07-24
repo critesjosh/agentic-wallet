@@ -29,6 +29,22 @@ def render_verified_result(data: dict[str, Any]) -> str:
     """Render trusted tool output without model participation."""
 
     kind = data.get("type")
+    if kind == "account":
+        account = data["account"]
+        if account["source"] == "signer":
+            return (
+                f"Your signer account is {account['address']} on "
+                f"{account['chain_name']} (chain {account['chain_id']}). "
+                "Its key stays in the isolated signer and is never shown here."
+            )
+        stale = " The snapshot is marked stale." if account["stale"] else ""
+        return (
+            "No real account is loaded. This demo is showing the sample fixture "
+            f"address {account['address']} on {account['chain_name']} (chain "
+            f"{account['chain_id']}), as of block {account['as_of_block']}. "
+            "Nobody controls it, so do not send funds to it."
+            f"{stale}"
+        )
     if kind == "portfolio":
         portfolio = data["portfolio"]
         return (
@@ -79,4 +95,9 @@ def validate_grounded_message(
         raise InferenceError(
             f"model narration contains unsupported typed facts: {unsupported}"
         )
+    if supported and not mentioned:
+        # Narration that states no fact at all passes the unsupported-fact
+        # check trivially, and would silently replace a deterministic summary
+        # the user asked for with filler. Fall back to the trusted summary.
+        raise InferenceError("model narration restates no verified fact")
     return message

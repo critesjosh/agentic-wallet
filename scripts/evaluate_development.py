@@ -27,6 +27,11 @@ def main() -> None:
     parser.add_argument("--dataset", type=Path, default=DEFAULT_DATASET)
     parser.add_argument("--adapter-path", type=Path, default=None)
     parser.add_argument("--json-output", type=Path, required=True)
+    parser.add_argument(
+        "--think",
+        action="store_true",
+        help="Enable Ollama reasoning mode (off by default).",
+    )
     args = parser.parse_args()
 
     examples = [
@@ -40,7 +45,9 @@ def main() -> None:
         if args.adapter_path is not None:
             raise SystemExit("--adapter-path is available only for Transformers")
         provider = OllamaProvider(
-            model=args.model_id or "gemma4:e2b", base_url=args.base_url
+            model=args.model_id or "gemma4:e2b",
+            base_url=args.base_url,
+            think=args.think,
         )
     else:
         provider = LocalTransformersProvider(
@@ -57,6 +64,7 @@ def main() -> None:
         "provider": provider.name,
         "model": getattr(provider, "model", getattr(provider, "model_id", None)),
         "native_constrained_decoding": provider.native_constrained_decoding,
+        "reasoning_enabled": bool(getattr(provider, "think", False)),
         **report.to_dict(),
     }
     print(json.dumps({key: value for key, value in payload.items() if key != "results"}, indent=2, sort_keys=True))

@@ -166,6 +166,7 @@
       "properties": {
         "fact_type": {
           "enum": [
+            "account",
             "portfolio",
             "balance",
             "allowances",

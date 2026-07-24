@@ -14,12 +14,14 @@ from agentic_wallet.training import (
     GENERATOR_VERSION,
     NATURAL_CURRICULUM_VERSION,
     PIPELINE_CURRICULUM_VERSION,
+    ACCOUNT_PIPELINE_CURRICULUM_VERSION,
     TRANSACTION_PIPELINE_CURRICULUM_VERSION,
     generate_error_driven_training_examples,
     generate_training_examples,
     load_candidate_pipeline_curriculum,
     load_natural_curriculum,
     load_pipeline_curriculum,
+    load_account_curriculum,
     load_transaction_candidate_curriculum,
     validate_training_dataset,
 )
@@ -31,6 +33,7 @@ from agentic_wallet.training.config import (
     ERROR_DRIVEN_DATASET_VERSION,
     WORKFLOW_DATASET_VERSION,
     PIPELINE_DATASET_VERSION,
+    ACCOUNT_PIPELINE_DATASET_VERSION,
     TRANSACTION_PIPELINE_DATASET_VERSION,
 )
 
@@ -98,6 +101,17 @@ PROFILES = {
         "generator_version": TRANSACTION_PIPELINE_CURRICULUM_VERSION,
         "generate": None,
         "load": load_transaction_candidate_curriculum,
+    },
+    "account-identity-v7": {
+        "output": ROOT / "data" / "training" / "sft-v7-account-identity.jsonl",
+        "source": ROOT / "data" / "training" / "natural_v3_source.jsonl",
+        "tool_count": None,
+        "dialogue_count": None,
+        "seed": None,
+        "dataset_version": ACCOUNT_PIPELINE_DATASET_VERSION,
+        "generator_version": ACCOUNT_PIPELINE_CURRICULUM_VERSION,
+        "generate": None,
+        "load": load_account_curriculum,
     },
 }
 

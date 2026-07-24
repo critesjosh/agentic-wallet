@@ -131,11 +131,28 @@ never authorization. Observed failures are recorded in
 
 Candidate-bound transfers remove recipient-address generation from the model
 contract. For the live proof, deterministic code accepts only the exact narrow
-current-message form `send <integer> wei to <0x address> on base`; Gemma can
-select the argument-free `request_native_transfer_review` route but cannot
-compose or alter its fields. The endpoint repeats checksum, chain, balance,
-recipient-class, simulation, and policy checks. Missing, ambiguous, contract,
-zero, self, and non-Base recipients fail closed.
+current-message form `send <amount> <wei|eth> to <0x address> on <base|base
+sepolia>`; Gemma can select the argument-free
+`request_native_transfer_review` route but cannot compose or alter its fields.
+Decimal amounts convert to integer base units with exact integer arithmetic, so
+no float ever touches an amount; sub-wei precision, fractional wei, and zero
+are rejected. A command naming a chain other than the configured signing chain
+fails closed rather than being retargeted. The endpoint repeats checksum,
+chain, balance, recipient-class, simulation, and policy checks. Missing,
+ambiguous, contract, zero, self, and off-chain recipients fail closed.
+
+`get_account` reports the account identity. When the isolated signer holds a
+key, it returns that real address, the configured signing chain, and a
+code-owned explorer link. Otherwise it states that no real account is loaded
+and labels the demo fixture as a placeholder with no link, because presenting a
+synthetic address beside a working explorer link would invite funding an
+account nobody controls. It is a read tool: it exposes no key material and
+cannot reach signing.
+
+Model narration must restate at least one verified fact from the typed result.
+A reply that asserts nothing would otherwise pass the unsupported-fact check
+trivially and replace the deterministic summary with filler; the deterministic
+summary is used instead.
 
 Ollama, llama.cpp, and OpenRouter request native schema-constrained decoding.
 The direct Transformers provider currently has post-hoc whole-output validation
@@ -155,18 +172,37 @@ header rejection is not a substitute for authentication. Install the signer
 extra, provision through the hidden-TTY script, and configure a Base RPC plus a
 URL-safe base64 key that decodes to at least 32 random bytes:
 
+Create a new account, or import one you already have. Creation runs inside the
+signer process through its private MCP surface, so no private key, mnemonic, or
+seed ever crosses that boundary or reaches this repository. The signer refuses
+to replace an existing key, and there is no export tool: back up the address
+you are given and treat the account as disposable test funds.
+
 ```bash
 pip install -e ".[dev,web,signer]"
+
+# Create a new account (prints only the address).
+AGENTIC_WALLET_SIGNER_RPC_URL=https://your-base-sepolia-rpc.example \
+  python scripts/create_signer_account.py
+
+# Or import a key you already control.
 python scripts/provision_signer_key.py
 
 # Example generator; keep the resulting value secret.
 openssl rand -base64 32 | tr '+/' '-_' | tr -d '='
 
 AGENTIC_WALLET_TRANSACTION_ENABLED=true \
-AGENTIC_WALLET_SIGNER_RPC_URL=https://your-base-rpc.example \
+AGENTIC_WALLET_SIGNER_RPC_URL=https://your-base-sepolia-rpc.example \
 AGENTIC_WALLET_APPROVAL_HMAC_KEY='URL_SAFE_BASE64_VALUE' \
+AGENTIC_WALLET_SIGNER_CHAIN_ID=84532 \
   uvicorn agentic_wallet.web.app:app --host 127.0.0.1
 ```
+
+`AGENTIC_WALLET_SIGNER_CHAIN_ID` accepts only 8453 (Base) or 84532 (Base
+Sepolia) and defaults to 8453, so set it explicitly to stay on testnet funds.
+Ethereum mainnet has explorer metadata but is deliberately absent from the
+signing allowlist. The chat parser, the proposal endpoint, and the RPC client
+are all pinned to the same configured chain.
 
 Never put a private key in `.env`; only the OS keyring may hold it. The UI
 advertises signing only after signer and RPC readiness succeed. A successful or

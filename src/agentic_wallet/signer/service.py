@@ -96,6 +96,25 @@ class SignerService:
                 raise
             raise SignerDenied("signer key is unavailable") from error
 
+    async def create_signer_account(self) -> dict[str, str]:
+        """Generate a signer key in this process and return only its address.
+
+        The key is written straight to the OS secure store. No private key,
+        mnemonic, or seed crosses this boundary in either direction, and an
+        existing key is never replaced.
+        """
+
+        create = getattr(self._key_store, "create_private_key", None)
+        if create is None:
+            raise SignerDenied("this key store cannot create an account")
+        try:
+            return {"address": create()}
+        except Exception as error:
+            if isinstance(error, SignerDenied):
+                raise
+            # Surface the store's own reason: it is deliberately secret-free.
+            raise SignerDenied(str(error)) from error
+
     def lookup_submission_outcome(
         self, envelope_digest: str
     ) -> SignerOutcome | None:

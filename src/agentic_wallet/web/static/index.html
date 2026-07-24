@@ -75,7 +75,26 @@
 
       function renderData(d) {
         if (!d) return;
-        if (d.type === "portfolio") {
+        if (d.type === "account") {
+          const a = d.account;
+          const isSigner = a.source === "signer";
+          // explorer_url is built server-side from the code-owned chain
+          // allowlist and a validated address, so it is never client input.
+          const link = a.explorer_url
+            ? `<tr><td>explorer</td><td><a href="${esc(a.explorer_url)}" target="_blank" rel="noopener noreferrer">view account</a></td></tr>`
+            : "";
+          const block = a.as_of_block === null ? ""
+            : `<tr><td>as of block</td><td>${esc(a.as_of_block)}</td></tr>`;
+          el("data", `<table>
+            <tr><td>address</td><td><code>${esc(a.address)}</code></td></tr>
+            <tr><td>chain</td><td>${esc(a.chain_name)} (${esc(a.chain_id)})</td></tr>
+            ${block}
+            <tr><td>source</td><td>${isSigner ? "isolated signer" : "sample fixture"}</td></tr>
+            <tr><td>access</td><td>${a.watch_only ? "watch-only" : "can sign with approval"}</td></tr>
+            ${link}</table>
+            ${isSigner ? "" : '<div class="digest">Placeholder address. Nobody controls it, so do not send funds to it. Create a signer account to use a real one.</div>'}
+            ${a.stale ? '<div class="digest">snapshot is stale</div>' : ""}`);
+        } else if (d.type === "portfolio") {
           const p = d.portfolio;
           let rows = `<tr><td>base:native</td><td>${amt(p.native_balance)}</td></tr>` +
             p.token_balances.map(t => `<tr><td>${esc(t.asset_id)}</td><td>${amt(t.amount)}</td></tr>`).join("");
