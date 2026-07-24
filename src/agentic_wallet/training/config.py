@@ -9,6 +9,7 @@ PIPELINE_DATASET_VERSION = "wallet-sft-v4-pipeline"
 CANDIDATE_PIPELINE_DATASET_VERSION = "wallet-sft-v5-candidate-binding-minimal-route"
 TRANSACTION_PIPELINE_DATASET_VERSION = "wallet-sft-v6-transaction-boundary-route"
 ACCOUNT_PIPELINE_DATASET_VERSION = "wallet-sft-v7-account-identity-route"
+ACCOUNT_DIVERSITY_DATASET_VERSION = "wallet-sft-v8-account-diversity-route"
 SUPPORTED_DATASET_VERSIONS = frozenset(
     {
         DATASET_VERSION,
@@ -18,6 +19,7 @@ SUPPORTED_DATASET_VERSIONS = frozenset(
         CANDIDATE_PIPELINE_DATASET_VERSION,
         TRANSACTION_PIPELINE_DATASET_VERSION,
         ACCOUNT_PIPELINE_DATASET_VERSION,
+        ACCOUNT_DIVERSITY_DATASET_VERSION,
     }
 )
 LORA_TARGET_MODULES = ("q_proj", "k_proj", "v_proj", "o_proj")

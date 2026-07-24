@@ -36,12 +36,33 @@ WORKSPACE = Path(os.environ.get("AGENTIC_WALLET_WORKSPACE", "/workspace"))
 OUTPUT_ROOT = Path(os.environ.get("AGENTIC_WALLET_OUTPUT_ROOT", "/outputs"))
 ADAPTER = Path(os.environ.get("AGENTIC_WALLET_ADAPTER", "/adapter"))
 
-IN_DIST = WORKSPACE / "data" / "training" / "sft-v7-account-identity.jsonl"
+# The in-distribution split must match the trained dataset, so a V8 run overrides
+# it to the V8 validation split. The disjoint suite is deliberately fixed: it is
+# the held-out generalization measure and stays the same across dataset versions.
+IN_DIST = Path(
+    os.environ.get(
+        "AGENTIC_WALLET_IN_DIST",
+        str(WORKSPACE / "data" / "training" / "sft-v7-account-identity.jsonl"),
+    )
+)
 DISJOINT = WORKSPACE / "data" / "benchmark" / "independent-route-v7.jsonl"
 
 sys.path.insert(0, str(WORKSPACE / "src"))
 
-CHECKPOINTS = ("checkpoint-25", "checkpoint-50", "checkpoint-75")
+
+def _discover_checkpoints(adapter: Path) -> tuple[str, ...]:
+    """Every ``checkpoint-N`` under the adapter, ordered by step.
+
+    The checkpoint interval is a training knob, so the curve is read from
+    whatever the run actually wrote rather than a fixed 25/50/75 assumption.
+    """
+
+    found = [
+        path.name
+        for path in adapter.glob("checkpoint-*")
+        if path.is_dir() and (path / "adapter_config.json").is_file()
+    ]
+    return tuple(sorted(found, key=lambda name: int(name.split("-")[1])))
 
 
 def main() -> None:
@@ -69,11 +90,13 @@ def main() -> None:
     output_dir = OUTPUT_ROOT / f"v7-disjoint-checkpoint-{timestamp}"
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    checkpoints = _discover_checkpoints(ADAPTER)
+    if not checkpoints:
+        raise SystemExit(f"no checkpoints found under {ADAPTER}")
+
     summary: dict[str, dict] = {}
-    for checkpoint in CHECKPOINTS:
+    for checkpoint in checkpoints:
         adapter_path = ADAPTER / checkpoint
-        if not (adapter_path / "adapter_config.json").is_file():
-            raise SystemExit(f"checkpoint not found: {adapter_path}")
         # Fresh provider per checkpoint so each adapter loads cleanly on the base.
         provider = LocalTransformersProvider(adapter_path=str(adapter_path))
         provider.load()

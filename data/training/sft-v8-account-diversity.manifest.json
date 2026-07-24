@@ -1,0 +1,249 @@
+{
+  "base_model_id": "google/gemma-4-E2B-it",
+  "base_model_revision": "3e22461f65e89153144f8adb70e3b8c2cc9845a7",
+  "benchmark_role": "development-regression-only",
+  "dataset_sha256": "1d2002989e154f2d302163358195c93171f32826181e3abb5cceb9e66191c408",
+  "dataset_version": "wallet-sft-v8-account-diversity-route",
+  "diversity": {
+    "overall": {
+      "count": 86,
+      "distinct_1": 0.4225,
+      "distinct_2": 0.8645,
+      "distinct_3": 0.9824,
+      "max_pairwise_similarity": 0.7184,
+      "near_duplicate_pairs": []
+    },
+    "per_family": {
+      "account": {
+        "count": 12,
+        "distinct_1": 0.6304,
+        "distinct_2": 0.9375,
+        "distinct_3": 1.0,
+        "max_pairwise_similarity": 0.5714,
+        "near_duplicate_pairs": []
+      },
+      "allowance": {
+        "count": 8,
+        "distinct_1": 0.8448,
+        "distinct_2": 0.98,
+        "distinct_3": 1.0,
+        "max_pairwise_similarity": 0.475,
+        "near_duplicate_pairs": []
+      },
+      "balance": {
+        "count": 8,
+        "distinct_1": 0.7188,
+        "distinct_2": 0.9643,
+        "distinct_3": 1.0,
+        "max_pairwise_similarity": 0.4948,
+        "near_duplicate_pairs": []
+      },
+      "conversation": {
+        "count": 8,
+        "distinct_1": 0.9062,
+        "distinct_2": 1.0,
+        "distinct_3": 1.0,
+        "max_pairwise_similarity": 0.411,
+        "near_duplicate_pairs": []
+      },
+      "help": {
+        "count": 6,
+        "distinct_1": 0.7442,
+        "distinct_2": 1.0,
+        "distinct_3": 1.0,
+        "max_pairwise_similarity": 0.4819,
+        "near_duplicate_pairs": []
+      },
+      "key-disclosure": {
+        "count": 10,
+        "distinct_1": 0.675,
+        "distinct_2": 0.9429,
+        "distinct_3": 1.0,
+        "max_pairwise_similarity": 0.6444,
+        "near_duplicate_pairs": []
+      },
+      "portfolio": {
+        "count": 8,
+        "distinct_1": 0.7797,
+        "distinct_2": 0.9804,
+        "distinct_3": 1.0,
+        "max_pairwise_similarity": 0.4416,
+        "near_duplicate_pairs": []
+      },
+      "registry": {
+        "count": 8,
+        "distinct_1": 0.6515,
+        "distinct_2": 0.9483,
+        "distinct_3": 0.98,
+        "max_pairwise_similarity": 0.7184,
+        "near_duplicate_pairs": []
+      },
+      "reject": {
+        "count": 12,
+        "distinct_1": 0.7103,
+        "distinct_2": 0.9474,
+        "distinct_3": 0.988,
+        "max_pairwise_similarity": 0.4615,
+        "near_duplicate_pairs": []
+      },
+      "untrusted-note": {
+        "count": 6,
+        "distinct_1": 0.7059,
+        "distinct_2": 0.9333,
+        "distinct_3": 1.0,
+        "max_pairwise_similarity": 0.5055,
+        "near_duplicate_pairs": []
+      }
+    },
+    "thresholds": {
+      "max_pairwise_similarity": 0.72,
+      "min_distinct_1": 0.34,
+      "min_distinct_2": 0.62
+    }
+  },
+  "frozen_benchmark": {
+    "eval_family.jsonl": "d410832d3841852e323167a4856108a4640c066db364fc250523023acdd8f066",
+    "train_family.jsonl": "3905abebf59c1728dfcb3c31a4db092e8decd3e10e943006c90acabd145dd84b"
+  },
+  "generator_version": "wallet-account-diversity-curriculum-v8-0",
+  "profile": "account-diversity-v8",
+  "seed": null,
+  "source": {
+    "path": "data/training/natural_v3_source.jsonl",
+    "sha256": "ac3c644f97e762a0b634563eb49831bf103052f9d9ab6adeec573d2b708490ff"
+  },
+  "validation": {
+    "coverage_counts": {
+      "adversarial_condition": {
+        "automatic-retry": 1,
+        "chat-approval": 1,
+        "chat-history-approval": 1,
+        "execution-before-result": 1,
+        "fake-transaction-link": 1,
+        "injected-approval": 1,
+        "key-disclosure-request": 10,
+        "nonce-drift": 1,
+        "none": 268,
+        "remote-signing-request": 1,
+        "signing-action-distractor": 17,
+        "typed-untrusted-data": 38,
+        "unlimited-approval-distractor": 16,
+        "untrusted-transaction-hash": 1
+      },
+      "ambiguity_type": {
+        "invalid-previous-output": 8,
+        "missing-recipient": 18,
+        "missing-transaction-hash": 1,
+        "none": 330,
+        "wrong-chain": 1
+      },
+      "conversational_intent": {
+        "clarify": 4,
+        "conversation": 67,
+        "none": 216,
+        "propose_tool": 70,
+        "refuse": 1
+      },
+      "intended_action": {
+        "create_exact_approval_plan": 32,
+        "create_transfer_plan_from_candidate": 8,
+        "get_account": 12,
+        "get_allowances": 8,
+        "get_balance": 8,
+        "get_portfolio": 8,
+        "get_registry": 8,
+        "get_swap_quote": 64,
+        "get_transaction_status": 2,
+        "none": 72,
+        "refresh_swap_quote": 32,
+        "reject_simulation": 32,
+        "reject_state_changing": 12,
+        "request_missing_information": 16,
+        "request_native_transfer_review": 6,
+        "request_user_confirmation": 32,
+        "show_help": 6
+      },
+      "risk_category": {
+        "ambiguous-broadcast": 2,
+        "arbitrary-address-invention": 2,
+        "fake-transaction-hash": 2,
+        "fixture-address-misuse": 2,
+        "key-disclosure": 10,
+        "none": 115,
+        "prompt-injection": 39,
+        "recipient-preflight": 3,
+        "registry-drift": 1,
+        "remote-signing": 2,
+        "signing-boundary-violation": 50,
+        "stale-quote": 32,
+        "stale-state": 5,
+        "unexpected-transfer": 32,
+        "unlimited-approval": 32,
+        "wrong-chain": 1,
+        "wrong-recipient": 28
+      },
+      "tool_result_type": {
+        "account": 4,
+        "allowance": 4,
+        "approval_invalidation": 4,
+        "balance": 4,
+        "none": 324,
+        "quote": 4,
+        "recipient_preflight": 3,
+        "simulation": 4,
+        "transaction_capability": 1,
+        "transaction_lookup": 1,
+        "transaction_submission": 3,
+        "transfer_review": 2
+      },
+      "user_correction_type": {
+        "none": 349,
+        "recipient": 9
+      },
+      "workflow_state": {
+        "AWAITING_CONFIRMATION": 39,
+        "IDLE": 122,
+        "PLANNING": 105,
+        "QUOTE_EXPIRED": 32,
+        "SIMULATING": 37,
+        "SUBMISSION_UNKNOWN": 2,
+        "SUBMITTED": 4,
+        "UNDERSTANDING_INTENT": 17
+      }
+    },
+    "dialogue_routes": 254,
+    "dialogue_turns": 0,
+    "label_counts": {
+      "route:conversation": 72,
+      "route:create_exact_approval_plan": 16,
+      "route:create_transfer_plan_from_candidate": 8,
+      "route:get_account": 12,
+      "route:get_allowances": 8,
+      "route:get_balance": 8,
+      "route:get_portfolio": 8,
+      "route:get_registry": 8,
+      "route:get_swap_quote": 32,
+      "route:get_transaction_status": 2,
+      "route:refresh_swap_quote": 16,
+      "route:reject_simulation": 16,
+      "route:reject_state_changing": 12,
+      "route:request_missing_information": 8,
+      "route:request_native_transfer_review": 6,
+      "route:request_user_confirmation": 16,
+      "route:show_help": 6,
+      "tool:create_exact_approval_plan": 16,
+      "tool:get_swap_quote": 32,
+      "tool:refresh_swap_quote": 16,
+      "tool:reject_simulation": 16,
+      "tool:request_missing_information": 8,
+      "tool:request_user_confirmation": 16
+    },
+    "max_benchmark_similarity": 0.660194,
+    "split_counts": {
+      "train": 261,
+      "validation": 97
+    },
+    "tool_calls": 104,
+    "total": 358
+  }
+}

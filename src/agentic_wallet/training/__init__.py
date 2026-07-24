@@ -32,6 +32,13 @@ from .account_curriculum import (
     load_account_curriculum,
     validate_transaction_curriculum_coverage,
 )
+from .account_curriculum_v8 import (
+    ACCOUNT_DIVERSITY_CURRICULUM_VERSION,
+    account_cluster_diversity,
+    load_account_diversity_curriculum,
+    validate_account_diversity_coverage,
+)
+from .diversity import DiversityReport, assert_diverse, measure_diversity
 from .sealed import load_verified_sealed_cases, validate_sealed_commitment
 from .blinded import (
     BLINDED_ADAPTER_FILES,
@@ -77,7 +84,12 @@ __all__ = [
     "CANDIDATE_PIPELINE_CURRICULUM_VERSION",
     "TRANSACTION_PIPELINE_CURRICULUM_VERSION",
     "ACCOUNT_PIPELINE_CURRICULUM_VERSION",
+    "ACCOUNT_DIVERSITY_CURRICULUM_VERSION",
+    "DiversityReport",
     "TrainingExample",
+    "account_cluster_diversity",
+    "assert_diverse",
+    "measure_diversity",
     "audit_blinded_disjointness",
     "blinded_adapter_sha256",
     "blinded_harness_sha256",
@@ -92,6 +104,8 @@ __all__ = [
     "load_candidate_pipeline_curriculum",
     "load_transaction_candidate_curriculum",
     "load_account_curriculum",
+    "load_account_diversity_curriculum",
+    "validate_account_diversity_coverage",
     "load_verified_sealed_cases",
     "load_verified_blinded_cases",
     "render_training_pair",

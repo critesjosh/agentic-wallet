@@ -111,10 +111,13 @@ def main() -> None:
     parser.add_argument("--max-steps", type=int, default=50)
     parser.add_argument("--max-length", type=int, default=1024)
     parser.add_argument("--learning-rate", type=float, default=2e-4)
+    parser.add_argument("--weight-decay", type=float, default=0.0)
+    parser.add_argument("--lora-dropout", type=float, default=0.05)
     parser.add_argument("--rank", type=int, default=8)
     parser.add_argument("--seed", type=int, default=17)
     parser.add_argument("--eval-steps", type=int, default=25)
     parser.add_argument("--save-steps", type=int, default=25)
+    parser.add_argument("--save-total-limit", type=int, default=3)
     parser.add_argument("--semantic-eval-limit", type=int, default=20)
     parser.add_argument(
         "--sealed-commitment", type=Path, default=DEFAULT_SEALED_COMMITMENT
@@ -142,6 +145,12 @@ def main() -> None:
         raise ValueError("eval and save steps must be positive")
     if args.eval_steps != args.save_steps:
         raise ValueError("eval and save steps must match for checkpoint selection")
+    if args.save_total_limit <= 0:
+        raise ValueError("save total limit must be positive")
+    if not 0.0 <= args.lora_dropout < 1.0:
+        raise ValueError("lora dropout must be in [0, 1)")
+    if args.weight_decay < 0.0:
+        raise ValueError("weight decay must be non-negative")
 
     run_plan = {
         "mode": "execute" if args.execute else "dry-run",
@@ -154,9 +163,13 @@ def main() -> None:
         "validation_examples": len(validation_examples),
         "max_steps": args.max_steps,
         "max_length": args.max_length,
+        "learning_rate": args.learning_rate,
+        "weight_decay": args.weight_decay,
+        "lora_dropout": args.lora_dropout,
         "rank": args.rank,
         "eval_steps": args.eval_steps,
         "save_steps": args.save_steps,
+        "save_total_limit": args.save_total_limit,
         "semantic_eval_limit": args.semantic_eval_limit,
         "target_modules": list(LORA_TARGET_MODULES),
         "completion_only_loss": True,
@@ -216,7 +229,7 @@ def main() -> None:
             task_type=TaskType.CAUSAL_LM,
             r=args.rank,
             lora_alpha=args.rank * 2,
-            lora_dropout=0.05,
+            lora_dropout=args.lora_dropout,
             bias="none",
             target_modules=list(LORA_TARGET_MODULES),
             exclude_modules=LORA_EXCLUDE_PATTERN,
@@ -242,6 +255,7 @@ def main() -> None:
         per_device_eval_batch_size=1,
         gradient_accumulation_steps=8,
         learning_rate=args.learning_rate,
+        weight_decay=args.weight_decay,
         bf16=True,
         gradient_checkpointing=True,
         logging_steps=1,
@@ -256,7 +270,7 @@ def main() -> None:
             else None
         ),
         greater_is_better=True if validation_dataset is not None else None,
-        save_total_limit=3,
+        save_total_limit=args.save_total_limit,
         report_to="none",
         remove_unused_columns=False,
         seed=args.seed,

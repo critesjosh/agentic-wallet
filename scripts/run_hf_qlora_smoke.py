@@ -33,6 +33,14 @@ from pathlib import Path
 WORKSPACE = Path(os.environ.get("AGENTIC_WALLET_WORKSPACE", "/workspace"))
 OUTPUT_ROOT = Path(os.environ.get("AGENTIC_WALLET_OUTPUT_ROOT", "/outputs"))
 MAX_STEPS = int(os.environ.get("AGENTIC_WALLET_MAX_STEPS", "20"))
+# Regularization knobs are optional overrides. When unset the training script's
+# own defaults apply, so the V7 launch command reproduces exactly. Each maps to a
+# train_qlora.py flag only when explicitly provided.
+CHECKPOINT_STEPS = os.environ.get("AGENTIC_WALLET_CHECKPOINT_STEPS")
+LEARNING_RATE = os.environ.get("AGENTIC_WALLET_LEARNING_RATE")
+WEIGHT_DECAY = os.environ.get("AGENTIC_WALLET_WEIGHT_DECAY")
+LORA_DROPOUT = os.environ.get("AGENTIC_WALLET_LORA_DROPOUT")
+SAVE_TOTAL_LIMIT = os.environ.get("AGENTIC_WALLET_SAVE_TOTAL_LIMIT")
 DATASET_PATH = Path(
     os.environ.get(
         "AGENTIC_WALLET_DATASET",
@@ -120,6 +128,11 @@ def main() -> None:
         ),
         "dataset": str(DATASET_PATH),
         "max_steps": MAX_STEPS,
+        "checkpoint_steps": CHECKPOINT_STEPS,
+        "learning_rate": LEARNING_RATE,
+        "weight_decay": WEIGHT_DECAY,
+        "lora_dropout": LORA_DROPOUT,
+        "save_total_limit": SAVE_TOTAL_LIMIT,
         "semantic_eval_limit": SEMANTIC_EVAL_LIMIT,
         "independent_evaluation": (
             str(independent_eval) if independent_eval is not None else None
@@ -155,6 +168,20 @@ def main() -> None:
             status["existing_adapter"] = str(adapter_path)
         else:
             adapter_path = output_dir / "adapter"
+            # Eval and save steps must match for checkpoint selection, so a single
+            # checkpoint interval drives both.
+            regularization_args: list[str] = []
+            if CHECKPOINT_STEPS is not None:
+                regularization_args += ["--eval-steps", CHECKPOINT_STEPS]
+                regularization_args += ["--save-steps", CHECKPOINT_STEPS]
+            if SAVE_TOTAL_LIMIT is not None:
+                regularization_args += ["--save-total-limit", SAVE_TOTAL_LIMIT]
+            if LEARNING_RATE is not None:
+                regularization_args += ["--learning-rate", LEARNING_RATE]
+            if WEIGHT_DECAY is not None:
+                regularization_args += ["--weight-decay", WEIGHT_DECAY]
+            if LORA_DROPOUT is not None:
+                regularization_args += ["--lora-dropout", LORA_DROPOUT]
             training = subprocess.run(
                 [
                     sys.executable,
@@ -169,6 +196,7 @@ def main() -> None:
                     str(SEMANTIC_EVAL_LIMIT),
                     "--output-dir",
                     str(adapter_path),
+                    *regularization_args,
                 ],
                 check=True,
                 text=True,

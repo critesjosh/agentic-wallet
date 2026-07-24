@@ -825,3 +825,17 @@ are now standing infrastructure. Future checkpoints must be selected on the
 disjoint score, not the in-distribution score. Report:
 `data/training/results/transformers-e2b-v7-disjoint-checkpoint-20260724.json`.
 Both suites remain development data and cannot support a sealed-evaluation claim.
+
+### Selection: the V7 release candidate is checkpoint-50
+
+This supersedes the earlier step-75 selection. The V7 release candidate is
+checkpoint-50, chosen on the disjoint suite under the standing protocol: the
+disjoint maximum with zero hard-zero failures, not the in-distribution or loss
+optimum. Checkpoint-50 scores 77.5% disjoint with zero safety failures and a
+6.9-point gap; checkpoint-75 scores 62.5% disjoint with a 29.7-point gap and is
+the most overfit checkpoint. Quote the honest capability as about 77% on novel
+wording (checkpoint-50), not the 92.2% in-distribution memorization score
+(checkpoint-75). No source config pins a release checkpoint; the adapter is
+selected per run via `AGENTIC_WALLET_ADAPTER`, so this selection is the record
+of record until V8 supersedes it. See `docs/v8-generalization-plan.md` for the
+diversity-augmentation work that targets a materially higher disjoint score.

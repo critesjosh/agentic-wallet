@@ -97,6 +97,27 @@ def main() -> int:
         "--dataset", default="data/training/sft-v7-account-identity.jsonl"
     )
     parser.add_argument("--max-steps", type=int, default=75)
+    parser.add_argument(
+        "--checkpoint-steps",
+        type=int,
+        default=None,
+        help=(
+            "Checkpoint and evaluate every N steps (drives both eval and save "
+            "steps). Unset keeps train_qlora.py's default of 25."
+        ),
+    )
+    parser.add_argument(
+        "--save-total-limit",
+        type=int,
+        default=None,
+        help=(
+            "Checkpoints to retain on disk. Set at least as high as the number "
+            "of checkpoints so the full disjoint curve survives pruning."
+        ),
+    )
+    parser.add_argument("--learning-rate", type=float, default=None)
+    parser.add_argument("--weight-decay", type=float, default=None)
+    parser.add_argument("--lora-dropout", type=float, default=None)
     parser.add_argument("--flavor", default="l4x1")
     parser.add_argument(
         "--evaluate-base-only",
@@ -192,6 +213,29 @@ def main() -> int:
             str(ROOT / "scripts" / job_script),
         ]
     else:
+        # Regularization overrides are only forwarded when set, so omitting them
+        # reproduces the V7 defaults baked into train_qlora.py.
+        regularization_env: list[str] = []
+        if args.checkpoint_steps is not None:
+            regularization_env += [
+                "-e", f"AGENTIC_WALLET_CHECKPOINT_STEPS={args.checkpoint_steps}"
+            ]
+        if args.save_total_limit is not None:
+            regularization_env += [
+                "-e", f"AGENTIC_WALLET_SAVE_TOTAL_LIMIT={args.save_total_limit}"
+            ]
+        if args.learning_rate is not None:
+            regularization_env += [
+                "-e", f"AGENTIC_WALLET_LEARNING_RATE={args.learning_rate}"
+            ]
+        if args.weight_decay is not None:
+            regularization_env += [
+                "-e", f"AGENTIC_WALLET_WEIGHT_DECAY={args.weight_decay}"
+            ]
+        if args.lora_dropout is not None:
+            regularization_env += [
+                "-e", f"AGENTIC_WALLET_LORA_DROPOUT={args.lora_dropout}"
+            ]
         command = [
             str(hf_cli), "jobs", "uv", "run",
             "--flavor", args.flavor,
@@ -202,8 +246,7 @@ def main() -> int:
             "-e", f"AGENTIC_WALLET_DATASET=/workspace/{args.dataset}",
             "-e", f"AGENTIC_WALLET_MAX_STEPS={args.max_steps}",
             "-e", f"AGENTIC_WALLET_SOURCE_REVISION={revision}",
-            # train_qlora.py checkpoints and evaluates every 25 steps by
-            # default, which is what makes early-stopping comparison possible.
+            *regularization_env,
             *(
                 ["-e", "AGENTIC_WALLET_EVALUATE_BASE=1",
                  "-e", "AGENTIC_WALLET_EVALUATE_DEVELOPMENT_BASE=1"]
@@ -212,9 +255,10 @@ def main() -> int:
             ),
             str(ROOT / "scripts" / "run_hf_qlora_smoke.py"),
         ]
+        checkpoint_every = args.checkpoint_steps if args.checkpoint_steps else 25
         mode = (
             "evaluate untuned base, NO TRAINING" if args.evaluate_base_only
-            else f"train {args.max_steps} steps, checkpoints every 25"
+            else f"train {args.max_steps} steps, checkpoints every {checkpoint_every}"
         )
 
     print(f"staged files      : {len(paths)}")

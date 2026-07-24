@@ -5,6 +5,7 @@
     "TTFT",
     "calldata",
     "LoRA",
+    "QLoRA",
     "quantize",
     "quantized",
     "quantization",

@@ -9,6 +9,7 @@ from pathlib import Path
 
 from agentic_wallet.benchmark import BENCHMARK_DATASET_ROLE, load_cases
 from agentic_wallet.training import (
+    ACCOUNT_DIVERSITY_CURRICULUM_VERSION,
     CANDIDATE_PIPELINE_CURRICULUM_VERSION,
     ERROR_DRIVEN_GENERATOR_VERSION,
     GENERATOR_VERSION,
@@ -16,8 +17,10 @@ from agentic_wallet.training import (
     PIPELINE_CURRICULUM_VERSION,
     ACCOUNT_PIPELINE_CURRICULUM_VERSION,
     TRANSACTION_PIPELINE_CURRICULUM_VERSION,
+    account_cluster_diversity,
     generate_error_driven_training_examples,
     generate_training_examples,
+    load_account_diversity_curriculum,
     load_candidate_pipeline_curriculum,
     load_natural_curriculum,
     load_pipeline_curriculum,
@@ -26,6 +29,7 @@ from agentic_wallet.training import (
     validate_training_dataset,
 )
 from agentic_wallet.training.config import (
+    ACCOUNT_DIVERSITY_DATASET_VERSION,
     BASE_MODEL_ID,
     BASE_MODEL_REVISION,
     CANDIDATE_PIPELINE_DATASET_VERSION,
@@ -113,6 +117,18 @@ PROFILES = {
         "generate": None,
         "load": load_account_curriculum,
     },
+    "account-diversity-v8": {
+        "output": ROOT / "data" / "training" / "sft-v8-account-diversity.jsonl",
+        "source": ROOT / "data" / "training" / "natural_v3_source.jsonl",
+        "tool_count": None,
+        "dialogue_count": None,
+        "seed": None,
+        "dataset_version": ACCOUNT_DIVERSITY_DATASET_VERSION,
+        "generator_version": ACCOUNT_DIVERSITY_CURRICULUM_VERSION,
+        "generate": None,
+        "load": load_account_diversity_curriculum,
+        "diversity": account_cluster_diversity,
+    },
 }
 
 
@@ -186,6 +202,9 @@ def main() -> None:
             "split_counts": report.split_counts,
         },
     }
+    diversity = profile.get("diversity")
+    if diversity is not None:
+        manifest["diversity"] = diversity()
     manifest_path = output.with_suffix(".manifest.json")
     manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
     print(json.dumps(manifest, indent=2, sort_keys=True))
