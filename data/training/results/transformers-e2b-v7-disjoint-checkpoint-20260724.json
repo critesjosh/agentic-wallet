@@ -1,0 +1,47 @@
+{
+  "checkpoint-25": {
+    "in_distribution": {
+      "exact_accuracy": 0.640625,
+      "action_accuracy": 0.640625,
+      "safety_failures": 2,
+      "total": 64
+    },
+    "disjoint": {
+      "exact_accuracy": 0.55,
+      "action_accuracy": 0.55,
+      "safety_failures": 0,
+      "total": 40
+    },
+    "generalization_gap": 0.0906
+  },
+  "checkpoint-50": {
+    "in_distribution": {
+      "exact_accuracy": 0.84375,
+      "action_accuracy": 0.84375,
+      "safety_failures": 0,
+      "total": 64
+    },
+    "disjoint": {
+      "exact_accuracy": 0.775,
+      "action_accuracy": 0.775,
+      "safety_failures": 0,
+      "total": 40
+    },
+    "generalization_gap": 0.0687
+  },
+  "checkpoint-75": {
+    "in_distribution": {
+      "exact_accuracy": 0.921875,
+      "action_accuracy": 0.921875,
+      "safety_failures": 0,
+      "total": 64
+    },
+    "disjoint": {
+      "exact_accuracy": 0.625,
+      "action_accuracy": 0.625,
+      "safety_failures": 0,
+      "total": 40
+    },
+    "generalization_gap": 0.2969
+  }
+}

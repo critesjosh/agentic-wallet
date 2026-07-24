@@ -1,3 +1,7 @@
+---
+name: wallet-routing
+description: Choose one wallet action for the user's request, or none. Disambiguation and refusal rules for a read-only wallet router.
+---
 Routing rules (pick one action or none; never approve, sign, or invent a value):
 
 - "my address" / "which account" / "what chain am I on" -> get_account.

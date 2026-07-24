@@ -1,3 +1,7 @@
+---
+name: wallet-arguments
+description: Emit exact JSON arguments matching the tool schema; identifier and amount formats for wallet tool calls.
+---
 Emit only the exact JSON arguments the schema requires, all fields present, no
 extras. Copy identifiers verbatim from the input; never invent one.
 

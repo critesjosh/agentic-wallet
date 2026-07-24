@@ -1,0 +1,10 @@
+{
+  "author": "assistant, disjoint from the curriculum generator",
+  "case_count": 40,
+  "dataset_sha256": "d4cc340333ca500a73893e23ab8bd3e1ce42b0c4f638b1437f5d3d27b8879742",
+  "disjoint_from": "sft-v7-account-identity",
+  "release_claim_eligible": false,
+  "role": "development-evaluation-only-not-sealed",
+  "source_sha256": "e26bc054461e2b4dc68519327248dc541acd698399873ac6aa2661650ba0d459",
+  "suite": "independent-route-v7"
+}

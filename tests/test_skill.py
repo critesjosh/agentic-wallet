@@ -10,7 +10,12 @@ from pathlib import Path
 
 import pytest
 
-from agentic_wallet.skill import DEFAULT_SKILL_PATH, apply_skill, load_skill
+from agentic_wallet.skill import (
+    DEFAULT_SKILL_PATH,
+    apply_skill,
+    load_skill,
+    parse_skill,
+)
 
 CONTRACT = '{"phase":"route_dialogue","user_request":"what is my address?"}'
 
@@ -22,6 +27,31 @@ def test_bundled_skill_loads_and_stays_terse():
     # A mobile context window is tight; keep the skill small. This is a
     # regression guard, not a hard runtime limit.
     assert len(text) < 900, "SKILL.md has grown; keep it terse for on-device use"
+
+
+def test_frontmatter_is_parsed_and_never_enters_the_body():
+    """Match the AI Edge Gallery SKILL.md shape: metadata plus instructions."""
+
+    skill = parse_skill()
+
+    assert skill.name and skill.description
+    # The body is the instructions only; the YAML metadata must not leak into it.
+    assert "---" not in skill.body
+    assert "description:" not in skill.body
+    assert skill.body.startswith("Routing")
+    # load_skill returns exactly the body.
+    assert load_skill() == skill.body
+
+
+def test_all_bundled_skills_have_metadata():
+    from pathlib import Path
+
+    skills_dir = DEFAULT_SKILL_PATH.parent / "skills"
+    for path in [DEFAULT_SKILL_PATH, *sorted(skills_dir.glob("*.md"))]:
+        skill = parse_skill(path)
+        assert skill.name, f"{path} missing name"
+        assert skill.description, f"{path} missing description"
+        assert "name:" not in skill.body
 
 
 def test_apply_skill_is_a_noop_when_absent():

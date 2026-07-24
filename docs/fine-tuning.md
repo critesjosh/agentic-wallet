@@ -676,17 +676,19 @@ the fine-tune taught the model to emit valid multi-field JSON, which had been
 the single largest failure mode in every prior evaluation. Safety-classification
 failures went to zero with no remaining hard-zeros.
 
-Checkpoint selection was cleaner than V5. The in-training 20-case semantic eval
-showed step 25 at 43.8% exact with two wrong-recipient failures, step 50 at
-81.2% with zero, and step 75 at 87.5% with zero. Unlike V5, where later
-checkpoints degraded generalization and refusal, step 75 here leads on both
-accuracy and safety, so the safety-first gate and the accuracy gate agree. On
-the full 64-case set the step-75 adapter is 92.2% with zero failures. The
-per-checkpoint full-set evaluation that V5 received was not repeated because the
-final checkpoint already dominates; a checkpoint-only job could confirm it if
-required. Reports:
+On the full 64-case in-distribution set the step-75 adapter is 92.2% with zero
+safety failures. Reports:
 `data/training/results/hf-l4-v7-account-base-20260724.json` and
 `hf-l4-v7-account-adapter-20260724.json`.
+
+Correction. An earlier version of this section claimed step 75 was the clean
+choice because it led the in-distribution and in-training evaluations on both
+accuracy and safety, and that a per-checkpoint full-set evaluation was
+unnecessary. That was wrong. It repeated the exact mistake it claimed to avoid:
+every one of those signals is in-distribution, drawn from the same generator as
+training, so they reward template memorization. The disjoint evaluation below
+shows step 75 is in fact the most overfit checkpoint. Step 50, not step 75, is
+the better candidate.
 
 The remaining five misses are four multi-argument and one single-argument case.
 These are argument-construction errors, not routing errors: the model chose the
@@ -782,3 +784,44 @@ appear. Reports are under
 `data/training/results/transformers-e2b-v7-skill-sweep-20260724.json` and the
 sweep bucket. The skill mechanism is retained, off by default and phase-scoped,
 as tested infrastructure and a recorded negative result.
+
+## 2026-07-24 disjoint generalization curve, and the V7 overfitting finding
+
+The in-distribution validation split is drawn from the same curriculum
+generator as training: the same scenario templates, synthetic addresses, and
+phrasing style. It measures whether the model learned the templates, not
+whether it generalizes to wording it never saw. To measure the second thing, a
+disjoint routing suite was authored with novel phrasings and novel addresses,
+none reused from the training data, compiled into the exact V7 production
+contract so only the surface form differs (`data/benchmark/independent-route-v7`,
+40 cases, `scripts/build_independent_route_v7_eval.py`, with a disjointness
+check that fails closed on any leaked request or address). Each checkpoint was
+then evaluated on both suites.
+
+| Checkpoint | In-distribution | Disjoint | Gap | Disjoint safety |
+| --- | ---: | ---: | ---: | ---: |
+| 25 | 64.1% | 55.0% | 9.1 | 0 |
+| 50 | 84.4% | 77.5% | 6.9 | 0 |
+| 75 | 92.2% | 62.5% | 29.7 | 0 |
+
+This is the classic overfitting signature. In-distribution accuracy rises
+monotonically through step 75, but disjoint accuracy peaks at step 50 and then
+falls fifteen points by step 75, while the generalization gap widens from about
+seven points to thirty. The final quarter of training memorized training-set
+surface forms at the direct expense of generalization. The 92.2% headline is an
+in-distribution memorization score, not a capability estimate; honest
+generalization to novel wording is about 77% at step 50 and only 62.5% at
+step 75.
+
+Step 50 is therefore the better candidate: it generalizes fifteen points better
+than step 75 with the same zero safety failures and the smallest gap. The
+deployed step-75 adapter is overtrained. The skill experiments were all run
+against step 75, the most overfit and most prompt-brittle checkpoint, which is
+the worst case for prompt perturbation; that does not change their conclusion
+but frames it.
+
+The disjoint suite and per-checkpoint job (`run_hf_disjoint_checkpoint_eval.py`)
+are now standing infrastructure. Future checkpoints must be selected on the
+disjoint score, not the in-distribution score. Report:
+`data/training/results/transformers-e2b-v7-disjoint-checkpoint-20260724.json`.
+Both suites remain development data and cannot support a sealed-evaluation claim.

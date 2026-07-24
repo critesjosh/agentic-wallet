@@ -124,6 +124,14 @@ def main() -> int:
         ),
     )
     parser.add_argument(
+        "--disjoint-eval-adapter",
+        default=None,
+        help=(
+            "Instead of training, run the per-checkpoint disjoint generalization "
+            "curve against this adapter bucket path in a single job."
+        ),
+    )
+    parser.add_argument(
         "--output-bucket", default="hf://buckets/critesjosh/agentic-wallet-smoke"
     )
     parser.add_argument("--stage-dir", type=Path, default=ROOT / ".hf-workspace")
@@ -150,11 +158,20 @@ def main() -> int:
     if not hf_cli.is_file():
         raise SystemExit(f"hf CLI not found at {hf_cli}")
 
-    if args.skill_eval_adapter or args.skill_sweep_adapter:
+    eval_adapter = (
+        args.skill_eval_adapter
+        or args.skill_sweep_adapter
+        or args.disjoint_eval_adapter
+    )
+    if eval_adapter:
         # The adapter already lives inside the output bucket, so read it through
         # the same /outputs mount rather than mounting the bucket twice.
-        adapter = args.skill_eval_adapter or args.skill_sweep_adapter
-        if args.skill_sweep_adapter:
+        adapter = eval_adapter
+        if args.disjoint_eval_adapter:
+            job_script = "run_hf_disjoint_checkpoint_eval.py"
+            mode = f"disjoint generalization curve against {adapter}, NO TRAINING"
+            name = f"{args.name}-disjoint-eval"
+        elif args.skill_sweep_adapter:
             job_script = "run_hf_skill_sweep.py"
             mode = f"skill variant sweep against {adapter}, NO TRAINING"
             name = f"{args.name}-skill-sweep"

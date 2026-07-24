@@ -1,3 +1,7 @@
+---
+name: wallet-routing-conservative
+description: Conservative wallet routing; prefer none unless the message clearly asks for a supported read or an exact command.
+---
 Routing (choose one action, or none). Prefer none unless the current message
 clearly asks for a supported read or an exact command.
 

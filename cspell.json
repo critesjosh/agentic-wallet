@@ -49,7 +49,11 @@
     "resimulate",
     "xblockhash",
     "retargeted",
-    "predeclared"
+    "predeclared",
+    "overfitting",
+    "overfit",
+    "overtrained",
+    "disjointness"
   ],
   "ignorePaths": [
     "*.ipynb",
