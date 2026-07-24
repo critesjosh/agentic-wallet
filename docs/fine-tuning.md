@@ -646,3 +646,139 @@ Reasoning stays off by default. `scripts/evaluate_development.py --think` keeps
 the comparison cheap to repeat against a tuned checkpoint. A further argument
 against enabling it is the mobile target, which measured roughly 3 tokens per
 second: the observed reasoning traces would add minutes per turn on device.
+
+## 2026-07-24 V7 fine-tune result
+
+The first V7 adapter was trained on Hugging Face L4: base
+`google/gemma-4-E2B-it` at revision `3e22461f`, 75 QLoRA steps, rank 8,
+completion-only loss, adapting `q_proj`, `k_proj`, `v_proj`, and `o_proj`.
+Dataset SHA-256 `62cb7176369773504b5e7e87e1c17fb5535ed8ae4f240430bff57a6129b1064e`,
+source revision `706d7b9`. The job trained and evaluated in 22m28s; the adapter
+weights stay private in the Hugging Face bucket.
+
+The untuned base and the step-75 adapter were evaluated through the same
+Transformers provider on the same 64-case V7 development split (11 grounded
+narration records were predeclared ineligible for the minimal-route evaluator).
+
+| Metric | Untuned base | V7 adapter |
+| --- | ---: | ---: |
+| Correct action | 45.3% | 92.2% |
+| Exact action and arguments | 45.3% | 92.2% |
+| Schema-valid | 59.4% | 92.2% |
+| Zero-argument exact | 29/38 | 38/38 |
+| Single-argument exact | 0/14 | 13/14 |
+| Multi-argument exact | 0/12 | 8/12 |
+| Development safety failures | 2 | 0 |
+| Hard-zero failures | signing-boundary, wrong-chain | none |
+
+Two results matter most. Multi-argument construction went from 0/12 to 8/12:
+the fine-tune taught the model to emit valid multi-field JSON, which had been
+the single largest failure mode in every prior evaluation. Safety-classification
+failures went to zero with no remaining hard-zeros.
+
+Checkpoint selection was cleaner than V5. The in-training 20-case semantic eval
+showed step 25 at 43.8% exact with two wrong-recipient failures, step 50 at
+81.2% with zero, and step 75 at 87.5% with zero. Unlike V5, where later
+checkpoints degraded generalization and refusal, step 75 here leads on both
+accuracy and safety, so the safety-first gate and the accuracy gate agree. On
+the full 64-case set the step-75 adapter is 92.2% with zero failures. The
+per-checkpoint full-set evaluation that V5 received was not repeated because the
+final checkpoint already dominates; a checkpoint-only job could confirm it if
+required. Reports:
+`data/training/results/hf-l4-v7-account-base-20260724.json` and
+`hf-l4-v7-account-adapter-20260724.json`.
+
+The remaining five misses are four multi-argument and one single-argument case.
+These are argument-construction errors, not routing errors: the model chose the
+right action but did not assemble every field. Both suites are development data
+and cannot support a generalization or sealed-evaluation claim.
+
+## 2026-07-24 inference-time routing skill A/B
+
+An optional routing skill (`src/agentic_wallet/SKILL.md`, about 137 tokens of
+disambiguation and safety rules) was tested as an inference-time prompt
+supplement. It is off by default and never changes the frozen contract; a
+provider prepends it only when a run opts in. It was measured on both the
+untuned base and the trained adapter, changing only whether the skill is
+present.
+
+On the untuned Ollama runtime the skill was neutral: exact accuracy 56.2% to
+57.8% on the V7 split, one single-argument case, with no change to the seven
+safety failures or the zero multi-argument passes.
+
+On the trained adapter, through the Transformers provider on the same 64-case
+split, the skill was clearly harmful:
+
+| Metric | Skill off | Skill on |
+| --- | ---: | ---: |
+| Exact action and arguments | 92.2% | 79.7% |
+| Schema-valid | 92.2% | 84.4% |
+| Multi-argument exact | 8/12 | 3/12 |
+| Zero-argument exact | 38/38 | 35/38 |
+| Development safety failures | 0 | 1 (wrong-chain) |
+
+The skill-off run reproduced the training-run adapter exactly at 0.9219,
+confirming the eval path. Reports:
+`data/training/results/transformers-e2b-v7-adapter-skill-off-20260724.json` and
+`transformers-e2b-v7-adapter-skill-on-20260724.json`.
+
+This is the train/inference mismatch made concrete. The adapter learned to route
+from the exact prompt format it saw in training, so a novel prepended block is
+out of distribution and degrades it, including introducing a hard-zero failure.
+The same guidance is already carried by the weights, because the V7 curriculum
+trains the disambiguation cases (`registry-not-account`, `portfolio-not-account`,
+key-disclosure refusals) as examples. The remaining adapter misses are
+multi-argument construction, which routing guidance does not address.
+
+The conclusion is to rely on the curriculum, not on inference-time prompt
+guidance. Baking the same rules into the frozen system prompt was not pursued:
+the system prompt is rendered into every training example, so a coherent change
+would require retraining, and it would target routing cases that are already
+handled rather than the argument-construction misses that remain. The skill
+plumbing is retained, off by default, for reproducibility and as a measured
+negative result. As with reasoning mode, adding to the prompt of a model that
+already learned the task did not help.
+
+## 2026-07-24 skill variant sweep
+
+The first skill A/B applied one routing skill to every phase. A per-case
+diagnosis showed why it failed: five of the eight regressions were
+argument-construction breakages, because routing text was prepended to the
+argument-filling prompt where it is noise. The remaining three were routing
+over- or under-triggering. The baseline adapter's own five misses are all
+argument construction (four multi-argument, one single); routing is already
+perfect at 38/38 zero-argument, so a routing skill has no room to help.
+
+Two changes followed. Skill injection was phase-scoped: a routing skill reaches
+only the routing prompt, and a separate argument skill reaches only the
+argument prompt. A dedicated argument skill was written describing the exact
+field shapes the failing tools require. Five variants were then swept against the
+same adapter in one job, loading the model once.
+
+| Variant | Exact | Zero-arg | Single | Multi | Safety |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| baseline (no skill) | 92.2% | 38/38 | 13/14 | 8/12 | 0 |
+| route_v1, scoped | 87.5% | 35/38 | 13/14 | 8/12 | 1 |
+| route_v2, descriptive | 84.4% | 33/38 | 13/14 | 8/12 | 1 |
+| arguments_v1 | 81.2% | 38/38 | 10/14 | 4/12 | 2 |
+| route_v2 + arguments_v1 | 73.4% | 33/38 | 10/14 | 4/12 | 3 |
+
+Phase scoping worked as intended: the scoped routing skill preserved argument
+construction (multi-argument stayed 8/12, versus 3/12 for the earlier unscoped
+skill). But with arguments protected, the routing skill still regressed routing,
+and making it more descriptive regressed it further. The argument skill, the one
+variant that could in principle beat baseline, made argument construction worse
+rather than better. The combined variant stacked both harms and was worst on
+every axis.
+
+No variant matched, let alone beat, the baseline. The harms are additive, which
+is the signature of out-of-distribution prompt text rather than unhelpful
+content. This is the third independent confirmation, after reasoning mode and
+the first skill A/B, that adding text to this adapter's prompt degrades it: the
+fine-tune internalized the task from the curriculum so thoroughly that the exact
+training prompt is a sharp optimum. The retrain-with-richer-prompt was therefore
+not pursued, because its premise, an inference-time gain to bake in, did not
+appear. Reports are under
+`data/training/results/transformers-e2b-v7-skill-sweep-20260724.json` and the
+sweep bucket. The skill mechanism is retained, off by default and phase-scoped,
+as tested infrastructure and a recorded negative result.

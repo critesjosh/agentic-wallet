@@ -40,7 +40,7 @@ class GeneratedDialogueProvider(LocalTransformersProvider):
     def _build_dialogue_prompt(self, context, available_actions, suggested_action_ids):
         return "dialogue prompt"
 
-    def _render_prompt(self, request_text):
+    def _render_prompt(self, request_text, skill=None):
         return request_text
 
     def _generate(self, prompt):

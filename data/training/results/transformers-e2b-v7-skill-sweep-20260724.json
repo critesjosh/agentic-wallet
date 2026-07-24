@@ -1,0 +1,57 @@
+{
+  "baseline": {
+    "exact_accuracy": 0.921875,
+    "action_accuracy": 0.921875,
+    "schema_valid_rate": 0.921875,
+    "safety_failures": 0,
+    "by_argument_count": {
+      "zero": 38,
+      "single": 13,
+      "multi": 8
+    }
+  },
+  "route_v1": {
+    "exact_accuracy": 0.875,
+    "action_accuracy": 0.875,
+    "schema_valid_rate": 0.921875,
+    "safety_failures": 1,
+    "by_argument_count": {
+      "zero": 35,
+      "single": 13,
+      "multi": 8
+    }
+  },
+  "route_v2": {
+    "exact_accuracy": 0.84375,
+    "action_accuracy": 0.84375,
+    "schema_valid_rate": 0.921875,
+    "safety_failures": 1,
+    "by_argument_count": {
+      "zero": 33,
+      "single": 13,
+      "multi": 8
+    }
+  },
+  "arguments_v1": {
+    "exact_accuracy": 0.8125,
+    "action_accuracy": 0.859375,
+    "schema_valid_rate": 0.859375,
+    "safety_failures": 2,
+    "by_argument_count": {
+      "zero": 38,
+      "single": 10,
+      "multi": 4
+    }
+  },
+  "route_v2_arguments_v1": {
+    "exact_accuracy": 0.734375,
+    "action_accuracy": 0.78125,
+    "schema_valid_rate": 0.859375,
+    "safety_failures": 3,
+    "by_argument_count": {
+      "zero": 33,
+      "single": 10,
+      "multi": 4
+    }
+  }
+}

@@ -32,7 +32,26 @@ def main() -> None:
         action="store_true",
         help="Enable Ollama reasoning mode (off by default).",
     )
+    parser.add_argument(
+        "--skill",
+        nargs="?",
+        const="",
+        default=None,
+        help=(
+            "Prepend an inference-time routing skill. Bare --skill uses the "
+            "bundled SKILL.md; --skill PATH uses a file. Off by default."
+        ),
+    )
     args = parser.parse_args()
+
+    skill_text = None
+    skill_source = None
+    if args.skill is not None:
+        from agentic_wallet.skill import DEFAULT_SKILL_PATH, load_skill
+
+        skill_path = args.skill or DEFAULT_SKILL_PATH
+        skill_text = load_skill(skill_path)
+        skill_source = str(skill_path)
 
     examples = [
         example
@@ -48,6 +67,7 @@ def main() -> None:
             model=args.model_id or "gemma4:e2b",
             base_url=args.base_url,
             think=args.think,
+            skill=skill_text,
         )
     else:
         provider = LocalTransformersProvider(
@@ -55,6 +75,7 @@ def main() -> None:
             adapter_path=(
                 str(args.adapter_path) if args.adapter_path is not None else None
             ),
+            skill=skill_text,
         )
         provider.load()
 
@@ -65,6 +86,8 @@ def main() -> None:
         "model": getattr(provider, "model", getattr(provider, "model_id", None)),
         "native_constrained_decoding": provider.native_constrained_decoding,
         "reasoning_enabled": bool(getattr(provider, "think", False)),
+        "skill_enabled": skill_text is not None,
+        "skill_source": skill_source,
         **report.to_dict(),
     }
     print(json.dumps({key: value for key, value in payload.items() if key != "results"}, indent=2, sort_keys=True))

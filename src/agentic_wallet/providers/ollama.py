@@ -70,6 +70,8 @@ class OllamaProvider(InferenceProvider):
         keep_alive: str = "5m",
         transport: OllamaTransport | None = None,
         think: bool = False,
+        skill: str | None = None,
+        argument_skill: str | None = None,
     ) -> None:
         if not model.strip():
             raise InferenceError("an Ollama model is required")
@@ -77,6 +79,11 @@ class OllamaProvider(InferenceProvider):
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
         self.keep_alive = keep_alive
+        # Optional inference-time guidance, off unless a run opts in. Prepended
+        # as a system message; never alters the frozen contract text. ``skill``
+        # applies to routing; ``argument_skill`` to argument filling.
+        self.skill = skill
+        self.argument_skill = argument_skill
         # Reasoning is off by default. It was originally disabled because
         # thinking mode returned incomplete responses, and the done/done_reason
         # gates below still reject those. Enabling it is an evaluated choice:
@@ -95,7 +102,14 @@ class OllamaProvider(InferenceProvider):
             else None
         )
 
-    def _complete(self, schema: dict, messages: list[dict[str, str]]) -> dict:
+    def _complete(
+        self,
+        schema: dict,
+        messages: list[dict[str, str]],
+        skill: str | None = None,
+    ) -> dict:
+        if skill:
+            messages = [{"role": "system", "content": skill}, *messages]
         payload = {
             "model": self.model,
             "messages": messages,
@@ -167,6 +181,7 @@ class OllamaProvider(InferenceProvider):
             dialogue_route_messages(
                 context, available_actions, suggested_action_ids
             ),
+            skill=self.skill,
         )
         return validate_dialogue_route_decision(
             raw, available_actions, suggested_action_ids
@@ -176,7 +191,11 @@ class OllamaProvider(InferenceProvider):
         self, context: dict, available_actions: list[str]
     ) -> ToolCall:
         schema = tool_call_json_schema(available_actions, self._asset_ids(context))
-        raw = self._complete(schema, tool_call_messages(context, available_actions))
+        raw = self._complete(
+            schema,
+            tool_call_messages(context, available_actions),
+            skill=self.argument_skill,
+        )
         return self._validate(raw, available_actions)
 
     def propose_dialogue_turn(
@@ -193,6 +212,7 @@ class OllamaProvider(InferenceProvider):
             dialogue_turn_messages(
                 context, available_actions, suggested_action_ids
             ),
+            skill=self.skill,
         )
         return validate_dialogue_turn(
             raw, available_actions, suggested_action_ids

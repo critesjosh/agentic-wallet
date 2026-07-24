@@ -12,6 +12,7 @@ import json
 from typing import Any
 
 from ..inference import InferenceError, InferenceProvider, ProposalValidationError
+from ..skill import apply_skill
 from ..schemas.tool_call import ToolCall
 from ..schemas.dialogue import DialogueRoute, ModelDialogueTurn
 from ..tool_contract import (
@@ -50,6 +51,8 @@ class LocalTransformersProvider(InferenceProvider):
         load_in_4bit: bool = True,
         max_new_tokens: int = 256,
         device: str = "cuda",
+        skill: str | None = None,
+        argument_skill: str | None = None,
     ) -> None:
         self.model_id = model_id
         self.revision = revision
@@ -57,6 +60,11 @@ class LocalTransformersProvider(InferenceProvider):
         self.load_in_4bit = load_in_4bit
         self.max_new_tokens = max_new_tokens
         self.device = device
+        # Optional inference-time guidance, off unless a run opts in. It is
+        # prepended to the prompt and never changes the frozen contract text.
+        # ``skill`` applies to routing; ``argument_skill`` to argument filling.
+        self.skill = skill
+        self.argument_skill = argument_skill
         self._processor: Any | None = None
         self._model: Any | None = None
 
@@ -109,9 +117,12 @@ class LocalTransformersProvider(InferenceProvider):
 
     def _build_prompt(self, context: dict, available_actions: list[str]) -> str:
         request_text = tool_call_prompt(context, available_actions)
-        return self._render_prompt(request_text)
+        # Argument construction is a different task from routing, so it gets the
+        # argument skill (if any), never the routing skill.
+        return self._render_prompt(request_text, self.argument_skill)
 
-    def _render_prompt(self, request_text: str) -> str:
+    def _render_prompt(self, request_text: str, skill: str | None = None) -> str:
+        request_text = apply_skill(request_text, skill)
         messages = [
             {"role": "user", "content": [{"type": "text", "text": request_text}]},
         ]
@@ -152,7 +163,8 @@ class LocalTransformersProvider(InferenceProvider):
         return self._render_prompt(
             dialogue_turn_prompt(
                 context, available_actions, suggested_action_ids
-            )
+            ),
+            self.skill,
         )
 
     def propose_tool_call(
@@ -174,7 +186,8 @@ class LocalTransformersProvider(InferenceProvider):
                 self._render_prompt(
                     dialogue_route_prompt(
                         context, available_actions, suggested_action_ids
-                    )
+                    ),
+                    self.skill,
                 )
             )
         )
